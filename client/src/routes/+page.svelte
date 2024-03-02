@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { inGameOrLobby, type AppState, type ServerMessage } from '$lib/types';
+	import { inGameOrLobby, type AppState, type ServerMessage, type ClientMessage } from '$lib/types';
 	import { PUBLIC_SERVER } from '$env/static/public';
 	import { match } from 'ts-pattern';
 
@@ -113,7 +113,7 @@
 		};
 	});
 
-	function sendMessage(message: any) {
+	function sendMessage(message: ClientMessage) {
 		socket.send(JSON.stringify(message));
 	}
 </script>

@@ -25,7 +25,11 @@ export type AppState =
 			chatMessages: Array<string>;
 	  };
 
-// export type ClientMessage = {};
+export type ClientMessage =
+	| { type: 'ready' }
+	| { type: 'unready' }
+	| { type: 'chatMessage'; content: string }
+	| { type: 'guess'; word: string };
 
 export type ServerMessage =
 	| {
