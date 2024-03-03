@@ -16,7 +16,7 @@
 	let winner: string;
 
 	const room = window.prompt('room', 'one');
-	const username = window.prompt('username', 'name');
+	const username = window.prompt('username', 'skeary');
 
 	const params = new URLSearchParams({ username: username! }).toString();
 	const socket = new WebSocket(`${PUBLIC_SERVER}/rooms/${room}?${params}`);
