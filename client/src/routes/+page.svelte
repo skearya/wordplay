@@ -232,5 +232,20 @@
 				<li>{message}</li>
 			{/each}
 		</ul>
+		<input
+			class="border"
+			type="text"
+			bind:value={chatInput}
+			on:keydown={(event) => {
+				if (event.key == 'Enter') {
+					sendMessage({
+						type: 'chatMessage',
+						content: chatInput
+					});
+
+					chatInput = '';
+				}
+			}}
+		/>
 	{/if}
 </section>
