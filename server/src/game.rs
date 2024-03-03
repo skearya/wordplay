@@ -24,6 +24,7 @@ pub struct InGame {
 #[derive(Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
+    pub input: String,
     pub lives: u8,
     pub used_letters: HashSet<char>,
 }
@@ -54,7 +55,7 @@ impl Lobby {
 
         GameState::InGame(InGame {
             timeout_task: None,
-            timer_len: thread_rng().gen_range(10..=20),
+            timer_len: thread_rng().gen_range(10..=30),
             starting_time: Instant::now(),
             prompt: GLOBAL.get().unwrap().random_prompt(),
             prompt_uses: 0,
@@ -105,8 +106,8 @@ impl InGame {
             .timer_len
             .saturating_sub(Instant::now().duration_since(self.starting_time).as_secs() as u8);
 
-        if self.timer_len < 5 {
-            self.timer_len = 5;
+        if self.timer_len < 6 {
+            self.timer_len = 6;
         }
     }
 
@@ -117,7 +118,7 @@ impl InGame {
     }
 
     pub fn player_timed_out(&mut self) {
-        self.timer_len = thread_rng().gen_range(10..=20);
+        self.timer_len = thread_rng().gen_range(10..=30);
 
         if let Some(player) = self
             .players
@@ -154,6 +155,7 @@ impl Player {
     pub fn new(uuid: Uuid) -> Self {
         Self {
             uuid,
+            input: String::new(),
             lives: 2,
             used_letters: HashSet::new(),
         }

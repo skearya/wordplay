@@ -29,6 +29,7 @@ export type ClientMessage =
 	| { type: 'ready' }
 	| { type: 'unready' }
 	| { type: 'chatMessage'; content: string }
+	| { type: 'input'; input: string }
 	| { type: 'guess'; word: string };
 
 export type ServerMessage =
@@ -57,14 +58,19 @@ export type ServerMessage =
 			players: Array<PlayerData>;
 	  }
 	| {
-			type: 'newPrompt';
-			timedOut: boolean;
-			prompt: string;
-			turn: string;
+			type: 'inputUpdate';
+			uuid: string;
+			input: string;
 	  }
 	| {
 			type: 'invalidWord';
 			uuid: string;
+	  }
+	| {
+			type: 'newPrompt';
+			timedOut: boolean;
+			prompt: string;
+			turn: string;
 	  }
 	| {
 			type: 'gameEnded';
@@ -91,6 +97,7 @@ export type PlayerInfo = {
 export type PlayerData = {
 	uuid: string;
 	username: string;
+	input: string;
 	lives: number;
 };
 

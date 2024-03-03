@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { inGameOrLobby, type AppState, type ServerMessage, type ClientMessage } from '$lib/types';
 	import { PUBLIC_SERVER } from '$env/static/public';
+	import { inGameOrLobby, type AppState, type ServerMessage, type ClientMessage } from '$lib/types';
+	import { tick } from 'svelte';
+	import { writable } from 'svelte/store';
 	import { match } from 'ts-pattern';
 
 	let chatInput: string = '';
-	let gameInput: string = '';
+	let gameInputNode: HTMLInputElement;
+	let gameInput = writable('');
 
 	let state: AppState = {
 		type: 'connecting'
@@ -37,12 +40,15 @@
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'inGame' } }],
 				([_state, { state: roomState, uuid }]) => {
+					// for reconnecting prob wanna do this
+					// gameInput = roomState.players.find((player) => player.uuid = uuid)!.input
+
 					return {
 						type: 'game',
-						uuid,
 						players: roomState.players,
-						prompt: roomState.prompt,
 						currentTurn: roomState.players.find((player) => player.uuid == roomState.turn)!,
+						prompt: roomState.prompt,
+						uuid,
 						chatMessages: []
 					};
 				}
@@ -69,7 +75,7 @@
 				};
 			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
-				gameInput = '';
+				$gameInput = '';
 
 				return {
 					type: 'game',
@@ -80,9 +86,17 @@
 					uuid: state.uuid
 				};
 			})
+			.with([{ type: 'game' }, { type: 'inputUpdate' }], ([state, message]) => {
+				state.players.find((player) => player.uuid === message.uuid)!.input = message.input;
+
+				return {
+					...state
+				};
+			})
+			// .with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {})
 			.with([{ type: 'game' }, { type: 'newPrompt' }], ([state, message]) => {
 				if (message.timedOut) {
-					state.players.find((player) => player.uuid == state.currentTurn.uuid)!.lives -= 1;
+					state.players.find((player) => player.uuid === state.currentTurn.uuid)!.lives -= 1;
 				}
 
 				return {
@@ -91,10 +105,9 @@
 					currentTurn: state.players.find((player) => player.uuid == message.turn)!
 				};
 			})
-			// .with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {})
 			.with([{ type: 'game' }, { type: 'gameEnded' }], ([state, message]) => {
 				chatInput = '';
-				winner = state.players.find((player) => player.uuid == message.winner)!.username;
+				winner = state.players.find((player) => player.uuid === message.winner)!.username;
 
 				return {
 					type: 'lobby',
@@ -115,6 +128,22 @@
 
 	function sendMessage(message: ClientMessage) {
 		socket.send(JSON.stringify(message));
+	}
+
+	gameInput.subscribe((input) => {
+		if (state.type === 'game') sendMessage({ type: 'input', input });
+	});
+
+	$: hasTurn = match(state)
+		.with({ type: 'game' }, (state) => state.uuid === state.currentTurn.uuid)
+		.otherwise(() => false);
+
+	$: if (hasTurn) {
+		$gameInput = '';
+
+		tick().then(() => {
+			gameInputNode.focus();
+		});
 	}
 </script>
 
@@ -176,22 +205,25 @@
 			{#each state.players as player}
 				<div>
 					<h1>{player.username}</h1>
+					<h1 class="min-w-16">input: {player.input}</h1>
 					<h1 class="text-red-400">lives: {player.lives}</h1>
 				</div>
 			{/each}
 		</div>
 		<input
-			class="border"
+			class="border bg-green-200 disabled:bg-red-400"
 			type="text"
-			bind:value={gameInput}
+			disabled={!hasTurn}
+			bind:this={gameInputNode}
+			bind:value={$gameInput}
 			on:keydown={(event) => {
 				if (event.key === 'Enter') {
 					sendMessage({
 						type: 'guess',
-						word: gameInput
+						word: $gameInput
 					});
 
-					gameInput = '';
+					$gameInput = '';
 				}
 			}}
 		/>

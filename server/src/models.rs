@@ -90,6 +90,7 @@ impl AppState {
                             .unwrap()
                             .username
                             .clone(),
+                        input: player.input.clone(),
                         lives: player.lives,
                     })
                     .collect(),
@@ -171,7 +172,6 @@ impl AppState {
                     .players
                     .iter()
                     .map(|player| PlayerData {
-                        lives: player.lives,
                         uuid: player.uuid,
                         username: clients
                             .iter()
@@ -179,6 +179,8 @@ impl AppState {
                             .unwrap()
                             .clone()
                             .username,
+                        input: player.input.clone(),
+                        lives: player.lives,
                     })
                     .collect(),
             });
@@ -205,6 +207,28 @@ impl AppState {
                     .collect(),
             });
         }
+    }
+
+    pub fn client_input_update(&self, room: &str, uuid: Uuid, new_input: String) {
+        let mut lock = self.inner.lock().unwrap();
+        let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
+
+        let GameState::InGame(game) = state else {
+            return;
+        };
+
+        let player = game
+            .players
+            .iter_mut()
+            .find(|player| player.uuid == uuid)
+            .unwrap();
+
+        player.input = new_input;
+
+        clients.broadcast(ServerMessage::InputUpdate {
+            uuid,
+            input: player.input.clone(),
+        })
     }
 
     pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {

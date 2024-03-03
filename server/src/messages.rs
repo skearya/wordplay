@@ -13,6 +13,7 @@ pub enum ClientMessage {
     Ready,
     Unready,
     ChatMessage { content: String },
+    Input { input: String },
     Guess { word: String },
 }
 
@@ -42,6 +43,10 @@ pub enum ServerMessage {
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
+    },
+    InputUpdate {
+        uuid: Uuid,
+        input: String,
     },
     InvalidWord {
         uuid: Uuid,
@@ -84,6 +89,7 @@ pub struct PlayerInfo {
 pub struct PlayerData {
     pub uuid: Uuid,
     pub username: String,
+    pub input: String,
     pub lives: u8,
 }
 
@@ -103,6 +109,7 @@ impl ClientMessage {
                     },
                 );
             }
+            ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {
                 state.client_guess(room, uuid, &word);
             }
