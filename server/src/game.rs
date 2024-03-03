@@ -67,38 +67,33 @@ impl Lobby {
 
 impl InGame {
     pub fn new_prompt(&mut self) {
-        let mut prompt = GLOBAL.get().unwrap().random_prompt();
+        self.prompt = loop {
+            let new_prompt = GLOBAL.get().unwrap().random_prompt();
 
-        while self.prompt == prompt {
-            prompt = GLOBAL.get().unwrap().random_prompt();
-        }
+            if new_prompt != self.prompt {
+                break new_prompt;
+            }
+        };
 
-        self.prompt = prompt;
         self.prompt_uses = 0;
     }
 
     pub fn update_turn(&mut self) {
-        let mut index = self
+        let index = self
             .players
             .iter()
             .position(|player| player.uuid == self.current_turn)
             .unwrap();
 
-        let mut next_turn = self
+        let next_alive = self
             .players
-            .get(index + 1)
-            .unwrap_or_else(|| &self.players[0]);
+            .iter()
+            .cycle()
+            .skip(index + 1)
+            .find(|player| player.lives > 0)
+            .unwrap();
 
-        while next_turn.lives == 0 {
-            index += 1;
-
-            next_turn = self
-                .players
-                .get(index + 1)
-                .unwrap_or_else(|| &self.players[0]);
-        }
-
-        self.current_turn = next_turn.uuid;
+        self.current_turn = next_alive.uuid;
     }
 
     pub fn update_timer_len(&mut self) {
@@ -129,7 +124,6 @@ impl InGame {
         }
 
         self.update_turn();
-        self.update_timer_len();
         self.prompt_uses += 1;
 
         if self.prompt_uses > 1 {

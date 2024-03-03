@@ -111,7 +111,7 @@ impl ClientMessage {
             }
             ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {
-                state.client_guess(room, uuid, &word);
+                state.client_guess(room, uuid, word.to_lowercase().trim());
             }
         }
     }

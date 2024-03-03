@@ -228,7 +228,7 @@ impl AppState {
         clients.broadcast(ServerMessage::InputUpdate {
             uuid,
             input: player.input.clone(),
-        })
+        });
     }
 
     pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {
