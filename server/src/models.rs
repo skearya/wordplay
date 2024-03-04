@@ -198,7 +198,17 @@ impl AppState {
         };
 
         if lobby.ready.len() >= 2 {
-            *state = lobby.start_game();
+            let app_state = self.clone();
+            let room = room.to_owned();
+
+            *state = lobby.start_game(move |prompt, timer_len| {
+                Arc::new(
+                    tokio::task::spawn(async move {
+                        app_state.check_for_timeout(room, timer_len, prompt).await;
+                    })
+                    .abort_handle(),
+                )
+            });
 
             let GameState::InGame(game) = state else {
                 unreachable!();
@@ -216,27 +226,13 @@ impl AppState {
                             .iter()
                             .find(|client| client.uuid == player.uuid)
                             .unwrap()
-                            .clone()
-                            .username,
+                            .username
+                            .clone(),
                         input: player.input.clone(),
                         lives: player.lives,
                     })
                     .collect(),
             });
-
-            let app_state = self.clone();
-            let room = room.to_owned();
-            let timer_len = game.timer_len;
-            let current_prompt = game.prompt.clone();
-
-            game.timeout_task = Some(Arc::new(
-                tokio::task::spawn(async move {
-                    app_state
-                        .check_for_timeout(room, timer_len, current_prompt)
-                        .await;
-                })
-                .abort_handle(),
-            ));
         }
     }
 
@@ -283,23 +279,21 @@ impl AppState {
                 turn: game.current_turn,
             });
 
-            if let Some(abort_handle) = &game.timeout_task {
-                abort_handle.abort();
-            }
+            game.timeout_task.abort();
 
             let app_state = self.clone();
             let room = room.to_owned();
             let timer_len = game.timer_len;
             let current_prompt = game.prompt.clone();
 
-            game.timeout_task = Some(Arc::new(
+            game.timeout_task = Arc::new(
                 tokio::task::spawn(async move {
                     app_state
                         .check_for_timeout(room, timer_len, current_prompt)
                         .await;
                 })
                 .abort_handle(),
-            ));
+            );
         } else {
             clients.broadcast(ServerMessage::InvalidWord { uuid });
         }
@@ -315,42 +309,44 @@ impl AppState {
             tokio::time::sleep(Duration::from_secs(timer_len.into())).await;
 
             let mut lock = self.inner.lock().unwrap();
-            if let Some(Room { clients, state }) = lock.rooms.get_mut(&room) {
-                let GameState::InGame(game) = state else {
-                    return;
-                };
+            let Some(Room { clients, state }) = lock.rooms.get_mut(&room) else {
+                return;
+            };
 
-                if original_prompt == game.prompt {
-                    game.player_timed_out();
+            let GameState::InGame(game) = state else {
+                return;
+            };
 
-                    let alive_players = game.alive_players();
+            if original_prompt == game.prompt {
+                game.player_timed_out();
 
-                    if alive_players.len() == 1 {
-                        clients.broadcast(ServerMessage::GameEnded {
-                            winner: alive_players.first().unwrap().uuid,
-                        });
+                let alive_players = game.alive_players();
 
-                        *state = game.end();
-                    } else {
-                        clients.broadcast(ServerMessage::NewPrompt {
-                            timed_out: true,
-                            prompt: game.prompt.clone(),
-                            turn: game.current_turn,
-                        });
+                if alive_players.len() == 1 {
+                    clients.broadcast(ServerMessage::GameEnded {
+                        winner: alive_players.first().unwrap().uuid,
+                    });
 
-                        let app_state = self.clone();
-                        let timer_len = game.timer_len;
-                        let current_prompt = game.prompt.clone();
+                    *state = game.end();
+                } else {
+                    clients.broadcast(ServerMessage::NewPrompt {
+                        timed_out: true,
+                        prompt: game.prompt.clone(),
+                        turn: game.current_turn,
+                    });
 
-                        game.timeout_task = Some(Arc::new(
-                            tokio::task::spawn(async move {
-                                app_state
-                                    .check_for_timeout(room, timer_len, current_prompt)
-                                    .await;
-                            })
-                            .abort_handle(),
-                        ));
-                    }
+                    let app_state = self.clone();
+                    let timer_len = game.timer_len;
+                    let current_prompt = game.prompt.clone();
+
+                    game.timeout_task = Arc::new(
+                        tokio::task::spawn(async move {
+                            app_state
+                                .check_for_timeout(room, timer_len, current_prompt)
+                                .await;
+                        })
+                        .abort_handle(),
+                    );
                 }
             }
         }

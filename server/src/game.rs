@@ -13,7 +13,7 @@ pub struct Lobby {
 
 #[derive(Debug, Clone)]
 pub struct InGame {
-    pub timeout_task: Option<Arc<AbortHandle>>,
+    pub timeout_task: Arc<AbortHandle>,
     pub timer_len: u8,
     pub starting_time: Instant,
     pub prompt: String,
@@ -46,7 +46,12 @@ impl Default for GameState {
 }
 
 impl Lobby {
-    pub fn start_game(&self) -> GameState {
+    pub fn start_game<F>(&self, timeout_task_handle: F) -> GameState
+    where
+        F: FnOnce(String, u8) -> Arc<AbortHandle>,
+    {
+        let timer_len = thread_rng().gen_range(10..=30);
+        let prompt = GLOBAL.get().unwrap().random_prompt();
         let mut players: Vec<Player> = self
             .ready
             .iter()
@@ -56,10 +61,10 @@ impl Lobby {
         players.shuffle(&mut thread_rng());
 
         GameState::InGame(InGame {
-            timeout_task: None,
-            timer_len: thread_rng().gen_range(10..=30),
+            timeout_task: timeout_task_handle(prompt.clone(), timer_len),
+            timer_len,
             starting_time: Instant::now(),
-            prompt: GLOBAL.get().unwrap().random_prompt(),
+            prompt,
             prompt_uses: 0,
             current_turn: players[0].uuid,
             players,
