@@ -38,6 +38,7 @@ pub enum ServerMessage {
     },
     ReadyPlayers {
         players: Vec<PlayerInfo>,
+        countdown: bool,
     },
     GameStarted {
         prompt: String,

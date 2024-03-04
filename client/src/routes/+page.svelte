@@ -9,6 +9,9 @@
 	let gameInputNode: HTMLInputElement;
 	let gameInput = writable('');
 
+	let countdownId: number;
+	let timeLeft: number | undefined = undefined;
+
 	let state: AppState = {
 		type: 'connecting'
 	};
@@ -69,6 +72,19 @@
 				}
 			)
 			.with([{ type: 'lobby' }, { type: 'readyPlayers' }], ([state, message]) => {
+				if (message.countdown) {
+					timeLeft = 10;
+
+					clearInterval(countdownId);
+					countdownId = setInterval(() => {
+						timeLeft! -= 1;
+
+						if (timeLeft == 0) {
+							clearInterval(countdownId);
+						}
+					}, 1000);
+				}
+
 				return {
 					...state,
 					readyPlayers: message.players
@@ -107,6 +123,7 @@
 			})
 			.with([{ type: 'game' }, { type: 'gameEnded' }], ([state, message]) => {
 				chatInput = '';
+				timeLeft = undefined;
 				winner = state.players.find((player) => player.uuid === message.winner)!.username;
 
 				return {
@@ -165,6 +182,9 @@
 				</h1>
 			{/each}
 		</div>
+		{#if timeLeft !== undefined}
+			<h1 class="text-red-300">starting in {timeLeft} !!</h1>
+		{/if}
 		<ul class="list-item">
 			{#each state.chatMessages as message}
 				<li>{message}</li>

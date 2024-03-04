@@ -50,6 +50,7 @@ export type ServerMessage =
 	| {
 			type: 'readyPlayers';
 			players: Array<PlayerInfo>;
+			countdown: boolean;
 	  }
 	| {
 			type: 'gameStarted';

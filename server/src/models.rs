@@ -158,7 +158,46 @@ impl AppState {
 
         lobby.ready.insert(client);
 
-        if lobby.ready.len() >= 2 && clients.len() == lobby.ready.len() {
+        if lobby.ready.len() >= 2 {
+            if let Some(start_handle) = &lobby.start_handle {
+                start_handle.abort();
+            }
+
+            let app_state = self.clone();
+            let room = room.to_owned();
+
+            lobby.start_handle = Some(Arc::new(
+                tokio::task::spawn(async move {
+                    app_state.start_when_ready(room).await;
+                })
+                .abort_handle(),
+            ));
+        }
+
+        clients.broadcast(ServerMessage::ReadyPlayers {
+            players: lobby
+                .ready
+                .iter()
+                .map(|client| PlayerInfo {
+                    uuid: client.0,
+                    username: client.1.clone(),
+                })
+                .collect(),
+            countdown: lobby.ready.len() >= 2,
+        });
+    }
+
+    pub async fn start_when_ready(&self, room: String) {
+        tokio::time::sleep(Duration::from_secs(10)).await;
+
+        let mut lock = self.inner.lock().unwrap();
+        let Room { clients, state } = lock.rooms.get_mut(&room).unwrap();
+
+        let GameState::Lobby(lobby) = state else {
+            return;
+        };
+
+        if lobby.ready.len() >= 2 {
             *state = lobby.start_game();
 
             let GameState::InGame(game) = state else {
@@ -190,22 +229,14 @@ impl AppState {
             let timer_len = game.timer_len;
             let current_prompt = game.prompt.clone();
 
-            tokio::task::spawn(async move {
-                app_state
-                    .check_for_timeout(room, timer_len, current_prompt)
-                    .await;
-            });
-        } else {
-            clients.broadcast(ServerMessage::ReadyPlayers {
-                players: lobby
-                    .ready
-                    .iter()
-                    .map(|client| PlayerInfo {
-                        uuid: client.0,
-                        username: client.1.clone(),
-                    })
-                    .collect(),
-            });
+            game.timeout_task = Some(Arc::new(
+                tokio::task::spawn(async move {
+                    app_state
+                        .check_for_timeout(room, timer_len, current_prompt)
+                        .await;
+                })
+                .abort_handle(),
+            ));
         }
     }
 
@@ -261,11 +292,14 @@ impl AppState {
             let timer_len = game.timer_len;
             let current_prompt = game.prompt.clone();
 
-            tokio::task::spawn(async move {
-                app_state
-                    .check_for_timeout(room, timer_len, current_prompt)
-                    .await;
-            });
+            game.timeout_task = Some(Arc::new(
+                tokio::task::spawn(async move {
+                    app_state
+                        .check_for_timeout(room, timer_len, current_prompt)
+                        .await;
+                })
+                .abort_handle(),
+            ));
         } else {
             clients.broadcast(ServerMessage::InvalidWord { uuid });
         }
