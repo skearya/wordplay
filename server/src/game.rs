@@ -108,9 +108,7 @@ impl InGame {
             .timer_len
             .saturating_sub(Instant::now().duration_since(self.starting_time).as_secs() as u8);
 
-        if self.timer_len < 6 {
-            self.timer_len = 6;
-        }
+        self.timer_len = self.timer_len.max(6);
     }
 
     pub fn progress(&mut self) {

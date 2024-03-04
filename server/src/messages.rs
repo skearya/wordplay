@@ -56,7 +56,6 @@ pub enum ServerMessage {
         timed_out: bool,
         prompt: String,
         turn: Uuid,
-        // TODO: probably just send usernames too?
     },
     GameEnded {
         winner: Uuid,

@@ -1,5 +1,7 @@
 # current todo:
 
+-   extra lives for using 24 distinct letters
+
 -   room owner able to start game early
 
 -   handle disconnections
