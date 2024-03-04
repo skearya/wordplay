@@ -73,6 +73,29 @@ impl Lobby {
 }
 
 impl InGame {
+    pub fn check_for_extra_life(&mut self, guess: &str) -> bool {
+        let current_player = self
+            .players
+            .iter_mut()
+            .find(|player| player.uuid == self.current_turn)
+            .unwrap();
+
+        current_player
+            .used_letters
+            .extend(guess.chars().filter(|char| char.is_alphabetic()));
+
+        let extra_life = ('a'..='z')
+            .filter(|char| !['x', 'z'].contains(char))
+            .all(|char| current_player.used_letters.contains(&char));
+
+        if extra_life {
+            current_player.lives += 1;
+            current_player.used_letters.clear();
+        }
+
+        extra_life
+    }
+
     pub fn new_prompt(&mut self) {
         self.prompt = loop {
             let new_prompt = GLOBAL.get().unwrap().random_prompt();
@@ -109,12 +132,6 @@ impl InGame {
             .saturating_sub(Instant::now().duration_since(self.starting_time).as_secs() as u8);
 
         self.timer_len = self.timer_len.max(6);
-    }
-
-    pub fn progress(&mut self) {
-        self.new_prompt();
-        self.update_turn();
-        self.update_timer_len();
     }
 
     pub fn player_timed_out(&mut self) {

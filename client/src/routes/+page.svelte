@@ -5,6 +5,8 @@
 	import { writable } from 'svelte/store';
 	import { match } from 'ts-pattern';
 
+	const alphabet = [...'abcdefghijklmnopqrstuvwy'];
+
 	let chatInput: string = '';
 	let gameInputNode: HTMLInputElement;
 	let gameInput = writable('');
@@ -45,12 +47,15 @@
 				([_state, { state: roomState, uuid }]) => {
 					// for reconnecting prob wanna do this
 					// gameInput = roomState.players.find((player) => player.uuid = uuid)!.input
+					// same for usedLetters
+					// this data wont be found if the player joins a game and they weren't in it
 
 					return {
 						type: 'game',
 						players: roomState.players,
 						currentTurn: roomState.players.find((player) => player.uuid == roomState.turn)!,
 						prompt: roomState.prompt,
+						usedLetters: new Set(),
 						uuid,
 						chatMessages: []
 					};
@@ -98,6 +103,7 @@
 					players: message.players,
 					prompt: message.prompt,
 					currentTurn: message.players.find((player) => player.uuid == message.turn)!,
+					usedLetters: new Set(),
 					chatMessages: state.chatMessages,
 					uuid: state.uuid
 				};
@@ -111,9 +117,14 @@
 			})
 			// .with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {})
 			.with([{ type: 'game' }, { type: 'newPrompt' }], ([state, message]) => {
-				if (message.timedOut) {
-					state.players.find((player) => player.uuid === state.currentTurn.uuid)!.lives -= 1;
+				let oldTurn = state.players.find((player) => player.uuid === state.currentTurn.uuid)!;
+				oldTurn.lives += message.lifeChange;
+
+				if (oldTurn.uuid === state.uuid && message.lifeChange >= 0) {
+					state.usedLetters = new Set([...state.usedLetters, ...$gameInput]);
 				}
+
+				$gameInput = '';
 
 				return {
 					...state,
@@ -162,6 +173,10 @@
 			gameInputNode.focus();
 		});
 	}
+
+	$: unusedLetters = match(state)
+		.with({ type: 'game' }, (state) => alphabet.filter((letter) => !state.usedLetters.has(letter)))
+		.otherwise(() => []);
 </script>
 
 <section>
@@ -230,6 +245,12 @@
 				</div>
 			{/each}
 		</div>
+		<div class="flex gap-1">
+			<h1>unused letters</h1>
+			{#each unusedLetters as letter}
+				<h1>{letter}</h1>
+			{/each}
+		</div>
 		<input
 			class="border bg-green-200 disabled:bg-red-400"
 			type="text"
@@ -242,8 +263,6 @@
 						type: 'guess',
 						word: $gameInput
 					});
-
-					$gameInput = '';
 				}
 			}}
 		/>

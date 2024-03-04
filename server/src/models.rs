@@ -271,10 +271,13 @@ impl AppState {
         }
 
         if guess.contains(&game.prompt) && GLOBAL.get().unwrap().is_valid(guess) {
-            game.progress();
+            let extra_life = game.check_for_extra_life(guess);
+            game.new_prompt();
+            game.update_turn();
+            game.update_timer_len();
 
             clients.broadcast(ServerMessage::NewPrompt {
-                timed_out: false,
+                life_change: if extra_life { 1 } else { 0 },
                 prompt: game.prompt.clone(),
                 turn: game.current_turn,
             });
@@ -320,17 +323,15 @@ impl AppState {
             if original_prompt == game.prompt {
                 game.player_timed_out();
 
-                let alive_players = game.alive_players();
-
-                if alive_players.len() == 1 {
+                if game.alive_players().len() == 1 {
                     clients.broadcast(ServerMessage::GameEnded {
-                        winner: alive_players.first().unwrap().uuid,
+                        winner: game.alive_players().first().unwrap().uuid,
                     });
 
                     *state = game.end();
                 } else {
                     clients.broadcast(ServerMessage::NewPrompt {
-                        timed_out: true,
+                        life_change: -1,
                         prompt: game.prompt.clone(),
                         turn: game.current_turn,
                     });

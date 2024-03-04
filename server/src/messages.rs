@@ -53,7 +53,7 @@ pub enum ServerMessage {
         uuid: Uuid,
     },
     NewPrompt {
-        timed_out: bool,
+        life_change: i8,
         prompt: String,
         turn: Uuid,
     },
@@ -111,6 +111,7 @@ impl ClientMessage {
             }
             ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {
+                // maybe also get rid of non letters
                 state.client_guess(room, uuid, word.to_lowercase().trim());
             }
         }

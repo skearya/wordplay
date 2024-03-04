@@ -20,6 +20,7 @@ export type AppState =
 			players: Array<PlayerData>;
 			currentTurn: PlayerData;
 			prompt: string;
+			usedLetters: Set<string>;
 
 			uuid: string;
 			chatMessages: Array<string>;
@@ -69,7 +70,7 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'newPrompt';
-			timedOut: boolean;
+			lifeChange: number;
 			prompt: string;
 			turn: string;
 	  }
