@@ -124,8 +124,6 @@
 					state.usedLetters = new Set([...state.usedLetters, ...$gameInput]);
 				}
 
-				$gameInput = '';
-
 				return {
 					...state,
 					prompt: message.prompt,
