@@ -206,6 +206,7 @@
 		<input
 			class="border"
 			type="text"
+			placeholder="chat"
 			bind:value={chatInput}
 			on:keydown={(event) => {
 				if (event.key == 'Enter') {
@@ -252,6 +253,7 @@
 		<input
 			class="border bg-green-200 disabled:bg-red-400"
 			type="text"
+			placeholder="answer"
 			disabled={!hasTurn}
 			bind:this={gameInputNode}
 			bind:value={$gameInput}
@@ -272,6 +274,7 @@
 		<input
 			class="border"
 			type="text"
+			placeholder="chat"
 			bind:value={chatInput}
 			on:keydown={(event) => {
 				if (event.key == 'Enter') {
