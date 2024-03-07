@@ -7,8 +7,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct Lobby {
-    // pub ready: HashSet<Uuid>,
-    pub ready: HashSet<(Uuid, String)>,
+    pub ready: HashSet<Uuid>,
     pub start_handle: Option<Arc<AbortHandle>>,
 }
 
@@ -19,7 +18,6 @@ pub struct InGame {
     pub starting_time: Instant,
     pub prompt: String,
     pub prompt_uses: u8,
-    // has to be vec cause sorting
     pub players: Vec<Player>,
     pub current_turn: Uuid,
 }
@@ -55,11 +53,7 @@ impl Lobby {
     {
         let timer_len = thread_rng().gen_range(10..=30);
         let prompt = GLOBAL.get().unwrap().random_prompt();
-        let mut players: Vec<Player> = self
-            .ready
-            .iter()
-            .map(|player| Player::new(player.0))
-            .collect();
+        let mut players: Vec<Player> = self.ready.iter().map(|uuid| Player::new(*uuid)).collect();
 
         players.shuffle(&mut thread_rng());
 

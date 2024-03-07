@@ -47,6 +47,11 @@ pub enum ServerMessage {
         turn: Uuid,
         players: Vec<PlayerData>,
     },
+    //send chat messages for join/leave
+    PlayerUpdate {
+        uuid: Uuid,
+        state: PlayerUpdate,
+    },
     InputUpdate {
         uuid: Uuid,
         input: String,
@@ -96,11 +101,22 @@ pub struct PlayerData {
     pub lives: u8,
 }
 
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum PlayerUpdate {
+    Disconnected,
+    Reconnected { username: String },
+}
+
 impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, username: &str, uuid: Uuid) {
         match self {
             ClientMessage::Ready => {
-                state.client_ready(room, (uuid, username.to_owned()));
+                state.client_ready(room, uuid);
             }
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {

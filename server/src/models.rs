@@ -1,7 +1,7 @@
 use crate::{
     game::GameState,
     global::GLOBAL,
-    messages::{PlayerData, PlayerInfo, RoomState, ServerMessage},
+    messages::{PlayerData, PlayerInfo, PlayerUpdate, RoomState, ServerMessage},
     Params,
 };
 
@@ -57,6 +57,20 @@ impl AppState {
         clients.broadcast(message);
     }
 
+    pub fn get_previous_uuid(&self, room: String, rejoin_token: Uuid) -> Option<Uuid> {
+        let mut lock = self.inner.lock().unwrap();
+        let Room { state, .. } = lock.rooms.entry(room).or_default();
+
+        if let GameState::InGame(game) = state {
+            game.players
+                .iter()
+                .find(|player| rejoin_token == player.rejoin_token)
+                .map(|player| player.uuid)
+        } else {
+            None
+        }
+    }
+
     pub fn add_client(
         &self,
         room: String,
@@ -64,54 +78,42 @@ impl AppState {
         tx: UnboundedSender<ServerMessage>,
     ) -> (Uuid, String) {
         let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state } = lock.rooms.entry(room).or_default();
+        let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
 
-        let prev_uuid = params
+        let uuid = match params
             .rejoin_token
-            .and_then(|token| {
-                if let GameState::InGame(game) = state {
-                    game.players
-                        .iter()
-                        .find(|player| token == player.rejoin_token)
-                } else {
-                    None
-                }
-            })
-            .map(|player| player.uuid);
-
-        let (uuid, client) = match prev_uuid {
+            .and_then(|rejoin_token| self.get_previous_uuid(room, rejoin_token))
+        {
             Some(uuid) => {
-                clients.entry(uuid).and_modify(|client| {
-                    client.tx = tx;
-                    client.disconnected = false;
-                });
-
-                clients.get_key_value(&uuid).unwrap()
-            }
-            None => {
-                let uuid = Uuid::new_v4();
-
-                clients.insert(
+                clients.broadcast(ServerMessage::PlayerUpdate {
                     uuid,
-                    Client {
-                        tx,
-                        disconnected: false,
+                    state: PlayerUpdate::Reconnected {
                         username: params.username.clone(),
                     },
-                );
+                });
 
-                clients.get_key_value(&uuid).unwrap()
+                uuid
             }
+            None => Uuid::new_v4(),
         };
+
+        clients.insert(
+            uuid,
+            Client {
+                tx,
+                disconnected: false,
+                username: params.username,
+            },
+        );
 
         let room_state = match state {
             GameState::Lobby(lobby) => RoomState::Lobby {
                 ready_players: lobby
                     .ready
                     .iter()
-                    .map(|(uuid, username)| PlayerInfo {
+                    .map(|uuid| PlayerInfo {
                         uuid: *uuid,
-                        username: username.clone(),
+                        username: clients[uuid].username.clone(),
                     })
                     .collect(),
             },
@@ -128,61 +130,54 @@ impl AppState {
                         lives: player.lives,
                     })
                     .collect(),
-                used_letters: prev_uuid.map(|uuid| {
-                    game.players
-                        .iter()
-                        .find(|player| uuid == player.uuid)
-                        .unwrap()
-                        .used_letters
-                        .clone()
-                }),
+                used_letters: game
+                    .players
+                    .iter()
+                    .find(|player| uuid == player.uuid)
+                    .map(|player| player.used_letters.clone()),
             },
         };
 
-        client
+        clients[&uuid]
             .tx
             .send(ServerMessage::RoomInfo {
-                uuid: *uuid,
+                uuid,
                 state: room_state,
             })
             .ok();
 
-        clients.broadcast(ServerMessage::ServerMessage {
-            content: format!("{} has joined", params.username),
-        });
-
-        (*uuid, client.username.clone())
+        (uuid, clients[&uuid].username.clone())
     }
 
     pub fn remove_client(&self, room: &str, uuid: Uuid) {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
 
-        let client = clients.get_mut(&uuid).unwrap();
-        client.disconnected = true;
+        if let Some(client) = clients.get_mut(&uuid) {
+            client.disconnected = true;
+            let username = client.username.clone();
 
-        let username = client.username.clone();
+            if clients
+                .values()
+                .filter(|client| !client.disconnected)
+                .count()
+                == 0
+            {
+                lock.rooms.remove(room);
+            } else {
+                if let GameState::Lobby(lobby) = state {
+                    lobby.ready.remove(&uuid);
+                    clients.remove(&uuid);
+                }
 
-        if clients
-            .values()
-            .filter(|client| !client.disconnected)
-            .count()
-            == 0
-        {
-            lock.rooms.remove(room);
-        } else {
-            if let GameState::Lobby(lobby) = state {
-                lobby.ready.remove(&(uuid, username.clone()));
-                clients.remove(&uuid);
+                clients.broadcast(ServerMessage::ServerMessage {
+                    content: format!("{} has left", username),
+                });
             }
-
-            clients.broadcast(ServerMessage::ServerMessage {
-                content: format!("{} has left", username),
-            });
-        }
+        };
     }
 
-    pub fn client_ready(&self, room: &str, client: (Uuid, String)) {
+    pub fn client_ready(&self, room: &str, uuid: Uuid) {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
 
@@ -190,7 +185,7 @@ impl AppState {
             return;
         };
 
-        lobby.ready.insert(client);
+        lobby.ready.insert(uuid);
 
         if lobby.ready.len() >= 2 {
             if let Some(start_handle) = &lobby.start_handle {
@@ -212,9 +207,9 @@ impl AppState {
             players: lobby
                 .ready
                 .iter()
-                .map(|(uuid, username)| PlayerInfo {
+                .map(|uuid| PlayerInfo {
                     uuid: *uuid,
-                    username: username.clone(),
+                    username: clients[uuid].username.clone(),
                 })
                 .collect(),
             countdown: lobby.ready.len() >= 2,
