@@ -39,7 +39,9 @@ pub enum ServerMessage {
     },
     ReadyPlayers {
         players: Vec<PlayerInfo>,
-        countdown: bool,
+    },
+    StartingCountdown {
+        state: CountdownState,
     },
     GameStarted {
         rejoin_token: Uuid,
@@ -78,6 +80,7 @@ pub enum ServerMessage {
 pub enum RoomState {
     Lobby {
         ready_players: Vec<PlayerInfo>,
+        starting_countdown: Option<u8>,
     },
     InGame {
         prompt: String,
@@ -112,6 +115,17 @@ pub enum PlayerUpdate {
     Reconnected { username: String },
 }
 
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum CountdownState {
+    InProgress(u8),
+    Stopped,
+}
+
 impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
         match self {
@@ -120,7 +134,7 @@ impl ClientMessage {
             }
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
-                state.client_chat_message(room, uuid, content)
+                state.client_chat_message(room, uuid, content);
             }
             ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {

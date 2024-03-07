@@ -1,7 +1,7 @@
 use crate::{
-    game::GameState,
+    game::{Countdown, GameState},
     global::GLOBAL,
-    messages::{PlayerData, PlayerInfo, PlayerUpdate, RoomState, ServerMessage},
+    messages::{CountdownState, PlayerData, PlayerInfo, PlayerUpdate, RoomState, ServerMessage},
     Params,
 };
 
@@ -109,6 +109,10 @@ impl AppState {
                         username: clients[uuid].username.clone(),
                     })
                     .collect(),
+                starting_countdown: lobby
+                    .countdown
+                    .as_ref()
+                    .map(|countdown| countdown.time_left),
             },
             GameState::InGame(game) => RoomState::InGame {
                 prompt: game.prompt.clone(),
@@ -160,6 +164,17 @@ impl AppState {
                 if let GameState::Lobby(lobby) = state {
                     lobby.ready.remove(&uuid);
                     clients.remove(&uuid);
+
+                    if let Some(countdown) = &mut lobby.countdown {
+                        if lobby.ready.len() < 2 {
+                            countdown.timer_handle.abort();
+                            lobby.countdown = None;
+
+                            clients.broadcast(ServerMessage::StartingCountdown {
+                                state: CountdownState::Stopped,
+                            })
+                        }
+                    }
                 }
 
                 clients.broadcast(ServerMessage::PlayerUpdate {
@@ -191,19 +206,22 @@ impl AppState {
         lobby.ready.insert(uuid);
 
         if lobby.ready.len() >= 2 {
-            if let Some(start_handle) = &lobby.start_handle {
-                start_handle.abort();
+            if let Some(countdown) = &lobby.countdown {
+                countdown.timer_handle.abort();
             }
 
             let app_state = self.clone();
             let room = room.to_owned();
 
-            lobby.start_handle = Some(Arc::new(
-                tokio::task::spawn(async move {
-                    app_state.start_when_ready(room).await;
-                })
-                .abort_handle(),
-            ));
+            lobby.countdown = Some(Countdown {
+                timer_handle: Arc::new(
+                    tokio::task::spawn(async move {
+                        app_state.start_when_ready(room).await;
+                    })
+                    .abort_handle(),
+                ),
+                time_left: 10,
+            });
         }
 
         clients.broadcast(ServerMessage::ReadyPlayers {
@@ -215,63 +233,78 @@ impl AppState {
                     username: clients[uuid].username.clone(),
                 })
                 .collect(),
-            countdown: lobby.ready.len() >= 2,
         });
     }
 
     pub async fn start_when_ready(&self, room: String) {
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        for _ in 0..10 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
 
-        let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state } = lock.rooms.get_mut(&room).unwrap();
+            let mut lock = self.inner.lock().unwrap();
+            let Room { clients, state } = lock.rooms.get_mut(&room).unwrap();
 
-        let GameState::Lobby(lobby) = state else {
-            return;
-        };
-
-        if lobby.ready.len() >= 2 {
-            let app_state = self.clone();
-            let room = room.to_owned();
-
-            *state = lobby.start_game(move |prompt, timer_len| {
-                Arc::new(
-                    tokio::task::spawn(async move {
-                        app_state.check_for_timeout(room, timer_len, prompt).await;
-                    })
-                    .abort_handle(),
-                )
-            });
-
-            let GameState::InGame(game) = state else {
-                unreachable!();
+            let GameState::Lobby(lobby) = state else {
+                return;
             };
 
-            let players: Vec<PlayerData> = game
-                .players
-                .iter()
-                .map(|player| PlayerData {
-                    uuid: player.uuid,
-                    username: clients[&player.uuid].username.clone(),
-                    input: player.input.clone(),
-                    lives: player.lives,
-                })
-                .collect();
+            let Some(countdown) = &mut lobby.countdown else {
+                return;
+            };
 
-            for (uuid, client) in clients {
-                client
-                    .tx
-                    .send(ServerMessage::GameStarted {
-                        rejoin_token: game
-                            .players
-                            .iter()
-                            .find(|player| *uuid == player.uuid)
-                            .unwrap()
-                            .rejoin_token,
-                        prompt: game.prompt.clone(),
-                        turn: game.current_turn,
-                        players: players.clone(),
+            countdown.time_left -= 1;
+
+            if countdown.time_left == 0 {
+                if lobby.ready.len() >= 2 {
+                    return;
+                }
+
+                let app_state = self.clone();
+                let room = room.clone();
+
+                *state = lobby.start_game(move |prompt, timer_len| {
+                    Arc::new(
+                        tokio::task::spawn(async move {
+                            app_state.check_for_timeout(room, timer_len, prompt).await;
+                        })
+                        .abort_handle(),
+                    )
+                });
+
+                let GameState::InGame(game) = state else {
+                    unreachable!();
+                };
+
+                let players: Vec<PlayerData> = game
+                    .players
+                    .iter()
+                    .map(|player| PlayerData {
+                        uuid: player.uuid,
+                        username: clients[&player.uuid].username.clone(),
+                        input: player.input.clone(),
+                        lives: player.lives,
                     })
-                    .ok();
+                    .collect();
+
+                for (uuid, client) in clients {
+                    client
+                        .tx
+                        .send(ServerMessage::GameStarted {
+                            rejoin_token: game
+                                .players
+                                .iter()
+                                .find(|player| *uuid == player.uuid)
+                                .unwrap()
+                                .rejoin_token,
+                            prompt: game.prompt.clone(),
+                            turn: game.current_turn,
+                            players: players.clone(),
+                        })
+                        .ok();
+                }
+            } else {
+                clients.broadcast(ServerMessage::StartingCountdown {
+                    state: CountdownState::InProgress(countdown.time_left),
+                });
             }
         }
     }
@@ -315,7 +348,7 @@ impl AppState {
             game.update_timer_len();
 
             clients.broadcast(ServerMessage::NewPrompt {
-                life_change: if extra_life { 1 } else { 0 },
+                life_change: extra_life.into(),
                 prompt: game.prompt.clone(),
                 turn: game.current_turn,
             });

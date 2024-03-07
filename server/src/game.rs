@@ -8,7 +8,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct Lobby {
     pub ready: HashSet<Uuid>,
-    pub start_handle: Option<Arc<AbortHandle>>,
+    pub countdown: Option<Countdown>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Countdown {
+    pub time_left: u8,
+    pub timer_handle: Arc<AbortHandle>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,8 +46,8 @@ pub enum GameState {
 impl Default for GameState {
     fn default() -> Self {
         GameState::Lobby(Lobby {
-            start_handle: None,
             ready: HashSet::new(),
+            countdown: None,
         })
     }
 }
@@ -159,8 +165,8 @@ impl InGame {
 
     pub fn end(&self) -> GameState {
         GameState::Lobby(Lobby {
-            start_handle: None,
             ready: HashSet::new(),
+            countdown: None,
         })
     }
 }
