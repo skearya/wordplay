@@ -1,8 +1,12 @@
 # current todo:
 
+-   clean up frontend state
+
 -   send current countdown to new clients joining, also input
 
 -   extra lives for using 24 distinct letters
+
+-   use unwrap less   
 
 -   room owner able to start game early
 

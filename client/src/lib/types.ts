@@ -55,6 +55,7 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'gameStarted';
+			rejoinToken: string,
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
@@ -89,6 +90,7 @@ type RoomState =
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
+			usedLetters?: Array<string>
 	  };
 
 export type PlayerInfo = {

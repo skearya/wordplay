@@ -23,8 +23,14 @@
 	const room = window.prompt('room', 'one');
 	const username = window.prompt('username', 'skeary');
 
-	const params = new URLSearchParams({ username: username! }).toString();
-	const socket = new WebSocket(`${PUBLIC_SERVER}/rooms/${room}?${params}`);
+	let params = new URLSearchParams({ username: username! });
+
+	let rejoinToken = localStorage.getItem(room!);
+	if (rejoinToken !== null) {
+		params.append('rejoinToken', rejoinToken);
+	}
+
+	const socket = new WebSocket(`${PUBLIC_SERVER}/rooms/${room}?${params.toString()}`);
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
@@ -45,17 +51,18 @@
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'inGame' } }],
 				([_state, { state: roomState, uuid }]) => {
-					// for reconnecting prob wanna do this
-					// gameInput = roomState.players.find((player) => player.uuid = uuid)!.input
-					// same for usedLetters
-					// this data wont be found if the player joins a game and they weren't in it
+					const playerData = roomState.players.find((player) => uuid === player.uuid);
+
+					if (playerData !== undefined) {
+						$gameInput = playerData.input;
+					}
 
 					return {
 						type: 'game',
 						players: roomState.players,
 						currentTurn: roomState.players.find((player) => player.uuid == roomState.turn)!,
 						prompt: roomState.prompt,
-						usedLetters: new Set(),
+						usedLetters: new Set(roomState.usedLetters || []),
 						uuid,
 						chatMessages: []
 					};
@@ -97,6 +104,8 @@
 			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
 				$gameInput = '';
+
+				localStorage.setItem(room!, message.rejoinToken);
 
 				return {
 					type: 'game',

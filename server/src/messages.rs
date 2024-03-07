@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::models::AppState;
 
 use serde::{Deserialize, Serialize};
@@ -27,7 +29,6 @@ pub enum ServerMessage {
     RoomInfo {
         uuid: Uuid,
         state: RoomState,
-        // rejoin_token
     },
     ServerMessage {
         content: String,
@@ -41,6 +42,7 @@ pub enum ServerMessage {
         countdown: bool,
     },
     GameStarted {
+        rejoin_token: Uuid,
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
@@ -76,6 +78,7 @@ pub enum RoomState {
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
+        used_letters: Option<HashSet<char>>,
     },
 }
 

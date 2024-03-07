@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct Lobby {
+    // pub ready: HashSet<Uuid>,
     pub ready: HashSet<(Uuid, String)>,
     pub start_handle: Option<Arc<AbortHandle>>,
 }
@@ -18,6 +19,7 @@ pub struct InGame {
     pub starting_time: Instant,
     pub prompt: String,
     pub prompt_uses: u8,
+    // has to be vec cause sorting
     pub players: Vec<Player>,
     pub current_turn: Uuid,
 }
@@ -25,6 +27,7 @@ pub struct InGame {
 #[derive(Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
+    pub rejoin_token: Uuid,
     pub input: String,
     pub lives: u8,
     pub used_letters: HashSet<char>,
@@ -172,6 +175,7 @@ impl Player {
     pub fn new(uuid: Uuid) -> Self {
         Self {
             uuid,
+            rejoin_token: Uuid::new_v4(),
             input: String::new(),
             lives: 2,
             used_letters: HashSet::new(),
