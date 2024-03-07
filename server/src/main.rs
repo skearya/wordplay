@@ -67,7 +67,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<ServerMessage>();
 
-    let (uuid, username) = state.add_client(room.clone(), params, proxy);
+    let uuid = state.add_client(room.clone(), params, proxy);
 
     let sending_task = tokio::task::spawn(async move {
         while let Some(msg) = inbox.recv().await {
@@ -86,7 +86,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
         if let Ok(msg) = msg {
             if let Message::Text(text) = msg {
                 if let Ok(msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    msg.handle(&state, &room, &username, uuid);
+                    msg.handle(&state, &room, uuid);
                 } else {
                     eprintln!("couldnt parse message: {text}");
                 }

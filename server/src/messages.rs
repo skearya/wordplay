@@ -47,7 +47,7 @@ pub enum ServerMessage {
         turn: Uuid,
         players: Vec<PlayerData>,
     },
-    //send chat messages for join/leave
+    // send chat messages for join/leave
     PlayerUpdate {
         uuid: Uuid,
         state: PlayerUpdate,
@@ -113,20 +113,14 @@ pub enum PlayerUpdate {
 }
 
 impl ClientMessage {
-    pub fn handle(self, state: &AppState, room: &str, username: &str, uuid: Uuid) {
+    pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
         match self {
             ClientMessage::Ready => {
                 state.client_ready(room, uuid);
             }
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
-                state.broadcast(
-                    room,
-                    ServerMessage::ChatMessage {
-                        author: username.to_owned(),
-                        content,
-                    },
-                );
+                state.client_chat_message(room, uuid, content)
             }
             ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {

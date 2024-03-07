@@ -50,13 +50,6 @@ impl AppState {
         lock.rooms.values().map(|room| room.clients.len()).sum()
     }
 
-    pub fn broadcast(&self, room: &str, message: ServerMessage) {
-        let lock = self.inner.lock().unwrap();
-        let Room { clients, .. } = lock.rooms.get(room).unwrap();
-
-        clients.broadcast(message);
-    }
-
     pub fn get_previous_uuid(&self, room: String, rejoin_token: Uuid) -> Option<Uuid> {
         let mut lock = self.inner.lock().unwrap();
         let Room { state, .. } = lock.rooms.entry(room).or_default();
@@ -76,7 +69,7 @@ impl AppState {
         room: String,
         params: Params,
         tx: UnboundedSender<ServerMessage>,
-    ) -> (Uuid, String) {
+    ) -> Uuid {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
 
@@ -146,7 +139,7 @@ impl AppState {
             })
             .ok();
 
-        (uuid, clients[&uuid].username.clone())
+        uuid
     }
 
     pub fn remove_client(&self, room: &str, uuid: Uuid) {
@@ -155,7 +148,6 @@ impl AppState {
 
         if let Some(client) = clients.get_mut(&uuid) {
             client.disconnected = true;
-            let username = client.username.clone();
 
             if clients
                 .values()
@@ -170,11 +162,22 @@ impl AppState {
                     clients.remove(&uuid);
                 }
 
-                clients.broadcast(ServerMessage::ServerMessage {
-                    content: format!("{} has left", username),
+                clients.broadcast(ServerMessage::PlayerUpdate {
+                    uuid,
+                    state: PlayerUpdate::Disconnected,
                 });
             }
         };
+    }
+
+    pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) {
+        let lock = self.inner.lock().unwrap();
+        let Room { clients, .. } = lock.rooms.get(room).unwrap();
+
+        clients.broadcast(ServerMessage::ChatMessage {
+            author: clients[&uuid].username.clone(),
+            content,
+        });
     }
 
     pub fn client_ready(&self, room: &str, uuid: Uuid) {
