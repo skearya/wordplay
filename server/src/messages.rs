@@ -122,7 +122,7 @@ pub enum PlayerUpdate {
     rename_all_fields = "camelCase"
 )]
 pub enum CountdownState {
-    InProgress(u8),
+    InProgress { time_left: u8 },
     Stopped,
 }
 

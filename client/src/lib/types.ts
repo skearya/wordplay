@@ -10,20 +10,18 @@ export type AppState =
 	  }
 	| {
 			type: 'lobby';
-			readyPlayers: Array<PlayerInfo>;
-
 			uuid: string;
 			chatMessages: Array<string>;
+			readyPlayers: Array<PlayerInfo>;
 	  }
 	| {
 			type: 'game';
-			players: Array<PlayerData>;
-			currentTurn: PlayerData;
-			prompt: string;
-			usedLetters: Set<string>;
-
 			uuid: string;
 			chatMessages: Array<string>;
+			players: Array<PlayerData>;
+			currentTurn: string;
+			prompt: string;
+			usedLetters: Set<string>;
 	  };
 
 export type ClientMessage =
@@ -55,7 +53,7 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'gameStarted';
-			rejoinToken: string,
+			rejoinToken: string;
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
@@ -90,7 +88,7 @@ type RoomState =
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
-			usedLetters?: Array<string>
+			usedLetters?: Array<string>;
 	  };
 
 export type PlayerInfo = {

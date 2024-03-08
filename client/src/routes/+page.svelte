@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_SERVER } from '$env/static/public';
+	import { gameInfo, gameState } from '$lib/state';
 	import { inGameOrLobby, type AppState, type ServerMessage, type ClientMessage } from '$lib/types';
 	import { tick } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -13,10 +14,6 @@
 
 	let countdownId: number;
 	let timeLeft: number | undefined = undefined;
-
-	let state: AppState = {
-		type: 'connecting'
-	};
 
 	let winner: string;
 
@@ -35,23 +32,23 @@
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
 
-		state = match([state, message])
+		$gameState = match([$gameState, message])
 			.returnType<AppState>()
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'lobby' } }],
-				([_state, { state: roomState, uuid }]) => {
+				([_state, message]) => {
 					return {
 						type: 'lobby',
-						uuid: uuid,
-						readyPlayers: roomState.readyPlayers,
+						uuid: message.uuid,
+						readyPlayers: message.state.readyPlayers,
 						chatMessages: []
 					};
 				}
 			)
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'inGame' } }],
-				([_state, { state: roomState, uuid }]) => {
-					const playerData = roomState.players.find((player) => uuid === player.uuid);
+				([_state, message]) => {
+					const playerData = message.state.players.find((player) => message.uuid === player.uuid);
 
 					if (playerData !== undefined) {
 						$gameInput = playerData.input;
@@ -59,11 +56,11 @@
 
 					return {
 						type: 'game',
-						players: roomState.players,
-						currentTurn: roomState.players.find((player) => player.uuid == roomState.turn)!,
-						prompt: roomState.prompt,
-						usedLetters: new Set(roomState.usedLetters || []),
-						uuid,
+						players: message.state.players,
+						currentTurn: message.state.turn,
+						prompt: message.state.prompt,
+						usedLetters: new Set(message.state.usedLetters || []),
+						uuid: message.uuid,
 						chatMessages: []
 					};
 				}
@@ -104,14 +101,13 @@
 			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
 				$gameInput = '';
-
 				localStorage.setItem(room!, message.rejoinToken);
 
 				return {
 					type: 'game',
 					players: message.players,
 					prompt: message.prompt,
-					currentTurn: message.players.find((player) => player.uuid == message.turn)!,
+					currentTurn: message.turn,
 					usedLetters: new Set(),
 					chatMessages: state.chatMessages,
 					uuid: state.uuid
@@ -120,13 +116,13 @@
 			.with([{ type: 'game' }, { type: 'inputUpdate' }], ([state, message]) => {
 				state.players.find((player) => player.uuid === message.uuid)!.input = message.input;
 
-				return {
-					...state
-				};
+				return state;
 			})
-			// .with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {})
+			.with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {
+				return state;
+			})
 			.with([{ type: 'game' }, { type: 'newPrompt' }], ([state, message]) => {
-				let oldTurn = state.players.find((player) => player.uuid === state.currentTurn.uuid)!;
+				let oldTurn = state.players.find((player) => player.uuid === state.currentTurn)!;
 				oldTurn.lives += message.lifeChange;
 
 				if (oldTurn.uuid === state.uuid && message.lifeChange >= 0) {
@@ -136,7 +132,7 @@
 				return {
 					...state,
 					prompt: message.prompt,
-					currentTurn: state.players.find((player) => player.uuid == message.turn)!
+					currentTurn: message.turn
 				};
 			})
 			.with([{ type: 'game' }, { type: 'gameEnded' }], ([state, message]) => {
@@ -151,11 +147,11 @@
 					uuid: state.uuid
 				};
 			})
-			.otherwise(() => state);
+			.otherwise(() => $gameState);
 	});
 
 	socket.addEventListener('close', (event) => {
-		state = {
+		$gameState = {
 			type: 'error',
 			message: event.reason
 		};
@@ -166,11 +162,11 @@
 	}
 
 	gameInput.subscribe((input) => {
-		if (state.type === 'game') sendMessage({ type: 'input', input });
+		if ($gameState.type === 'game') sendMessage({ type: 'input', input });
 	});
 
-	$: hasTurn = match(state)
-		.with({ type: 'game' }, (state) => state.uuid === state.currentTurn.uuid)
+	$: hasTurn = match($gameState)
+		.with({ type: 'game' }, (state) => state.uuid === state.currentTurn)
 		.otherwise(() => false);
 
 	$: if (hasTurn) {
@@ -181,24 +177,24 @@
 		});
 	}
 
-	$: unusedLetters = match(state)
+	$: unusedLetters = match($gameState)
 		.with({ type: 'game' }, (state) => alphabet.filter((letter) => !state.usedLetters.has(letter)))
 		.otherwise(() => []);
 </script>
 
 <section>
-	{#if state.type === 'connecting'}
+	{#if $gameState.type === 'connecting'}
 		<h1>connecting!</h1>
-	{:else if state.type === 'error'}
-		<h1>we errored: {state.message}</h1>
-	{:else if state.type === 'lobby'}
+	{:else if $gameState.type === 'error'}
+		<h1>we errored: {$gameState.message}</h1>
+	{:else if $gameState.type === 'lobby'}
 		{#if winner}
 			<h1 class="text-green-400">winner!!: {winner}</h1>
 		{/if}
 		<h1 class="text-2xl">room: {room}</h1>
 		<div class="flex gap-2">
 			<h1>ready players:</h1>
-			{#each state.readyPlayers as player}
+			{#each $gameState.readyPlayers as player}
 				<h1>
 					{player.username}
 				</h1>
@@ -208,7 +204,7 @@
 			<h1 class="text-red-300">starting in {timeLeft} !!</h1>
 		{/if}
 		<ul class="list-item">
-			{#each state.chatMessages as message}
+			{#each $gameState.chatMessages as message}
 				<li>{message}</li>
 			{/each}
 		</ul>
@@ -239,13 +235,13 @@
 		<div class="flex gap-2">
 			<h1>turn:</h1>
 			<h1 class="text-green-500">
-				{state.currentTurn.username}
+				{$gameInfo?.username}
 			</h1>
 		</div>
-		<h1>{state.prompt}</h1>
+		<h1>{$gameState.prompt}</h1>
 		<div class="flex gap-2">
 			<h1>players:</h1>
-			{#each state.players as player}
+			{#each $gameState.players as player}
 				<div>
 					<h1>{player.username}</h1>
 					<h1 class="min-w-16">input: {player.input}</h1>
@@ -276,7 +272,7 @@
 			}}
 		/>
 		<ul>
-			{#each state.chatMessages as message}
+			{#each $gameState.chatMessages as message}
 				<li>{message}</li>
 			{/each}
 		</ul>

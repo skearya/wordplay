@@ -50,20 +50,6 @@ impl AppState {
         lock.rooms.values().map(|room| room.clients.len()).sum()
     }
 
-    pub fn get_previous_uuid(&self, room: String, rejoin_token: Uuid) -> Option<Uuid> {
-        let mut lock = self.inner.lock().unwrap();
-        let Room { state, .. } = lock.rooms.entry(room).or_default();
-
-        if let GameState::InGame(game) = state {
-            game.players
-                .iter()
-                .find(|player| rejoin_token == player.rejoin_token)
-                .map(|player| player.uuid)
-        } else {
-            None
-        }
-    }
-
     pub fn add_client(
         &self,
         room: String,
@@ -73,10 +59,16 @@ impl AppState {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
 
-        let uuid = match params
-            .rejoin_token
-            .and_then(|rejoin_token| self.get_previous_uuid(room, rejoin_token))
-        {
+        let uuid = match params.rejoin_token.and_then(|rejoin_token| {
+            if let GameState::InGame(game) = state {
+                game.players
+                    .iter()
+                    .find(|player| rejoin_token == player.rejoin_token)
+                    .map(|player| player.uuid)
+            } else {
+                None
+            }
+        }) {
             Some(uuid) => {
                 clients.broadcast(ServerMessage::PlayerUpdate {
                     uuid,
@@ -87,7 +79,13 @@ impl AppState {
 
                 uuid
             }
-            None => Uuid::new_v4(),
+            None => {
+                clients.broadcast(ServerMessage::ServerMessage {
+                    content: format!("{} has joined", params.username.clone()),
+                });
+
+                Uuid::new_v4()
+            }
         };
 
         clients.insert(
@@ -254,7 +252,7 @@ impl AppState {
             countdown.time_left -= 1;
 
             if countdown.time_left == 0 {
-                if lobby.ready.len() >= 2 {
+                if lobby.ready.len() < 2 {
                     return;
                 }
 
@@ -303,7 +301,9 @@ impl AppState {
                 }
             } else {
                 clients.broadcast(ServerMessage::StartingCountdown {
-                    state: CountdownState::InProgress(countdown.time_left),
+                    state: CountdownState::InProgress {
+                        time_left: countdown.time_left,
+                    },
                 });
             }
         }
