@@ -76,6 +76,7 @@ export type ServerMessage =
 	| {
 			type: 'invalidWord';
 			uuid: string;
+			reason: InvalidWordReason;
 	  }
 	| {
 			type: 'newPrompt';
@@ -91,7 +92,7 @@ export type ServerMessage =
 type RoomState =
 	| {
 			type: 'lobby';
-			readyPlayers: Array<PlayerInfo>;
+			ready: Array<PlayerInfo>;
 			startingCountdown?: number;
 	  }
 	| {
@@ -131,6 +132,17 @@ type CountdownState =
 	  }
 	| {
 			type: 'stopped';
+	  };
+
+type InvalidWordReason =
+	| {
+			type: 'promptNotIn';
+	  }
+	| {
+			type: 'notEnglish';
+	  }
+	| {
+			type: 'alreadyUsed';
 	  };
 
 export const inGameOrLobby = P.when(

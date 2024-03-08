@@ -1,7 +1,9 @@
 use crate::{
-    game::{Countdown, GameState},
-    global::GLOBAL,
-    messages::{CountdownState, PlayerData, PlayerInfo, PlayerUpdate, RoomState, ServerMessage},
+    game::{Countdown, GameState, GuessInfo},
+    messages::{
+        CountdownState, InvalidWordReason, PlayerData, PlayerInfo, PlayerUpdate, RoomState,
+        ServerMessage,
+    },
     Params,
 };
 
@@ -99,7 +101,7 @@ impl AppState {
 
         let room_state = match state {
             GameState::Lobby(lobby) => RoomState::Lobby {
-                ready_players: lobby
+                ready: lobby
                     .ready
                     .iter()
                     .map(|uuid| PlayerInfo {
@@ -182,8 +184,6 @@ impl AppState {
                     uuid,
                     state: PlayerUpdate::Disconnected,
                 });
-
-                println!("d {uuid}");
             }
         };
     }
@@ -343,36 +343,45 @@ impl AppState {
             return;
         }
 
-        if guess.contains(&game.prompt) && GLOBAL.get().unwrap().is_valid(guess) {
-            let extra_life = game.check_for_extra_life(guess);
-            game.new_prompt();
-            game.update_turn();
-            game.update_timer_len();
+        match game.parse_prompt(guess) {
+            GuessInfo::Valid(life_change) => {
+                game.new_prompt();
+                game.update_turn();
+                game.update_timer_len();
 
-            clients.broadcast(ServerMessage::NewPrompt {
-                life_change: extra_life.into(),
-                prompt: game.prompt.clone(),
-                turn: game.current_turn,
-            });
+                clients.broadcast(ServerMessage::NewPrompt {
+                    life_change,
+                    prompt: game.prompt.clone(),
+                    turn: game.current_turn,
+                });
 
-            game.timeout_task.abort();
+                game.timeout_task.abort();
 
-            let app_state = self.clone();
-            let room = room.to_owned();
-            let timer_len = game.timer_len;
-            let current_prompt = game.prompt.clone();
+                let app_state = self.clone();
+                let room = room.to_owned();
+                let timer_len = game.timer_len;
+                let current_prompt = game.prompt.clone();
 
-            game.timeout_task = Arc::new(
-                tokio::task::spawn(async move {
-                    app_state
-                        .check_for_timeout(room, timer_len, current_prompt)
-                        .await;
-                })
-                .abort_handle(),
-            );
-        } else {
-            clients.broadcast(ServerMessage::InvalidWord { uuid });
-        }
+                game.timeout_task = Arc::new(
+                    tokio::task::spawn(async move {
+                        app_state
+                            .check_for_timeout(room, timer_len, current_prompt)
+                            .await;
+                    })
+                    .abort_handle(),
+                );
+            }
+            guess_info => {
+                let reason = match guess_info {
+                    GuessInfo::PromptNotIn => InvalidWordReason::PromptNotIn,
+                    GuessInfo::NotEnglish => InvalidWordReason::NotEnglish,
+                    GuessInfo::AlreadyUsed => InvalidWordReason::AlreadyUsed,
+                    GuessInfo::Valid(_) => unreachable!(),
+                };
+
+                clients.broadcast(ServerMessage::InvalidWord { uuid, reason });
+            }
+        };
     }
 
     fn check_for_timeout(

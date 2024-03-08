@@ -59,6 +59,7 @@ pub enum ServerMessage {
     },
     InvalidWord {
         uuid: Uuid,
+        reason: InvalidWordReason,
     },
     NewPrompt {
         life_change: i8,
@@ -78,7 +79,7 @@ pub enum ServerMessage {
 )]
 pub enum RoomState {
     Lobby {
-        ready_players: Vec<PlayerInfo>,
+        ready: Vec<PlayerInfo>,
         starting_countdown: Option<u8>,
     },
     InGame {
@@ -124,6 +125,18 @@ pub enum PlayerUpdate {
 pub enum CountdownState {
     InProgress { time_left: u8 },
     Stopped,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum InvalidWordReason {
+    PromptNotIn,
+    NotEnglish,
+    AlreadyUsed,
 }
 
 impl ClientMessage {

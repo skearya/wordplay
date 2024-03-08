@@ -33,7 +33,7 @@
 					return {
 						type: 'lobby',
 						uuid: message.uuid,
-						readyPlayers: message.state.readyPlayers,
+						readyPlayers: message.state.ready,
 						chatMessages: [],
 						previousWinner: null,
 						countdown: null
@@ -245,7 +245,7 @@
 				<div class:animate-pulse={player.disconnected}>
 					<h1>{player.username}</h1>
 					<h1>{player.uuid}</h1>
-					<h1 class="min-w-16">input: {player.input}</h1>
+					<h1 id={`input-${player.uuid}`} class="min-w-16">input: {player.input}</h1>
 					<h1 class="text-red-400">lives: {player.lives}</h1>
 					{#if player.disconnected}
 						<h1>i disconnected..</h1>

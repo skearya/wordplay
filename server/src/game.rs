@@ -24,6 +24,7 @@ pub struct InGame {
     pub starting_time: Instant,
     pub prompt: String,
     pub prompt_uses: u8,
+    pub used_words: HashSet<String>,
     pub players: Vec<Player>,
     pub current_turn: Uuid,
 }
@@ -69,14 +70,34 @@ impl Lobby {
             starting_time: Instant::now(),
             prompt,
             prompt_uses: 0,
+            used_words: HashSet::new(),
             current_turn: players[0].uuid,
             players,
         })
     }
 }
 
+pub enum GuessInfo {
+    PromptNotIn,
+    NotEnglish,
+    AlreadyUsed,
+    Valid(i8),
+}
+
 impl InGame {
-    pub fn check_for_extra_life(&mut self, guess: &str) -> bool {
+    pub fn parse_prompt(&mut self, guess: &str) -> GuessInfo {
+        if !guess.contains(&self.prompt) {
+            return GuessInfo::PromptNotIn;
+        }
+
+        if !GLOBAL.get().unwrap().is_valid(guess) {
+            return GuessInfo::NotEnglish;
+        }
+
+        if !self.used_words.insert(guess.to_owned()) {
+            return GuessInfo::AlreadyUsed;
+        }
+
         let current_player = self
             .players
             .iter_mut()
@@ -96,7 +117,7 @@ impl InGame {
             current_player.used_letters.clear();
         }
 
-        extra_life
+        GuessInfo::Valid(extra_life.into())
     }
 
     pub fn new_prompt(&mut self) {

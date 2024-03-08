@@ -1,8 +1,8 @@
 # current todo:
 
--   clean up frontend state
+-   clean up frontend state   
 
--   send current countdown to new clients joining, also input
+-   send current countdown to new clients joining, also input, maybe previous winner?
 
 -   extra lives for using 24 distinct letters
 
