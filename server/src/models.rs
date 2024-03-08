@@ -123,6 +123,7 @@ impl AppState {
                         username: clients[&player.uuid].username.clone(),
                         input: player.input.clone(),
                         lives: player.lives,
+                        disconnected: !clients.contains_key(&player.uuid),
                     })
                     .collect(),
                 used_letters: game
@@ -146,7 +147,9 @@ impl AppState {
 
     pub fn remove_client(&self, room: &str, uuid: Uuid) {
         let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
+        let Some(Room { clients, state }) = lock.rooms.get_mut(room) else {
+            return;
+        };
 
         if let Some(client) = clients.get_mut(&uuid) {
             client.disconnected = true;
@@ -179,6 +182,8 @@ impl AppState {
                     uuid,
                     state: PlayerUpdate::Disconnected,
                 });
+
+                println!("d {uuid}");
             }
         };
     }
@@ -280,19 +285,16 @@ impl AppState {
                         username: clients[&player.uuid].username.clone(),
                         input: player.input.clone(),
                         lives: player.lives,
+                        disconnected: !clients.contains_key(&player.uuid),
                     })
                     .collect();
 
-                for (uuid, client) in clients {
-                    client
+                // TODO: spectators stuck in lobby
+                for player in &game.players {
+                    clients[&player.uuid]
                         .tx
                         .send(ServerMessage::GameStarted {
-                            rejoin_token: game
-                                .players
-                                .iter()
-                                .find(|player| *uuid == player.uuid)
-                                .unwrap()
-                                .rejoin_token,
+                            rejoin_token: player.rejoin_token,
                             prompt: game.prompt.clone(),
                             turn: game.current_turn,
                             players: players.clone(),

@@ -49,7 +49,6 @@ pub enum ServerMessage {
         turn: Uuid,
         players: Vec<PlayerData>,
     },
-    // send chat messages for join/leave
     PlayerUpdate {
         uuid: Uuid,
         state: PlayerUpdate,
@@ -102,6 +101,7 @@ pub struct PlayerData {
     pub username: String,
     pub input: String,
     pub lives: u8,
+    pub disconnected: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]

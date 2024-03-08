@@ -13,6 +13,8 @@ export type AppState =
 			uuid: string;
 			chatMessages: Array<string>;
 			readyPlayers: Array<PlayerInfo>;
+			previousWinner: string | null;
+			countdown: number | null;
 	  }
 	| {
 			type: 'game';
@@ -49,7 +51,10 @@ export type ServerMessage =
 	| {
 			type: 'readyPlayers';
 			players: Array<PlayerInfo>;
-			countdown: boolean;
+	  }
+	| {
+			type: 'startingCountdown';
+			state: CountdownState;
 	  }
 	| {
 			type: 'gameStarted';
@@ -57,6 +62,11 @@ export type ServerMessage =
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
+	  }
+	| {
+			type: 'playerUpdate';
+			uuid: string;
+			state: PlayerUpdate;
 	  }
 	| {
 			type: 'inputUpdate';
@@ -82,6 +92,7 @@ type RoomState =
 	| {
 			type: 'lobby';
 			readyPlayers: Array<PlayerInfo>;
+			startingCountdown?: number;
 	  }
 	| {
 			type: 'inGame';
@@ -101,7 +112,26 @@ export type PlayerData = {
 	username: string;
 	input: string;
 	lives: number;
+	disconnected: boolean;
 };
+
+type PlayerUpdate =
+	| {
+			type: 'disconnected';
+	  }
+	| {
+			type: 'reconnected';
+			username: string;
+	  };
+
+type CountdownState =
+	| {
+			type: 'inProgress';
+			timeLeft: number;
+	  }
+	| {
+			type: 'stopped';
+	  };
 
 export const inGameOrLobby = P.when(
 	(type): type is 'lobby' | 'game' => type === 'lobby' || type === 'game'

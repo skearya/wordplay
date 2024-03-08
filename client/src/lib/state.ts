@@ -10,7 +10,13 @@ const isInGame = isMatching({ type: 'game' });
 
 export const gameInfo = derived(gameState, (state) => {
 	if (isInGame(state)) {
-		return state.players.find((player) => state.currentTurn == player.uuid);
+		return {
+			currentTurn: state.players.find((player) => state.currentTurn == player.uuid)!,
+			hasTurn: state.uuid === state.currentTurn,
+			unusedLetters: [...'abcdefghijklmnopqrstuvwy'].filter(
+				(letter) => !state.usedLetters.has(letter)
+			)
+		};
 	}
 
 	return undefined;

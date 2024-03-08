@@ -6,16 +6,9 @@
 	import { writable } from 'svelte/store';
 	import { match } from 'ts-pattern';
 
-	const alphabet = [...'abcdefghijklmnopqrstuvwy'];
-
 	let chatInput: string = '';
 	let gameInputNode: HTMLInputElement;
 	let gameInput = writable('');
-
-	let countdownId: number;
-	let timeLeft: number | undefined = undefined;
-
-	let winner: string;
 
 	const room = window.prompt('room', 'one');
 	const username = window.prompt('username', 'skeary');
@@ -41,7 +34,9 @@
 						type: 'lobby',
 						uuid: message.uuid,
 						readyPlayers: message.state.readyPlayers,
-						chatMessages: []
+						chatMessages: [],
+						previousWinner: null,
+						countdown: null
 					};
 				}
 			)
@@ -81,22 +76,19 @@
 				}
 			)
 			.with([{ type: 'lobby' }, { type: 'readyPlayers' }], ([state, message]) => {
-				if (message.countdown) {
-					timeLeft = 10;
-
-					clearInterval(countdownId);
-					countdownId = setInterval(() => {
-						timeLeft! -= 1;
-
-						if (timeLeft == 0) {
-							clearInterval(countdownId);
-						}
-					}, 1000);
+				if (message.players.length >= 2) {
+					state.countdown = 10;
 				}
 
 				return {
 					...state,
 					readyPlayers: message.players
+				};
+			})
+			.with([{ type: 'lobby' }, { type: 'startingCountdown' }], ([state, message]) => {
+				return {
+					...state,
+					countdown: message.state.type === 'inProgress' ? message.state.timeLeft : null
 				};
 			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
@@ -112,6 +104,22 @@
 					chatMessages: state.chatMessages,
 					uuid: state.uuid
 				};
+			})
+			.with([{ type: 'game' }, { type: 'playerUpdate' }], ([state, message]) => {
+				let player = state.players.find((player) => player.uuid === message.uuid)!;
+
+				if (message.state.type === 'reconnected') {
+					player.username = message.state.username;
+					player.disconnected = false;
+				} else {
+					player.disconnected = true;
+				}
+
+				state.chatMessages.push(
+					`${player.username} has ${message.state.type === 'reconnected' ? 'joined' : 'left'}`
+				);
+
+				return state;
 			})
 			.with([{ type: 'game' }, { type: 'inputUpdate' }], ([state, message]) => {
 				state.players.find((player) => player.uuid === message.uuid)!.input = message.input;
@@ -129,6 +137,14 @@
 					state.usedLetters = new Set([...state.usedLetters, ...$gameInput]);
 				}
 
+				if (state.uuid === message.turn) {
+					$gameInput = '';
+
+					tick().then(() => {
+						gameInputNode.focus();
+					});
+				}
+
 				return {
 					...state,
 					prompt: message.prompt,
@@ -137,14 +153,14 @@
 			})
 			.with([{ type: 'game' }, { type: 'gameEnded' }], ([state, message]) => {
 				chatInput = '';
-				timeLeft = undefined;
-				winner = state.players.find((player) => player.uuid === message.winner)!.username;
 
 				return {
 					type: 'lobby',
 					readyPlayers: [],
 					chatMessages: state.chatMessages,
-					uuid: state.uuid
+					uuid: state.uuid,
+					previousWinner: state.players.find((player) => player.uuid === message.winner)!.username,
+					countdown: null
 				};
 			})
 			.otherwise(() => $gameState);
@@ -164,22 +180,6 @@
 	gameInput.subscribe((input) => {
 		if ($gameState.type === 'game') sendMessage({ type: 'input', input });
 	});
-
-	$: hasTurn = match($gameState)
-		.with({ type: 'game' }, (state) => state.uuid === state.currentTurn)
-		.otherwise(() => false);
-
-	$: if (hasTurn) {
-		$gameInput = '';
-
-		tick().then(() => {
-			gameInputNode.focus();
-		});
-	}
-
-	$: unusedLetters = match($gameState)
-		.with({ type: 'game' }, (state) => alphabet.filter((letter) => !state.usedLetters.has(letter)))
-		.otherwise(() => []);
 </script>
 
 <section>
@@ -188,8 +188,8 @@
 	{:else if $gameState.type === 'error'}
 		<h1>we errored: {$gameState.message}</h1>
 	{:else if $gameState.type === 'lobby'}
-		{#if winner}
-			<h1 class="text-green-400">winner!!: {winner}</h1>
+		{#if $gameState.previousWinner !== null}
+			<h1 class="text-green-400">winner!!: {$gameState.previousWinner}</h1>
 		{/if}
 		<h1 class="text-2xl">room: {room}</h1>
 		<div class="flex gap-2">
@@ -200,8 +200,8 @@
 				</h1>
 			{/each}
 		</div>
-		{#if timeLeft !== undefined}
-			<h1 class="text-red-300">starting in {timeLeft} !!</h1>
+		{#if $gameState.countdown !== null}
+			<h1 class="text-red-300">starting in {$gameState.countdown} !!</h1>
 		{/if}
 		<ul class="list-item">
 			{#each $gameState.chatMessages as message}
@@ -235,23 +235,27 @@
 		<div class="flex gap-2">
 			<h1>turn:</h1>
 			<h1 class="text-green-500">
-				{$gameInfo?.username}
+				{$gameInfo?.currentTurn.username}
 			</h1>
 		</div>
 		<h1>{$gameState.prompt}</h1>
 		<div class="flex gap-2">
 			<h1>players:</h1>
 			{#each $gameState.players as player}
-				<div>
+				<div class:animate-pulse={player.disconnected}>
 					<h1>{player.username}</h1>
+					<h1>{player.uuid}</h1>
 					<h1 class="min-w-16">input: {player.input}</h1>
 					<h1 class="text-red-400">lives: {player.lives}</h1>
+					{#if player.disconnected}
+						<h1>i disconnected..</h1>
+					{/if}
 				</div>
 			{/each}
 		</div>
 		<div class="flex gap-1">
 			<h1>unused letters</h1>
-			{#each unusedLetters as letter}
+			{#each $gameInfo?.unusedLetters || '' as letter}
 				<h1>{letter}</h1>
 			{/each}
 		</div>
@@ -259,7 +263,7 @@
 			class="border bg-green-200 disabled:bg-red-400"
 			type="text"
 			placeholder="answer"
-			disabled={!hasTurn}
+			disabled={!$gameInfo?.hasTurn}
 			bind:this={gameInputNode}
 			bind:value={$gameInput}
 			on:keydown={(event) => {
