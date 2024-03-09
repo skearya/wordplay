@@ -4,7 +4,7 @@ pub mod messages;
 mod models;
 
 use global::{GlobalData, GLOBAL};
-use messages::{ClientMessage, ServerMessage};
+use messages::ClientMessage;
 use models::AppState;
 
 use axum::{
@@ -65,18 +65,16 @@ async fn ws_handler(
 
 async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {
     let (mut sender, mut reciever) = socket.split();
-    let (proxy, mut inbox) = mpsc::unbounded_channel::<ServerMessage>();
+    let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
     let uuid = state.add_client(room.clone(), params, proxy);
 
     let sending_task = tokio::task::spawn(async move {
         while let Some(msg) = inbox.recv().await {
-            let serialized = serde_json::to_string(&msg).unwrap();
-
             sender
-                .send(serialized.clone().into())
+                .send(msg.clone())
                 .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {e}, msg: {serialized:#?}");
+                    eprintln!("websocket send error: {e}, msg: {msg:#?}");
                 })
                 .await;
         }

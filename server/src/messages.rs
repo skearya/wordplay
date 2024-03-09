@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use crate::models::AppState;
 
+use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -155,5 +156,13 @@ impl ClientMessage {
                 state.client_guess(room, uuid, word.to_lowercase().trim());
             }
         }
+    }
+}
+
+impl From<ServerMessage> for Message {
+    fn from(msg: ServerMessage) -> Self {
+        let serialized = serde_json::to_string(&msg).unwrap();
+
+        Self::Text(serialized)
     }
 }

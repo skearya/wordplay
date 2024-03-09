@@ -7,8 +7,10 @@ use crate::{
     Params,
 };
 
+use axum::extract::ws::{close_code, CloseFrame, Message};
 use futures::{future::BoxFuture, FutureExt};
 use std::{
+    borrow::Cow,
     collections::HashMap,
     sync::{Arc, Mutex},
     time::Duration,
@@ -33,7 +35,7 @@ pub struct Room {
 
 #[derive(Debug, Clone)]
 pub struct Client {
-    pub tx: UnboundedSender<ServerMessage>,
+    pub tx: UnboundedSender<Message>,
     pub disconnected: bool,
     pub username: String,
 }
@@ -52,12 +54,7 @@ impl AppState {
         lock.rooms.values().map(|room| room.clients.len()).sum()
     }
 
-    pub fn add_client(
-        &self,
-        room: String,
-        params: Params,
-        tx: UnboundedSender<ServerMessage>,
-    ) -> Uuid {
+    pub fn add_client(&self, room: String, params: Params, tx: UnboundedSender<Message>) -> Uuid {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
 
@@ -90,7 +87,7 @@ impl AppState {
             }
         };
 
-        clients.insert(
+        let old_client = clients.insert(
             uuid,
             Client {
                 tx,
@@ -98,6 +95,16 @@ impl AppState {
                 username: params.username,
             },
         );
+
+        if let Some(client) = old_client {
+            client
+                .tx
+                .send(Message::Close(Some(CloseFrame {
+                    code: close_code::ABNORMAL,
+                    reason: Cow::from("Connected on another client?"),
+                })))
+                .ok();
+        };
 
         let room_state = match state {
             GameState::Lobby(lobby) => RoomState::Lobby {
@@ -138,10 +145,13 @@ impl AppState {
 
         clients[&uuid]
             .tx
-            .send(ServerMessage::RoomInfo {
-                uuid,
-                state: room_state,
-            })
+            .send(
+                ServerMessage::RoomInfo {
+                    uuid,
+                    state: room_state,
+                }
+                .into(),
+            )
             .ok();
 
         uuid
@@ -293,12 +303,15 @@ impl AppState {
                 for player in &game.players {
                     clients[&player.uuid]
                         .tx
-                        .send(ServerMessage::GameStarted {
-                            rejoin_token: player.rejoin_token,
-                            prompt: game.prompt.clone(),
-                            turn: game.current_turn,
-                            players: players.clone(),
-                        })
+                        .send(
+                            ServerMessage::GameStarted {
+                                rejoin_token: player.rejoin_token,
+                                prompt: game.prompt.clone(),
+                                turn: game.current_turn,
+                                players: players.clone(),
+                            }
+                            .into(),
+                        )
                         .ok();
                 }
             } else {
@@ -445,8 +458,10 @@ pub trait Broadcast {
 
 impl Broadcast for HashMap<Uuid, Client> {
     fn broadcast(&self, message: ServerMessage) {
+        let serialized = serde_json::to_string(&message).unwrap();
+
         for client in self.values().filter(|client| !client.disconnected) {
-            client.tx.send(message.clone()).ok();
+            client.tx.send(Message::Text(serialized.clone())).ok();
         }
     }
 }
