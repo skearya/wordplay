@@ -37,6 +37,7 @@ pub struct Room {
 pub struct Client {
     pub tx: UnboundedSender<Message>,
     pub disconnected: bool,
+    pub reconnected: bool,
     pub username: String,
 }
 
@@ -92,18 +93,21 @@ impl AppState {
             Client {
                 tx,
                 disconnected: false,
+                reconnected: false,
                 username: params.username,
             },
         );
 
-        if let Some(client) = old_client {
-            client
+        if let Some(old_client) = old_client {
+            old_client
                 .tx
                 .send(Message::Close(Some(CloseFrame {
                     code: close_code::ABNORMAL,
                     reason: Cow::from("Connected on another client?"),
                 })))
                 .ok();
+
+            clients.get_mut(&uuid).unwrap().reconnected = true;
         };
 
         let room_state = match state {
@@ -132,7 +136,7 @@ impl AppState {
                         username: clients[&player.uuid].username.clone(),
                         input: player.input.clone(),
                         lives: player.lives,
-                        disconnected: !clients.contains_key(&player.uuid),
+                        disconnected: clients[&player.uuid].disconnected,
                     })
                     .collect(),
                 used_letters: game
@@ -164,6 +168,11 @@ impl AppState {
         };
 
         if let Some(client) = clients.get_mut(&uuid) {
+            if client.reconnected {
+                client.reconnected = false;
+                return;
+            }
+
             client.disconnected = true;
 
             if clients

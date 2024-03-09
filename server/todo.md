@@ -1,16 +1,14 @@
 # current todo:
 
--   clean up frontend state   
+-   clients may or may not be correctly reporting disconnections, look into this
+
+-   clean up frontend state
 
 -   send current countdown to new clients joining, also input, maybe previous winner?
 
--   extra lives for using 24 distinct letters
-
--   use unwrap less   
+-   use unwrap less
 
 -   room owner able to start game early
-
--   handle disconnections
 
 -   probably look into using dashmap instead of std hashmap for global game data for concurrent references
 
