@@ -37,8 +37,6 @@ pub struct Room {
 pub struct Client {
     pub socket: Option<Uuid>,
     pub tx: UnboundedSender<Message>,
-    // note: "disconnected" might not be needed cause its true when socket_id is None
-    pub disconnected: bool,
     pub username: String,
 }
 
@@ -90,7 +88,7 @@ impl AppState {
         };
 
         clients.broadcast(ServerMessage::ServerMessage {
-            content: format!("{} has joined", params.username.clone()),
+            content: format!("{} has joined", params.username),
         });
 
         let old_client = clients.insert(
@@ -98,7 +96,6 @@ impl AppState {
             Client {
                 socket: Some(socket_uuid),
                 tx,
-                disconnected: false,
                 username: params.username,
             },
         );
@@ -139,7 +136,7 @@ impl AppState {
                         username: clients[&player.uuid].username.clone(),
                         input: player.input.clone(),
                         lives: player.lives,
-                        disconnected: clients[&player.uuid].disconnected,
+                        disconnected: clients[&player.uuid].socket.is_none(),
                     })
                     .collect(),
                 used_letters: game
@@ -178,14 +175,11 @@ impl AppState {
             return;
         };
 
-        let username = client.username.clone();
-
         client.socket = None;
-        client.disconnected = true;
 
         if clients
             .values()
-            .filter(|client| !client.disconnected)
+            .filter(|client| client.socket.is_some())
             .count()
             == 0
         {
@@ -228,7 +222,7 @@ impl AppState {
             }
 
             clients.broadcast(ServerMessage::ServerMessage {
-                content: format!("{} has left", username),
+                content: format!("{} has left", clients[&uuid].username),
             });
         }
     }
@@ -379,7 +373,7 @@ impl AppState {
         });
     }
 
-    pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {
+    pub fn client_guess(&self, room: &str, uuid: Uuid, guess: String) {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
 
@@ -391,7 +385,7 @@ impl AppState {
             return;
         }
 
-        match game.parse_prompt(guess) {
+        match game.parse_prompt(&guess) {
             GuessInfo::Valid(life_change) => {
                 game.new_prompt();
                 game.update_turn();
@@ -460,7 +454,7 @@ impl AppState {
 
                     *state = game.end();
 
-                    clients.retain(|_uuid, client| !client.disconnected);
+                    clients.retain(|_uuid, client| client.socket.is_some());
                 } else {
                     clients.broadcast(ServerMessage::NewPrompt {
                         life_change: -1,
@@ -495,7 +489,7 @@ impl Broadcast for HashMap<Uuid, Client> {
     fn broadcast(&self, message: ServerMessage) {
         let serialized = serde_json::to_string(&message).unwrap();
 
-        for client in self.values().filter(|client| !client.disconnected) {
+        for client in self.values().filter(|client| client.socket.is_some()) {
             client.tx.send(Message::Text(serialized.clone())).ok();
         }
     }
