@@ -6,7 +6,7 @@
 
 -   clean up frontend state
 
--   send current countdown to new clients joining, also input, maybe previous winner?
+-   send previous winner to new clients joining?
 
 -   use unwrap less
 

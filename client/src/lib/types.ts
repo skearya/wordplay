@@ -58,7 +58,7 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'gameStarted';
-			rejoinToken: string;
+			rejoinToken?: string;
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;

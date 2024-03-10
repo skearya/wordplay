@@ -330,13 +330,16 @@ impl AppState {
                     })
                     .collect();
 
-                // TODO: spectators stuck in lobby
-                for player in &game.players {
-                    clients[&player.uuid]
+                for (uuid, client) in clients {
+                    client
                         .tx
                         .send(
                             ServerMessage::GameStarted {
-                                rejoin_token: player.rejoin_token,
+                                rejoin_token: game
+                                    .players
+                                    .iter()
+                                    .find(|player| *uuid == player.uuid)
+                                    .map(|player| player.rejoin_token),
                                 prompt: game.prompt.clone(),
                                 turn: game.current_turn,
                                 players: players.clone(),

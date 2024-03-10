@@ -93,7 +93,10 @@
 			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
 				$gameInput = '';
-				localStorage.setItem(room!, message.rejoinToken);
+
+				if (message?.rejoinToken !== undefined) {
+					localStorage.setItem(room!, message.rejoinToken);
+				}
 
 				return {
 					type: 'game',

@@ -45,7 +45,7 @@ pub enum ServerMessage {
         state: CountdownState,
     },
     GameStarted {
-        rejoin_token: Uuid,
+        rejoin_token: Option<Uuid>,
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
