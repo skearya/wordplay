@@ -1,62 +1,61 @@
 <script lang="ts">
 	import { PUBLIC_SERVER } from '$env/static/public';
+	import { gameInfo, gameState } from '$lib/state';
 	import { inGameOrLobby, type AppState, type ServerMessage, type ClientMessage } from '$lib/types';
 	import { tick } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { match } from 'ts-pattern';
 
-	const alphabet = [...'abcdefghijklmnopqrstuvwy'];
-
 	let chatInput: string = '';
 	let gameInputNode: HTMLInputElement;
 	let gameInput = writable('');
 
-	let countdownId: number;
-	let timeLeft: number | undefined = undefined;
-
-	let state: AppState = {
-		type: 'connecting'
-	};
-
-	let winner: string;
-
 	const room = window.prompt('room', 'one');
 	const username = window.prompt('username', 'skeary');
 
-	const params = new URLSearchParams({ username: username! }).toString();
-	const socket = new WebSocket(`${PUBLIC_SERVER}/rooms/${room}?${params}`);
+	let params = new URLSearchParams({ username: username! });
+
+	let rejoinToken = localStorage.getItem(room!);
+	if (rejoinToken !== null) {
+		params.append('rejoinToken', rejoinToken);
+	}
+
+	const socket = new WebSocket(`${PUBLIC_SERVER}/rooms/${room}?${params.toString()}`);
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
 
-		state = match([state, message])
+		$gameState = match([$gameState, message])
 			.returnType<AppState>()
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'lobby' } }],
-				([_state, { state: roomState, uuid }]) => {
+				([_state, message]) => {
 					return {
 						type: 'lobby',
-						uuid: uuid,
-						readyPlayers: roomState.readyPlayers,
-						chatMessages: []
+						uuid: message.uuid,
+						readyPlayers: message.state.ready,
+						chatMessages: [],
+						previousWinner: null,
+						countdown: null
 					};
 				}
 			)
 			.with(
 				[{ type: 'connecting' }, { type: 'roomInfo', state: { type: 'inGame' } }],
-				([_state, { state: roomState, uuid }]) => {
-					// for reconnecting prob wanna do this
-					// gameInput = roomState.players.find((player) => player.uuid = uuid)!.input
-					// same for usedLetters
-					// this data wont be found if the player joins a game and they weren't in it
+				([_state, message]) => {
+					const playerData = message.state.players.find((player) => message.uuid === player.uuid);
+
+					if (playerData !== undefined) {
+						$gameInput = playerData.input;
+					}
 
 					return {
 						type: 'game',
-						players: roomState.players,
-						currentTurn: roomState.players.find((player) => player.uuid == roomState.turn)!,
-						prompt: roomState.prompt,
-						usedLetters: new Set(),
-						uuid,
+						players: message.state.players,
+						currentTurn: message.state.turn,
+						prompt: message.state.prompt,
+						usedLetters: new Set(message.state.usedLetters || []),
+						uuid: message.uuid,
 						chatMessages: []
 					};
 				}
@@ -77,17 +76,8 @@
 				}
 			)
 			.with([{ type: 'lobby' }, { type: 'readyPlayers' }], ([state, message]) => {
-				if (message.countdown) {
-					timeLeft = 10;
-
-					clearInterval(countdownId);
-					countdownId = setInterval(() => {
-						timeLeft! -= 1;
-
-						if (timeLeft == 0) {
-							clearInterval(countdownId);
-						}
-					}, 1000);
+				if (message.players.length >= 2) {
+					state.countdown = 10;
 				}
 
 				return {
@@ -95,58 +85,88 @@
 					readyPlayers: message.players
 				};
 			})
+			.with([{ type: 'lobby' }, { type: 'startingCountdown' }], ([state, message]) => {
+				return {
+					...state,
+					countdown: message.state.type === 'inProgress' ? message.state.timeLeft : null
+				};
+			})
 			.with([{ type: 'lobby' }, { type: 'gameStarted' }], ([state, message]) => {
 				$gameInput = '';
+
+				if (message?.rejoinToken !== undefined) {
+					localStorage.setItem(room!, message.rejoinToken);
+				}
 
 				return {
 					type: 'game',
 					players: message.players,
 					prompt: message.prompt,
-					currentTurn: message.players.find((player) => player.uuid == message.turn)!,
+					currentTurn: message.turn,
 					usedLetters: new Set(),
 					chatMessages: state.chatMessages,
 					uuid: state.uuid
 				};
 			})
+			.with([{ type: 'game' }, { type: 'playerUpdate' }], ([state, message]) => {
+				let player = state.players.find((player) => player.uuid === message.uuid)!;
+
+				if (message.state.type === 'reconnected') {
+					player.username = message.state.username;
+					player.disconnected = false;
+				} else {
+					player.disconnected = true;
+				}
+
+				return state;
+			})
 			.with([{ type: 'game' }, { type: 'inputUpdate' }], ([state, message]) => {
 				state.players.find((player) => player.uuid === message.uuid)!.input = message.input;
 
-				return {
-					...state
-				};
+				return state;
 			})
-			// .with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {})
+			.with([{ type: 'game' }, { type: 'invalidWord' }], ([state, message]) => {
+				return state;
+			})
 			.with([{ type: 'game' }, { type: 'newPrompt' }], ([state, message]) => {
-				let oldTurn = state.players.find((player) => player.uuid === state.currentTurn.uuid)!;
+				let oldTurn = state.players.find((player) => player.uuid === state.currentTurn)!;
 				oldTurn.lives += message.lifeChange;
 
 				if (oldTurn.uuid === state.uuid && message.lifeChange >= 0) {
 					state.usedLetters = new Set([...state.usedLetters, ...$gameInput]);
 				}
 
+				if (state.uuid === message.turn) {
+					$gameInput = '';
+
+					tick().then(() => {
+						gameInputNode.focus();
+					});
+				}
+
 				return {
 					...state,
 					prompt: message.prompt,
-					currentTurn: state.players.find((player) => player.uuid == message.turn)!
+					currentTurn: message.turn
 				};
 			})
 			.with([{ type: 'game' }, { type: 'gameEnded' }], ([state, message]) => {
 				chatInput = '';
-				timeLeft = undefined;
-				winner = state.players.find((player) => player.uuid === message.winner)!.username;
 
 				return {
 					type: 'lobby',
 					readyPlayers: [],
 					chatMessages: state.chatMessages,
-					uuid: state.uuid
+					uuid: state.uuid,
+					previousWinner: state.players.find((player) => player.uuid === message.winner)!.username,
+					countdown: null
 				};
 			})
-			.otherwise(() => state);
+			.otherwise(() => $gameState);
 	});
 
 	socket.addEventListener('close', (event) => {
-		state = {
+		$gameState = {
 			type: 'error',
 			message: event.reason
 		};
@@ -157,49 +177,33 @@
 	}
 
 	gameInput.subscribe((input) => {
-		if (state.type === 'game') sendMessage({ type: 'input', input });
+		if ($gameState.type === 'game') sendMessage({ type: 'input', input });
 	});
-
-	$: hasTurn = match(state)
-		.with({ type: 'game' }, (state) => state.uuid === state.currentTurn.uuid)
-		.otherwise(() => false);
-
-	$: if (hasTurn) {
-		$gameInput = '';
-
-		tick().then(() => {
-			gameInputNode.focus();
-		});
-	}
-
-	$: unusedLetters = match(state)
-		.with({ type: 'game' }, (state) => alphabet.filter((letter) => !state.usedLetters.has(letter)))
-		.otherwise(() => []);
 </script>
 
 <section>
-	{#if state.type === 'connecting'}
+	{#if $gameState.type === 'connecting'}
 		<h1>connecting!</h1>
-	{:else if state.type === 'error'}
-		<h1>we errored: {state.message}</h1>
-	{:else if state.type === 'lobby'}
-		{#if winner}
-			<h1 class="text-green-400">winner!!: {winner}</h1>
+	{:else if $gameState.type === 'error'}
+		<h1>we errored: {$gameState.message}</h1>
+	{:else if $gameState.type === 'lobby'}
+		{#if $gameState.previousWinner !== null}
+			<h1 class="text-green-400">winner!!: {$gameState.previousWinner}</h1>
 		{/if}
 		<h1 class="text-2xl">room: {room}</h1>
 		<div class="flex gap-2">
 			<h1>ready players:</h1>
-			{#each state.readyPlayers as player}
+			{#each $gameState.readyPlayers as player}
 				<h1>
 					{player.username}
 				</h1>
 			{/each}
 		</div>
-		{#if timeLeft !== undefined}
-			<h1 class="text-red-300">starting in {timeLeft} !!</h1>
+		{#if $gameState.countdown !== null}
+			<h1 class="text-red-300">starting in {$gameState.countdown} !!</h1>
 		{/if}
 		<ul class="list-item">
-			{#each state.chatMessages as message}
+			{#each $gameState.chatMessages as message}
 				<li>{message}</li>
 			{/each}
 		</ul>
@@ -230,23 +234,27 @@
 		<div class="flex gap-2">
 			<h1>turn:</h1>
 			<h1 class="text-green-500">
-				{state.currentTurn.username}
+				{$gameInfo?.currentTurn.username}
 			</h1>
 		</div>
-		<h1>{state.prompt}</h1>
+		<h1>{$gameState.prompt}</h1>
 		<div class="flex gap-2">
 			<h1>players:</h1>
-			{#each state.players as player}
-				<div>
+			{#each $gameState.players as player}
+				<div class:animate-pulse={player.disconnected}>
 					<h1>{player.username}</h1>
-					<h1 class="min-w-16">input: {player.input}</h1>
+					<h1>{player.uuid}</h1>
+					<h1 id={`input-${player.uuid}`} class="min-w-16">input: {player.input}</h1>
 					<h1 class="text-red-400">lives: {player.lives}</h1>
+					{#if player.disconnected}
+						<h1>i disconnected..</h1>
+					{/if}
 				</div>
 			{/each}
 		</div>
 		<div class="flex gap-1">
 			<h1>unused letters</h1>
-			{#each unusedLetters as letter}
+			{#each $gameInfo?.unusedLetters || '' as letter}
 				<h1>{letter}</h1>
 			{/each}
 		</div>
@@ -254,7 +262,7 @@
 			class="border bg-green-200 disabled:bg-red-400"
 			type="text"
 			placeholder="answer"
-			disabled={!hasTurn}
+			disabled={!$gameInfo?.hasTurn}
 			bind:this={gameInputNode}
 			bind:value={$gameInput}
 			on:keydown={(event) => {
@@ -267,7 +275,7 @@
 			}}
 		/>
 		<ul>
-			{#each state.chatMessages as message}
+			{#each $gameState.chatMessages as message}
 				<li>{message}</li>
 			{/each}
 		</ul>

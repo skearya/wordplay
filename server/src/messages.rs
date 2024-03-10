@@ -1,5 +1,8 @@
+use std::collections::HashSet;
+
 use crate::models::AppState;
 
+use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -27,7 +30,6 @@ pub enum ServerMessage {
     RoomInfo {
         uuid: Uuid,
         state: RoomState,
-        // rejoin_token
     },
     ServerMessage {
         content: String,
@@ -38,12 +40,19 @@ pub enum ServerMessage {
     },
     ReadyPlayers {
         players: Vec<PlayerInfo>,
-        countdown: bool,
+    },
+    StartingCountdown {
+        state: CountdownState,
     },
     GameStarted {
+        rejoin_token: Option<Uuid>,
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
+    },
+    PlayerUpdate {
+        uuid: Uuid,
+        state: PlayerUpdate,
     },
     InputUpdate {
         uuid: Uuid,
@@ -51,6 +60,7 @@ pub enum ServerMessage {
     },
     InvalidWord {
         uuid: Uuid,
+        reason: InvalidWordReason,
     },
     NewPrompt {
         life_change: i8,
@@ -70,12 +80,14 @@ pub enum ServerMessage {
 )]
 pub enum RoomState {
     Lobby {
-        ready_players: Vec<PlayerInfo>,
+        ready: Vec<PlayerInfo>,
+        starting_countdown: Option<u8>,
     },
     InGame {
         prompt: String,
         turn: Uuid,
         players: Vec<PlayerData>,
+        used_letters: Option<HashSet<char>>,
     },
 }
 
@@ -91,29 +103,73 @@ pub struct PlayerData {
     pub username: String,
     pub input: String,
     pub lives: u8,
+    pub disconnected: bool,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum PlayerUpdate {
+    Disconnected,
+    Reconnected { username: String },
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum CountdownState {
+    InProgress { time_left: u8 },
+    Stopped,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum InvalidWordReason {
+    PromptNotIn,
+    NotEnglish,
+    AlreadyUsed,
 }
 
 impl ClientMessage {
-    pub fn handle(self, state: &AppState, room: &str, username: &str, uuid: Uuid) {
+    pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
         match self {
             ClientMessage::Ready => {
-                state.client_ready(room, (uuid, username.to_owned()));
+                state.client_ready(room, uuid);
             }
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
-                state.broadcast(
-                    room,
-                    ServerMessage::ChatMessage {
-                        author: username.to_owned(),
-                        content,
-                    },
-                );
+                state.client_chat_message(room, uuid, content);
             }
             ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
             ClientMessage::Guess { word } => {
-                // maybe also get rid of non letters
-                state.client_guess(room, uuid, word.to_lowercase().trim());
+                state.client_guess(
+                    room,
+                    uuid,
+                    &word
+                        .to_ascii_lowercase()
+                        .chars()
+                        .filter(|char| char.is_alphabetic())
+                        .collect::<String>(),
+                );
             }
         }
+    }
+}
+
+impl From<ServerMessage> for Message {
+    fn from(msg: ServerMessage) -> Self {
+        let serialized = serde_json::to_string(&msg).unwrap();
+
+        Self::Text(serialized)
     }
 }

@@ -7,8 +7,14 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct Lobby {
-    pub ready: HashSet<(Uuid, String)>,
-    pub start_handle: Option<Arc<AbortHandle>>,
+    pub ready: HashSet<Uuid>,
+    pub countdown: Option<Countdown>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Countdown {
+    pub time_left: u8,
+    pub timer_handle: Arc<AbortHandle>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +24,7 @@ pub struct InGame {
     pub starting_time: Instant,
     pub prompt: String,
     pub prompt_uses: u8,
+    pub used_words: HashSet<String>,
     pub players: Vec<Player>,
     pub current_turn: Uuid,
 }
@@ -25,6 +32,7 @@ pub struct InGame {
 #[derive(Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
+    pub rejoin_token: Uuid,
     pub input: String,
     pub lives: u8,
     pub used_letters: HashSet<char>,
@@ -39,8 +47,8 @@ pub enum GameState {
 impl Default for GameState {
     fn default() -> Self {
         GameState::Lobby(Lobby {
-            start_handle: None,
             ready: HashSet::new(),
+            countdown: None,
         })
     }
 }
@@ -52,11 +60,7 @@ impl Lobby {
     {
         let timer_len = thread_rng().gen_range(10..=30);
         let prompt = GLOBAL.get().unwrap().random_prompt();
-        let mut players: Vec<Player> = self
-            .ready
-            .iter()
-            .map(|player| Player::new(player.0))
-            .collect();
+        let mut players: Vec<Player> = self.ready.iter().map(|uuid| Player::new(*uuid)).collect();
 
         players.shuffle(&mut thread_rng());
 
@@ -66,14 +70,34 @@ impl Lobby {
             starting_time: Instant::now(),
             prompt,
             prompt_uses: 0,
+            used_words: HashSet::new(),
             current_turn: players[0].uuid,
             players,
         })
     }
 }
 
+pub enum GuessInfo {
+    PromptNotIn,
+    NotEnglish,
+    AlreadyUsed,
+    Valid(i8),
+}
+
 impl InGame {
-    pub fn check_for_extra_life(&mut self, guess: &str) -> bool {
+    pub fn parse_prompt(&mut self, guess: &str) -> GuessInfo {
+        if !guess.contains(&self.prompt) {
+            return GuessInfo::PromptNotIn;
+        }
+
+        if !GLOBAL.get().unwrap().is_valid(guess) {
+            return GuessInfo::NotEnglish;
+        }
+
+        if !self.used_words.insert(guess.to_owned()) {
+            return GuessInfo::AlreadyUsed;
+        }
+
         let current_player = self
             .players
             .iter_mut()
@@ -93,7 +117,7 @@ impl InGame {
             current_player.used_letters.clear();
         }
 
-        extra_life
+        GuessInfo::Valid(extra_life.into())
     }
 
     pub fn new_prompt(&mut self) {
@@ -162,8 +186,8 @@ impl InGame {
 
     pub fn end(&self) -> GameState {
         GameState::Lobby(Lobby {
-            start_handle: None,
             ready: HashSet::new(),
+            countdown: None,
         })
     }
 }
@@ -172,6 +196,7 @@ impl Player {
     pub fn new(uuid: Uuid) -> Self {
         Self {
             uuid,
+            rejoin_token: Uuid::new_v4(),
             input: String::new(),
             lives: 2,
             used_letters: HashSet::new(),

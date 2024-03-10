@@ -4,8 +4,8 @@ pub mod messages;
 mod models;
 
 use global::{GlobalData, GLOBAL};
-use messages::{ClientMessage, ServerMessage};
-use models::{AppState, Client};
+use messages::ClientMessage;
+use models::AppState;
 
 use axum::{
     extract::{
@@ -40,8 +40,10 @@ async fn main() {
 }
 
 #[derive(Debug, Deserialize)]
-struct Params {
+#[serde(rename_all = "camelCase")]
+pub struct Params {
     username: String,
+    rejoin_token: Option<Uuid>,
 }
 
 async fn ws_handler(
@@ -58,32 +60,22 @@ async fn ws_handler(
         state.clients_connected() + 1
     );
 
-    ws.on_upgrade(move |socket| handle_socket(socket, state, room, params.username))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, room: String, username: String) {
-    let uuid = Uuid::new_v4();
-
+async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {
     let (mut sender, mut reciever) = socket.split();
-    let (proxy, mut inbox) = mpsc::unbounded_channel::<ServerMessage>();
+    let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
-    state.add_client(
-        room.clone(),
-        Client {
-            uuid,
-            tx: proxy,
-            username: username.clone(),
-        },
-    );
+    let socket_uuid = Uuid::new_v4();
+    let uuid = state.add_client(&room, params, socket_uuid, proxy);
 
     let sending_task = tokio::task::spawn(async move {
         while let Some(msg) = inbox.recv().await {
-            let serialized = serde_json::to_string(&msg).unwrap();
-
             sender
-                .send(serialized.clone().into())
+                .send(msg.clone())
                 .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {e}, msg: {serialized:#?}");
+                    eprintln!("websocket send error: {e}, msg: {msg:#?}");
                 })
                 .await;
         }
@@ -93,7 +85,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, usernam
         if let Ok(msg) = msg {
             if let Message::Text(text) = msg {
                 if let Ok(msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    msg.handle(&state, &room, &username, uuid);
+                    msg.handle(&state, &room, uuid);
                 } else {
                     eprintln!("couldnt parse message: {text}");
                 }
@@ -104,5 +96,5 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, usernam
     }
 
     sending_task.abort();
-    state.remove_client(&room, uuid);
+    state.remove_client(&room, uuid, socket_uuid);
 }

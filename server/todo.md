@@ -1,12 +1,16 @@
 # current todo:
 
--   send current countdown to new clients joining, also input
+-   limit player input length
 
--   extra lives for using 24 distinct letters
+-   clients may or may not be correctly reporting disconnections, look into this
+
+-   clean up frontend state
+
+-   send previous winner to new clients joining?
+
+-   use unwrap less
 
 -   room owner able to start game early
-
--   handle disconnections
 
 -   probably look into using dashmap instead of std hashmap for global game data for concurrent references
 

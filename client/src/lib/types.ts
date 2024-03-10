@@ -10,20 +10,20 @@ export type AppState =
 	  }
 	| {
 			type: 'lobby';
-			readyPlayers: Array<PlayerInfo>;
-
 			uuid: string;
 			chatMessages: Array<string>;
+			readyPlayers: Array<PlayerInfo>;
+			previousWinner: string | null;
+			countdown: number | null;
 	  }
 	| {
 			type: 'game';
-			players: Array<PlayerData>;
-			currentTurn: PlayerData;
-			prompt: string;
-			usedLetters: Set<string>;
-
 			uuid: string;
 			chatMessages: Array<string>;
+			players: Array<PlayerData>;
+			currentTurn: string;
+			prompt: string;
+			usedLetters: Set<string>;
 	  };
 
 export type ClientMessage =
@@ -51,13 +51,22 @@ export type ServerMessage =
 	| {
 			type: 'readyPlayers';
 			players: Array<PlayerInfo>;
-			countdown: boolean;
+	  }
+	| {
+			type: 'startingCountdown';
+			state: CountdownState;
 	  }
 	| {
 			type: 'gameStarted';
+			rejoinToken?: string;
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
+	  }
+	| {
+			type: 'playerUpdate';
+			uuid: string;
+			state: PlayerUpdate;
 	  }
 	| {
 			type: 'inputUpdate';
@@ -67,6 +76,7 @@ export type ServerMessage =
 	| {
 			type: 'invalidWord';
 			uuid: string;
+			reason: InvalidWordReason;
 	  }
 	| {
 			type: 'newPrompt';
@@ -82,13 +92,15 @@ export type ServerMessage =
 type RoomState =
 	| {
 			type: 'lobby';
-			readyPlayers: Array<PlayerInfo>;
+			ready: Array<PlayerInfo>;
+			startingCountdown?: number;
 	  }
 	| {
 			type: 'inGame';
 			prompt: string;
 			turn: string;
 			players: Array<PlayerData>;
+			usedLetters?: Array<string>;
 	  };
 
 export type PlayerInfo = {
@@ -101,7 +113,37 @@ export type PlayerData = {
 	username: string;
 	input: string;
 	lives: number;
+	disconnected: boolean;
 };
+
+type PlayerUpdate =
+	| {
+			type: 'disconnected';
+	  }
+	| {
+			type: 'reconnected';
+			username: string;
+	  };
+
+type CountdownState =
+	| {
+			type: 'inProgress';
+			timeLeft: number;
+	  }
+	| {
+			type: 'stopped';
+	  };
+
+type InvalidWordReason =
+	| {
+			type: 'promptNotIn';
+	  }
+	| {
+			type: 'notEnglish';
+	  }
+	| {
+			type: 'alreadyUsed';
+	  };
 
 export const inGameOrLobby = P.when(
 	(type): type is 'lobby' | 'game' => type === 'lobby' || type === 'game'
