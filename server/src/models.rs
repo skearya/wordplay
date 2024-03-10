@@ -175,6 +175,8 @@ impl AppState {
             return;
         };
 
+        let username = client.username.clone();
+
         client.socket = None;
 
         if clients
@@ -222,7 +224,7 @@ impl AppState {
             }
 
             clients.broadcast(ServerMessage::ServerMessage {
-                content: format!("{} has left", clients[&uuid].username),
+                content: format!("{} has left", username),
             });
         }
     }
