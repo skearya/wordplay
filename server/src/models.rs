@@ -35,9 +35,10 @@ pub struct Room {
 
 #[derive(Debug, Clone)]
 pub struct Client {
+    pub socket: Option<Uuid>,
     pub tx: UnboundedSender<Message>,
+    // note: "disconnected" might not be needed cause its true when socket_id is None
     pub disconnected: bool,
-    pub reconnected: bool,
     pub username: String,
 }
 
@@ -55,7 +56,13 @@ impl AppState {
         lock.rooms.values().map(|room| room.clients.len()).sum()
     }
 
-    pub fn add_client(&self, room: String, params: Params, tx: UnboundedSender<Message>) -> Uuid {
+    pub fn add_client(
+        &self,
+        room: String,
+        params: Params,
+        socket_uuid: Uuid,
+        tx: UnboundedSender<Message>,
+    ) -> Uuid {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
 
@@ -79,26 +86,24 @@ impl AppState {
 
                 uuid
             }
-            None => {
-                clients.broadcast(ServerMessage::ServerMessage {
-                    content: format!("{} has joined", params.username.clone()),
-                });
-
-                Uuid::new_v4()
-            }
+            None => Uuid::new_v4(),
         };
+
+        clients.broadcast(ServerMessage::ServerMessage {
+            content: format!("{} has joined", params.username.clone()),
+        });
 
         let old_client = clients.insert(
             uuid,
             Client {
+                socket: Some(socket_uuid),
                 tx,
                 disconnected: false,
-                reconnected: false,
                 username: params.username,
             },
         );
 
-        if let Some(old_client) = old_client {
+        if let Some(old_client) = old_client.filter(|client| client.socket.is_some()) {
             old_client
                 .tx
                 .send(Message::Close(Some(CloseFrame {
@@ -106,8 +111,6 @@ impl AppState {
                     reason: Cow::from("Connected on another client?"),
                 })))
                 .ok();
-
-            clients.get_mut(&uuid).unwrap().reconnected = true;
         };
 
         let room_state = match state {
@@ -161,31 +164,49 @@ impl AppState {
         uuid
     }
 
-    pub fn remove_client(&self, room: &str, uuid: Uuid) {
+    pub fn remove_client(&self, room: &str, uuid: Uuid, socket_uuid: Uuid) {
         let mut lock = self.inner.lock().unwrap();
         let Some(Room { clients, state }) = lock.rooms.get_mut(room) else {
             return;
         };
 
-        if let Some(client) = clients.get_mut(&uuid) {
-            if client.reconnected {
-                client.reconnected = false;
-                return;
-            }
+        let Some(client) = clients.get_mut(&uuid).filter(|client| {
+            client
+                .socket
+                .is_some_and(|client_socket| client_socket == socket_uuid)
+        }) else {
+            return;
+        };
 
-            client.disconnected = true;
+        let username = client.username.clone();
 
-            if clients
-                .values()
-                .filter(|client| !client.disconnected)
-                .count()
-                == 0
-            {
-                lock.rooms.remove(room);
-            } else {
-                if let GameState::Lobby(lobby) = state {
-                    lobby.ready.remove(&uuid);
+        client.socket = None;
+        client.disconnected = true;
+
+        if clients
+            .values()
+            .filter(|client| !client.disconnected)
+            .count()
+            == 0
+        {
+            lock.rooms.remove(room);
+        } else {
+            match state {
+                GameState::Lobby(lobby) => {
                     clients.remove(&uuid);
+
+                    if lobby.ready.remove(&uuid) {
+                        clients.broadcast(ServerMessage::ReadyPlayers {
+                            players: lobby
+                                .ready
+                                .iter()
+                                .map(|uuid| PlayerInfo {
+                                    uuid: *uuid,
+                                    username: clients[uuid].username.clone(),
+                                })
+                                .collect(),
+                        });
+                    }
 
                     if let Some(countdown) = &mut lobby.countdown {
                         if lobby.ready.len() < 2 {
@@ -194,17 +215,22 @@ impl AppState {
 
                             clients.broadcast(ServerMessage::StartingCountdown {
                                 state: CountdownState::Stopped,
-                            })
+                            });
                         }
                     }
                 }
-
-                clients.broadcast(ServerMessage::PlayerUpdate {
-                    uuid,
-                    state: PlayerUpdate::Disconnected,
-                });
+                GameState::InGame(_) => {
+                    clients.broadcast(ServerMessage::PlayerUpdate {
+                        uuid,
+                        state: PlayerUpdate::Disconnected,
+                    });
+                }
             }
-        };
+
+            clients.broadcast(ServerMessage::ServerMessage {
+                content: format!("{} has left", username),
+            });
+        }
     }
 
     pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) {

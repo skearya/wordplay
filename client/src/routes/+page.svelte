@@ -115,10 +115,6 @@
 					player.disconnected = true;
 				}
 
-				state.chatMessages.push(
-					`${player.username} has ${message.state.type === 'reconnected' ? 'joined' : 'left'}`
-				);
-
 				return state;
 			})
 			.with([{ type: 'game' }, { type: 'inputUpdate' }], ([state, message]) => {

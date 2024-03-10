@@ -67,7 +67,8 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
-    let uuid = state.add_client(room.clone(), params, proxy);
+    let socket_uuid = Uuid::new_v4();
+    let uuid = state.add_client(room.clone(), params, socket_uuid, proxy);
 
     let sending_task = tokio::task::spawn(async move {
         while let Some(msg) = inbox.recv().await {
@@ -95,5 +96,5 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
     }
 
     sending_task.abort();
-    state.remove_client(&room, uuid);
+    state.remove_client(&room, uuid, socket_uuid);
 }
