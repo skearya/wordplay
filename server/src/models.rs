@@ -56,13 +56,13 @@ impl AppState {
 
     pub fn add_client(
         &self,
-        room: String,
+        room: &str,
         params: Params,
         socket_uuid: Uuid,
         tx: UnboundedSender<Message>,
     ) -> Uuid {
         let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state } = lock.rooms.entry(room.clone()).or_default();
+        let Room { clients, state } = lock.rooms.entry(room.to_string()).or_default();
 
         let uuid = match params.rejoin_token.and_then(|rejoin_token| {
             if let GameState::InGame(game) = state {
@@ -373,7 +373,7 @@ impl AppState {
         });
     }
 
-    pub fn client_guess(&self, room: &str, uuid: Uuid, guess: String) {
+    pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state } = lock.rooms.get_mut(room).unwrap();
 
@@ -385,7 +385,7 @@ impl AppState {
             return;
         }
 
-        match game.parse_prompt(&guess) {
+        match game.parse_prompt(guess) {
             GuessInfo::Valid(life_change) => {
                 game.new_prompt();
                 game.update_turn();

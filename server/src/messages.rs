@@ -155,7 +155,8 @@ impl ClientMessage {
                 state.client_guess(
                     room,
                     uuid,
-                    word.to_ascii_lowercase()
+                    &word
+                        .to_ascii_lowercase()
                         .chars()
                         .filter(|char| char.is_alphabetic())
                         .collect::<String>(),
