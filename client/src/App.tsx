@@ -1,12 +1,11 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from './types/messages';
 import { createSignal, Switch, Match, For, onCleanup } from 'solid-js';
-import { match } from 'ts-pattern';
+import { P, match } from 'ts-pattern';
 
 const App: Component = () => {
 	const [state, setState] = createSignal<'connecting' | 'error' | 'lobby' | 'game'>('connecting');
 	const [messages, setMessages] = createSignal<Array<string>>([]);
-	const [input, setInput] = createSignal<string>('');
 
 	const room = prompt('room', 'one');
 	const username = prompt('username', 'skeary');
@@ -18,6 +17,20 @@ const App: Component = () => {
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
+
+		match(message)
+			.with({ type: 'roomInfo', state: { type: 'lobby' } }, (message) => {})
+			.with({ type: 'roomInfo', state: { type: 'inGame' } }, (message) => {})
+			.with({ type: P.union('serverMessage', 'chatMessage') }, (message) => {})
+			.with({ type: 'readyPlayers' }, (message) => {})
+			.with({ type: 'startingCountdown' }, (message) => {})
+			.with({ type: 'gameStarted' }, (message) => {})
+			.with({ type: 'playerUpdate' }, (message) => {})
+			.with({ type: 'inputUpdate' }, (message) => {})
+			.with({ type: 'invalidWord' }, (message) => {})
+			.with({ type: 'newPrompt' }, (message) => {})
+			.with({ type: 'gameEnded' }, (message) => {})
+			.exhaustive();
 	});
 
 	function sendMessage(data: ClientMessage) {
