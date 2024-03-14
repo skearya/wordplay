@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from './types/messages';
-import { createSignal, Switch, Match, For, onCleanup, createEffect, Show } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { createSignal, Switch, Match, For, onCleanup, createEffect, Show, batch } from 'solid-js';
+import { createStore, produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { ConnectionData, GameData, LobbyData } from './types/stores';
 
@@ -25,8 +25,12 @@ const App: Component = () => {
 		players: [],
 		currentTurn: '',
 		prompt: '',
-		usedLetters: new Set()
+		usedLetters: new Set(),
+		input: ''
 	});
+
+	const unusedLetters = () =>
+		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
 
 	const params = new URLSearchParams({ username: connection.username });
 	const socket = new WebSocket(
@@ -40,24 +44,30 @@ const App: Component = () => {
 			.with({ type: 'roomInfo' }, (message) => {
 				setConnection('uuid', message.uuid);
 
-				if (message.state.type === 'lobby') {
-					setState('lobby');
-					setLobby({
-						readyPlayers: message.state.ready,
-						startingCountdown: message.state.startingCountdown
-					});
-				} else {
-					setState('game');
-					setGame({
-						players: message.state.players,
-						currentTurn: message.state.turn,
-						prompt: message.state.prompt,
-						usedLetters:
-							message.state.usedLetters !== undefined
-								? new Set(message.state.usedLetters)
-								: undefined
-					});
-				}
+				batch(() => {
+					if (message.state.type === 'lobby') {
+						setState('lobby');
+						setLobby({
+							readyPlayers: message.state.ready,
+							startingCountdown: message.state.startingCountdown
+						});
+					} else {
+						const usedLetters = message.state.usedLetters
+							? new Set(message.state.usedLetters)
+							: undefined;
+						const input =
+							message.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
+
+						setState('game');
+						setGame({
+							players: message.state.players,
+							currentTurn: message.state.turn,
+							prompt: message.state.prompt,
+							usedLetters,
+							input
+						});
+					}
+				});
 			})
 			.with({ type: P.union('serverMessage', 'chatMessage') }, (message) => {
 				const messageContent =
@@ -68,28 +78,32 @@ const App: Component = () => {
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 			})
 			.with({ type: 'readyPlayers' }, (message) => {
-				setLobby({ readyPlayers: message.players });
+				setLobby({
+					readyPlayers: message.players,
+					startingCountdown: message.players.length >= 2 ? 10 : null
+				});
 			})
 			.with({ type: 'startingCountdown' }, (message) => {
-				if (message.state.type === 'inProgress') {
-					setLobby({ startingCountdown: message.state.timeLeft });
-				} else {
-					setLobby({ startingCountdown: null });
-				}
+				setLobby({
+					startingCountdown: message.state.type === 'inProgress' ? message.state.timeLeft : null
+				});
 			})
 			.with({ type: 'gameStarted' }, (message) => {
-				if (message.rejoinToken !== undefined) {
-					let tokens = JSON.parse(localStorage.getItem('rejoinTokens') || '{}');
+				if (message.rejoinToken) {
+					let tokens = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}');
 					tokens[connection.room] = message.rejoinToken;
 					localStorage.setItem('rejoinTokens', JSON.stringify(tokens));
 				}
 
-				setState('game');
-				setGame({
-					players: message.players,
-					currentTurn: message.turn,
-					prompt: message.prompt,
-					usedLetters: new Set()
+				batch(() => {
+					setState('game');
+					setGame({
+						players: message.players,
+						currentTurn: message.turn,
+						prompt: message.prompt,
+						usedLetters: new Set(),
+						input: ''
+					});
 				});
 			})
 			.with({ type: 'playerUpdate' }, (message) => {
@@ -109,17 +123,42 @@ const App: Component = () => {
 			})
 			.with({ type: 'invalidWord' }, (message) => {})
 			.with({ type: 'newPrompt' }, (message) => {
-				setGame('prompt', message.prompt);
+				setGame(
+					produce((game) => {
+						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
+						turn.lives += message.lifeChange;
+
+						if (turn.uuid === connection.uuid && message.lifeChange >= 0) {
+							// technically game.input could be modified after word submission so this would be incorrect
+							// probably just send used letters from server
+							game.usedLetters = new Set([...game.usedLetters!, ...game.input]);
+						}
+
+						if (message.turn === game.currentTurn) {
+							game.input = '';
+							// focus input
+						}
+
+						game.prompt = message.prompt;
+						game.currentTurn = message.turn;
+					})
+				);
 			})
 			.with({ type: 'gameEnded' }, (message) => {
-				setState('lobby');
-				setLobby({
-					previousWinner: game.players.find((player) => player.uuid === message.winner)!.username,
-					readyPlayers: [],
-					startingCountdown: null
+				batch(() => {
+					setState('lobby');
+					setLobby({
+						previousWinner: game.players.find((player) => player.uuid === message.winner)!.username,
+						readyPlayers: [],
+						startingCountdown: null
+					});
 				});
 			})
 			.exhaustive();
+	});
+
+	socket.addEventListener('close', (event) => {
+		setState('error');
 	});
 
 	function sendMessage(data: ClientMessage) {
@@ -166,9 +205,35 @@ const App: Component = () => {
 				</ul>
 			</Match>
 			<Match when={state() === 'game'}>
+				<div class="flex gap-2">
+					<h1>turn</h1>
+					<h1 class="text-green-300">
+						{game.players.find((player) => player.uuid === game.currentTurn)!.username}
+					</h1>
+				</div>
 				<h1>{game.prompt}</h1>
-				<h1>{game.players.find((player) => player.uuid === game.currentTurn)?.username}</h1>
+				<div class="flex gap-2">
+					<h1>players:</h1>
+					<For each={game.players}>
+						{(player, _) => (
+							<div>
+								<h1>{player.username}</h1>
+								<h1>{player.uuid}</h1>
+								<h1 class="min-w-16">input: {player.input}</h1>
+								<h1 class="text-red-400">lives: {player.lives}</h1>
+								<Show when={player.disconnected}>
+									<h1>i disconnected...</h1>
+								</Show>
+							</div>
+						)}
+					</For>
+				</div>
+				<div class="flex gap-1">
+					<h1>unused letters</h1>
+					<For each={unusedLetters()}>{(letter, _) => <h1>{letter}</h1>}</For>
+				</div>
 				<input
+					disabled={game.currentTurn !== connection.uuid}
 					class="border"
 					type="text"
 					onKeyDown={(event) => {
