@@ -1,11 +1,23 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from './types/messages';
-import { createSignal, Switch, Match, For, onCleanup, createEffect, Show, batch } from 'solid-js';
+import {
+	createSignal,
+	Switch,
+	Match,
+	For,
+	onCleanup,
+	createEffect,
+	Show,
+	batch,
+	untrack
+} from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { ConnectionData, GameData, LobbyData } from './types/stores';
 
 const App: Component = () => {
+	let gameInputRef!: HTMLInputElement;
+
 	const [state, setState] = createSignal<'connecting' | 'error' | 'lobby' | 'game'>('connecting');
 
 	const [connection, setConnection] = createStore<ConnectionData>({
@@ -32,7 +44,15 @@ const App: Component = () => {
 	const unusedLetters = () =>
 		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
 
-	const params = new URLSearchParams({ username: connection.username });
+	const rejoinToken: string | undefined = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}')[
+		connection.room
+	];
+
+	const params = new URLSearchParams({
+		username: connection.username,
+		...(rejoinToken && { rejoinToken })
+	});
+
 	const socket = new WebSocket(
 		`${import.meta.env.PUBLIC_SERVER}/rooms/${connection.room}?${params.toString()}`
 	);
@@ -134,9 +154,9 @@ const App: Component = () => {
 							game.usedLetters = new Set([...game.usedLetters!, ...game.input]);
 						}
 
-						if (message.turn === game.currentTurn) {
+						if (message.turn == connection.uuid) {
 							game.input = '';
-							// focus input
+							gameInputRef.focus();
 						}
 
 						game.prompt = message.prompt;
@@ -164,6 +184,15 @@ const App: Component = () => {
 	function sendMessage(data: ClientMessage) {
 		socket.send(JSON.stringify(data));
 	}
+
+	createEffect(() => {
+		if (state() === 'game' && game.players.map((player) => player.uuid).includes(connection.uuid)) {
+			sendMessage({
+				type: 'input',
+				input: game.input
+			});
+		}
+	});
 
 	onCleanup(() => {
 		socket.close();
@@ -233,9 +262,12 @@ const App: Component = () => {
 					<For each={unusedLetters()}>{(letter, _) => <h1>{letter}</h1>}</For>
 				</div>
 				<input
-					disabled={game.currentTurn !== connection.uuid}
+					ref={gameInputRef}
 					class="border"
 					type="text"
+					disabled={game.currentTurn !== connection.uuid}
+					value={game.input}
+					onInput={(event) => setGame('input', event.target.value)}
 					onKeyDown={(event) => {
 						if (event.key === 'Enter') {
 							sendMessage({

@@ -366,16 +366,14 @@ impl AppState {
             return;
         };
 
-        game.players
-            .iter_mut()
-            .find(|player| player.uuid == uuid)
-            .unwrap()
-            .input = new_input.clone();
+        if let Some(player) = game.players.iter_mut().find(|player| player.uuid == uuid) {
+            player.input = new_input.clone();
 
-        clients.broadcast(ServerMessage::InputUpdate {
-            uuid,
-            input: new_input,
-        });
+            clients.broadcast(ServerMessage::InputUpdate {
+                uuid,
+                input: new_input,
+            });
+        }
     }
 
     pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {
