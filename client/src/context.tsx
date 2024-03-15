@@ -1,6 +1,6 @@
+import { ConnectionData, GameData, LobbyData } from './types/stores';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { ConnectionData, GameData, LobbyData } from './types/stores';
 
 function makeContext() {
 	const [state, setState] = createSignal<'connecting' | 'error' | 'lobby' | 'game'>('connecting');
@@ -32,7 +32,7 @@ function makeContext() {
 	] as const;
 }
 
-const Context = createContext<ReturnType<typeof makeContext>>(makeContext());
+export const Context = createContext<ReturnType<typeof makeContext>>(makeContext());
 
 export const ContextProvider: ParentComponent = (props) => {
 	return <Context.Provider value={makeContext()}>{props.children}</Context.Provider>;
