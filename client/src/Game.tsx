@@ -1,9 +1,9 @@
 import type { Component } from 'solid-js';
-import type { ClientMessage, ServerMessage } from './types/messages';
+import type { ClientMessage, ServerMessage } from './lib/types/messages';
 import { Switch, Match, For, onCleanup, createEffect, Show, batch, useContext } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
-import { Context } from './context';
+import { Context } from './lib/context';
 
 const Game: Component = () => {
 	let gameInputRef!: HTMLInputElement;
@@ -119,19 +119,17 @@ const Game: Component = () => {
 						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
 						turn.lives += message.lifeChange;
 
-						if (turn.uuid === connection.uuid && message.lifeChange >= 0) {
-							// technically game.input could be modified after word submission so this would be incorrect
-							// probably just send used letters from server
-							game.usedLetters = new Set([...game.usedLetters!, ...game.input]);
+						if (turn.uuid === connection.uuid && message.word) {
+							game.usedLetters = new Set([...game.usedLetters!, ...message.word]);
 						}
 
-						if (message.turn == connection.uuid) {
+						if (message.newTurn == connection.uuid) {
 							game.input = '';
 							gameInputRef.focus();
 						}
 
-						game.prompt = message.prompt;
-						game.currentTurn = message.turn;
+						game.prompt = message.newPrompt;
+						game.currentTurn = message.newTurn;
 					})
 				);
 			})

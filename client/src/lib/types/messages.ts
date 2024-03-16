@@ -52,9 +52,10 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'newPrompt';
+			word?: string;
 			lifeChange: number;
-			prompt: string;
-			turn: string;
+			newPrompt: string;
+			newTurn: string;
 	  }
 	| {
 			type: 'gameEnded';

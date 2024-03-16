@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-
 use crate::models::AppState;
+
+use std::collections::HashSet;
 
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
@@ -63,9 +63,10 @@ pub enum ServerMessage {
         reason: InvalidWordReason,
     },
     NewPrompt {
+        word: Option<String>,
         life_change: i8,
-        prompt: String,
-        turn: Uuid,
+        new_prompt: String,
+        new_turn: Uuid,
     },
     GameEnded {
         winner: Uuid,
