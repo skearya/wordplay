@@ -18,7 +18,6 @@ import { Context } from './lib/context';
 const Game: Component = () => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-
 	const { connection, game, lobby, state } = context[0];
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
@@ -38,6 +37,8 @@ const Game: Component = () => {
 	const socket = new WebSocket(
 		`${import.meta.env.PUBLIC_SERVER}/rooms/${connection.room}?${params.toString()}`
 	);
+
+	const sendMessage = (data: ClientMessage) => socket.send(JSON.stringify(data));
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
@@ -162,10 +163,6 @@ const Game: Component = () => {
 			setConnectionError(event.reason);
 		});
 	});
-
-	function sendMessage(data: ClientMessage) {
-		socket.send(JSON.stringify(data));
-	}
 
 	const ourTurn = () => state() === 'game' && game.currentTurn == connection.uuid;
 	const unusedLetters = () =>
