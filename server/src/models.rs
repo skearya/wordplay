@@ -255,7 +255,7 @@ impl AppState {
             }
 
             let app_state = self.clone();
-            let room = room.to_owned();
+            let room = room.to_string();
 
             lobby.countdown = Some(Countdown {
                 timer_handle: Arc::new(
@@ -366,16 +366,14 @@ impl AppState {
             return;
         };
 
-        game.players
-            .iter_mut()
-            .find(|player| player.uuid == uuid)
-            .unwrap()
-            .input = new_input.clone();
+        if let Some(player) = game.players.iter_mut().find(|player| player.uuid == uuid) {
+            player.input = new_input.clone();
 
-        clients.broadcast(ServerMessage::InputUpdate {
-            uuid,
-            input: new_input,
-        });
+            clients.broadcast(ServerMessage::InputUpdate {
+                uuid,
+                input: new_input,
+            });
+        }
     }
 
     pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) {
@@ -398,14 +396,15 @@ impl AppState {
 
                 clients.broadcast(ServerMessage::NewPrompt {
                     life_change,
-                    prompt: game.prompt.clone(),
-                    turn: game.current_turn,
+                    word: Some(guess.to_string()),
+                    new_prompt: game.prompt.clone(),
+                    new_turn: game.current_turn,
                 });
 
                 game.timeout_task.abort();
 
                 let app_state = self.clone();
-                let room = room.to_owned();
+                let room = room.to_string();
                 let timer_len = game.timer_len;
                 let current_prompt = game.prompt.clone();
 
@@ -463,8 +462,9 @@ impl AppState {
                 } else {
                     clients.broadcast(ServerMessage::NewPrompt {
                         life_change: -1,
-                        prompt: game.prompt.clone(),
-                        turn: game.current_turn,
+                        word: None,
+                        new_prompt: game.prompt.clone(),
+                        new_turn: game.current_turn,
                     });
 
                     let app_state = self.clone();

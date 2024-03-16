@@ -1,31 +1,3 @@
-import { P } from 'ts-pattern';
-
-export type AppState =
-	| {
-			type: 'connecting';
-	  }
-	| {
-			type: 'error';
-			message: string;
-	  }
-	| {
-			type: 'lobby';
-			uuid: string;
-			chatMessages: Array<string>;
-			readyPlayers: Array<PlayerInfo>;
-			previousWinner: string | null;
-			countdown: number | null;
-	  }
-	| {
-			type: 'game';
-			uuid: string;
-			chatMessages: Array<string>;
-			players: Array<PlayerData>;
-			currentTurn: string;
-			prompt: string;
-			usedLetters: Set<string>;
-	  };
-
 export type ClientMessage =
 	| { type: 'ready' }
 	| { type: 'unready' }
@@ -80,9 +52,10 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'newPrompt';
+			word?: string;
 			lifeChange: number;
-			prompt: string;
-			turn: string;
+			newPrompt: string;
+			newTurn: string;
 	  }
 	| {
 			type: 'gameEnded';
@@ -144,7 +117,3 @@ type InvalidWordReason =
 	| {
 			type: 'alreadyUsed';
 	  };
-
-export const inGameOrLobby = P.when(
-	(type): type is 'lobby' | 'game' => type === 'lobby' || type === 'game'
-);
