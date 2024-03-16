@@ -1,19 +1,30 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from './lib/types/messages';
-import { Switch, Match, For, onCleanup, createEffect, Show, batch, useContext } from 'solid-js';
+import {
+	Switch,
+	Match,
+	For,
+	onCleanup,
+	createEffect,
+	Show,
+	batch,
+	useContext,
+	createSignal
+} from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from './lib/context';
 
 const Game: Component = () => {
+	const context = useContext(Context);
+	if (!context) throw new Error('Not called inside context provider?');
+
+	const { connection, game, lobby, state } = context[0];
+	const { setConnection, setGame, setLobby, setState } = context[1];
+
 	let gameInputRef!: HTMLInputElement;
 
-	const [context, setContext] = useContext(Context);
-	const { connection, game, lobby, state } = context;
-	const { setConnection, setGame, setLobby, setState } = setContext;
-
-	const unusedLetters = () =>
-		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
+	const [connectionError, setConnectionError] = createSignal('');
 
 	const rejoinToken: string | undefined = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}')[
 		connection.room
@@ -125,7 +136,6 @@ const Game: Component = () => {
 
 						if (message.newTurn == connection.uuid) {
 							game.input = '';
-							gameInputRef.focus();
 						}
 
 						game.prompt = message.newPrompt;
@@ -147,19 +157,32 @@ const Game: Component = () => {
 	});
 
 	socket.addEventListener('close', (event) => {
-		setState('error');
+		batch(() => {
+			setState('error');
+			setConnectionError(event.reason);
+		});
 	});
 
 	function sendMessage(data: ClientMessage) {
 		socket.send(JSON.stringify(data));
 	}
 
+	const ourTurn = () => state() === 'game' && game.currentTurn == connection.uuid;
+	const unusedLetters = () =>
+		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
+
 	createEffect(() => {
-		if (state() === 'game' && game.players.map((player) => player.uuid).includes(connection.uuid)) {
+		if (ourTurn()) {
 			sendMessage({
 				type: 'input',
 				input: game.input
 			});
+		}
+	});
+
+	createEffect(() => {
+		if (ourTurn()) {
+			gameInputRef.focus();
 		}
 	});
 
@@ -174,6 +197,7 @@ const Game: Component = () => {
 			</Match>
 			<Match when={state() === 'error'}>
 				<h1>we errored</h1>
+				<h1>{connectionError()}</h1>
 			</Match>
 			<Match when={state() === 'lobby'}>
 				{lobby.startingCountdown && <h1>starting soon: {lobby.startingCountdown}</h1>}
