@@ -253,9 +253,9 @@ const Game: Component = () => {
 					type="text"
 					disabled={game.currentTurn !== connection.uuid}
 					value={game.input}
-					onInput={(event) => setGame('input', event.target.value)}
+					onInput={(event) => setGame('input', event.target.value.substring(0, 35))}
 					onKeyDown={(event) => {
-						if (event.key === 'Enter') {
+						if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
 							sendMessage({
 								type: 'guess',
 								word: event.currentTarget.value

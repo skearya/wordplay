@@ -149,10 +149,24 @@ impl ClientMessage {
             }
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
+                if content.len() > 250 {
+                    return;
+                }
+
                 state.client_chat_message(room, uuid, content);
             }
-            ClientMessage::Input { input } => state.client_input_update(room, uuid, input),
+            ClientMessage::Input { input } => {
+                if input.len() > 35 {
+                    return;
+                }
+
+                state.client_input_update(room, uuid, input)
+            }
             ClientMessage::Guess { word } => {
+                if word.len() > 35 {
+                    return;
+                }
+
                 state.client_guess(
                     room,
                     uuid,

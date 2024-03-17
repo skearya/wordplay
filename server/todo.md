@@ -1,10 +1,6 @@
 # current todo:
 
--   limit player input length
-
 -   clients may or may not be correctly reporting disconnections, look into this
-
--   clean up frontend state
 
 -   send previous winner to new clients joining?
 
