@@ -1,5 +1,9 @@
 # current todo:
 
+-   pub/priv rooms, http api
+
+-   send info about connected clients, not just players, in lobby and game
+
 -   clients may or may not be correctly reporting disconnections, look into this
 
 -   send previous winner to new clients joining?
