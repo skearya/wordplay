@@ -1,5 +1,5 @@
 import type { Component } from 'solid-js';
-import type { ClientMessage, ServerMessage } from './lib/types/messages';
+import type { ClientMessage, ServerMessage } from '../lib/types/messages';
 import {
 	Switch,
 	Match,
@@ -13,7 +13,7 @@ import {
 } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
-import { Context } from './lib/context';
+import { Context } from '../lib/context';
 
 const Game: Component = () => {
 	const context = useContext(Context);
@@ -283,4 +283,4 @@ const Game: Component = () => {
 	);
 };
 
-export { Game };
+export default Game;
