@@ -6,9 +6,6 @@
     "files.exclude": {
         "**/.git": true,
         "**/.github": true,
-        "**/.devcontainer": true,
-        "**/.cargo": true,
-        "**/.svelte-kit": true,
         "**/.eslintignore": true,
         "**/.npmrc": true,
         "**/.prettierignore": true,
