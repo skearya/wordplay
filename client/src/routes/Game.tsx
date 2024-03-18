@@ -22,8 +22,10 @@ const Game: Component = () => {
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
 	let gameInputRef!: HTMLInputElement;
+	let guessErrorTimeout: number;
 
 	const [connectionError, setConnectionError] = createSignal('');
+	const [invalidGuessError, setInvalidGuessError] = createSignal<string | null>(null);
 
 	const rejoinToken: string | undefined = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}')[
 		connection.room
@@ -57,7 +59,7 @@ const Game: Component = () => {
 					} else {
 						const usedLetters = message.state.usedLetters
 							? new Set(message.state.usedLetters)
-							: undefined;
+							: null;
 						const input =
 							message.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
@@ -124,8 +126,18 @@ const Game: Component = () => {
 			.with({ type: 'inputUpdate' }, (message) => {
 				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
 			})
-			.with({ type: 'invalidWord' }, (message) => {})
+			.with({ type: 'invalidWord' }, (message) => {
+				if (message.uuid === connection.uuid) {
+					setInvalidGuessError(message.reason.type);
+
+					clearInterval(guessErrorTimeout);
+					guessErrorTimeout = setTimeout(() => {
+						setInvalidGuessError(null);
+					}, 1000);
+				}
+			})
 			.with({ type: 'newPrompt' }, (message) => {
+				setInvalidGuessError(null);
 				setGame(
 					produce((game) => {
 						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
@@ -135,7 +147,7 @@ const Game: Component = () => {
 							game.usedLetters = new Set([...game.usedLetters!, ...message.word]);
 						}
 
-						if (message.newTurn == connection.uuid) {
+						if (message.newTurn === connection.uuid) {
 							game.input = '';
 						}
 
@@ -247,6 +259,7 @@ const Game: Component = () => {
 					<h1>unused letters</h1>
 					<For each={unusedLetters()}>{(letter, _) => <h1>{letter}</h1>}</For>
 				</div>
+				{invalidGuessError() && <h1 class="text-red-400">{invalidGuessError()}</h1>}
 				<input
 					ref={gameInputRef}
 					class="border"
