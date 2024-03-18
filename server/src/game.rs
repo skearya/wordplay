@@ -53,6 +53,21 @@ impl Default for GameState {
     }
 }
 
+impl GameState {
+    pub fn try_lobby(&mut self) -> Option<&mut Lobby> {
+        match self {
+            GameState::Lobby(lobby) => Some(lobby),
+            GameState::InGame(_) => None,
+        }
+    }
+    pub fn try_in_game(&mut self) -> Option<&mut InGame> {
+        match self {
+            GameState::Lobby(_) => None,
+            GameState::InGame(game) => Some(game),
+        }
+    }
+}
+
 impl Lobby {
     pub fn start_game<F>(&self, timeout_task_handle: F) -> GameState
     where

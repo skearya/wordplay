@@ -143,41 +143,43 @@ pub enum InvalidWordReason {
 
 impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
-        match self {
-            ClientMessage::Ready => {
-                state.client_ready(room, uuid);
-            }
+        let success = match self {
+            ClientMessage::Ready => state.client_ready(room, uuid),
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
                 if content.len() > 250 {
-                    return;
+                    None
+                } else {
+                    state.client_chat_message(room, uuid, content)
                 }
-
-                state.client_chat_message(room, uuid, content);
             }
             ClientMessage::Input { input } => {
                 if input.len() > 35 {
-                    return;
+                    None
+                } else {
+                    state.client_input_update(room, uuid, input)
                 }
-
-                state.client_input_update(room, uuid, input)
             }
             ClientMessage::Guess { word } => {
                 if word.len() > 35 {
-                    return;
+                    None
+                } else {
+                    state.client_guess(
+                        room,
+                        uuid,
+                        &word
+                            .to_ascii_lowercase()
+                            .chars()
+                            .filter(|char| char.is_alphabetic())
+                            .collect::<String>(),
+                    )
                 }
-
-                state.client_guess(
-                    room,
-                    uuid,
-                    &word
-                        .to_ascii_lowercase()
-                        .chars()
-                        .filter(|char| char.is_alphabetic())
-                        .collect::<String>(),
-                );
             }
-        }
+        };
+
+        if success.is_none() {
+            state.errored(room, uuid);
+        };
     }
 }
 

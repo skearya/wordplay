@@ -8,7 +8,7 @@
 
 -   send previous winner to new clients joining?
 
--   use unwrap less
+-   possibly care about duplicate usernames
 
 -   room owner able to start game early
 
