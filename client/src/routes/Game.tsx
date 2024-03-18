@@ -11,6 +11,7 @@ import {
 	useContext,
 	createSignal
 } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
@@ -199,39 +200,20 @@ const Game: Component = () => {
 		socket.close();
 	});
 
-	return (
-		<Switch>
-			<Match when={state() === 'connecting'}>
-				<h1>connecting</h1>
-			</Match>
-			<Match when={state() === 'error'}>
-				<h1>we errored</h1>
-				<h1>{connectionError()}</h1>
-			</Match>
-			<Match when={state() === 'lobby'}>
+	function Lobby() {
+		return (
+			<>
 				{lobby.startingCountdown && <h1>starting soon: {lobby.startingCountdown}</h1>}
 				{lobby.previousWinner && <h1>winner: {lobby.previousWinner}</h1>}
 				<h1>ready players: {lobby.readyPlayers.map((player) => player.username).join(' ')}</h1>
-				<div class="flex">
-					<input
-						class="border"
-						type="text"
-						onKeyDown={(event) => {
-							if (event.key === 'Enter') {
-								sendMessage({
-									type: 'chatMessage',
-									content: event.currentTarget.value
-								});
-							}
-						}}
-					/>
-					<button onClick={() => sendMessage({ type: 'ready' })}>ready</button>
-				</div>
-				<ul class="list-item">
-					<For each={connection.chatMessages}>{(message, _) => <li>{message}</li>}</For>
-				</ul>
-			</Match>
-			<Match when={state() === 'game'}>
+				<button onClick={() => sendMessage({ type: 'ready' })}>ready</button>
+			</>
+		);
+	}
+
+	function InGame() {
+		return (
+			<>
 				<div class="flex gap-2">
 					<h1>turn</h1>
 					<h1 class="text-green-300">
@@ -276,6 +258,21 @@ const Game: Component = () => {
 						}
 					}}
 				/>
+			</>
+		);
+	}
+
+	return (
+		<Switch>
+			<Match when={state() === 'connecting'}>
+				<h1>connecting</h1>
+			</Match>
+			<Match when={state() === 'error'}>
+				<h1>we errored</h1>
+				<h1>{connectionError()}</h1>
+			</Match>
+			<Match when={state() === 'lobby' || state() === 'game'}>
+				<Dynamic component={state() === 'lobby' ? Lobby : InGame} />
 				<input
 					class="border"
 					type="text"
