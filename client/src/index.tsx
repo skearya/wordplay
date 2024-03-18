@@ -4,6 +4,10 @@ import { render } from 'solid-js/web';
 
 import App from './App';
 
+document.documentElement.classList[
+	window.matchMedia('(prefers-color-scheme: light)').matches ? 'remove' : 'add'
+]('dark');
+
 const root = document.getElementById('root');
 
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
