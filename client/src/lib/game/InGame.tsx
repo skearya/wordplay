@@ -81,6 +81,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 				ref={gameInputRef}
 				class="border"
 				type="text"
+				maxlength="35"
 				disabled={game.currentTurn !== connection.uuid}
 				value={game.input}
 				onInput={(event) => setGame('input', event.target.value.substring(0, 35))}

@@ -12,6 +12,7 @@ const ChatMessages: Component<{ sendMessage: (message: ClientMessage) => void }>
 			<input
 				class="border"
 				type="text"
+				maxlength="250"
 				onKeyDown={(event) => {
 					if (event.key === 'Enter') {
 						props.sendMessage({
