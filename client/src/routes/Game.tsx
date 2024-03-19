@@ -1,20 +1,11 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
-import {
-	Switch,
-	Match,
-	For,
-	onCleanup,
-	createEffect,
-	Show,
-	batch,
-	useContext,
-	createSignal
-} from 'solid-js';
-import { Dynamic } from 'solid-js/web';
+import { Switch, Match, For, onCleanup, batch, useContext, createSignal } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
+import { Lobby } from '../lib/game/Lobby';
+import { InGame } from '../lib/game/InGame';
 
 const Game: Component = () => {
 	const context = useContext(Context);
@@ -22,11 +13,7 @@ const Game: Component = () => {
 	const { connection, game, lobby, state } = context[0];
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
-	let gameInputRef!: HTMLInputElement;
-	let guessErrorTimeout: number;
-
 	const [connectionError, setConnectionError] = createSignal('');
-	const [invalidGuessError, setInvalidGuessError] = createSignal<string | null>(null);
 
 	const rejoinToken: string | undefined = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}')[
 		connection.room
@@ -107,6 +94,7 @@ const Game: Component = () => {
 						players: message.players,
 						currentTurn: message.turn,
 						prompt: message.prompt,
+						guessError: ['', ''],
 						usedLetters: new Set(),
 						input: ''
 					});
@@ -128,17 +116,9 @@ const Game: Component = () => {
 				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
 			})
 			.with({ type: 'invalidWord' }, (message) => {
-				if (message.uuid === connection.uuid) {
-					setInvalidGuessError(message.reason.type);
-
-					clearInterval(guessErrorTimeout);
-					guessErrorTimeout = setTimeout(() => {
-						setInvalidGuessError(null);
-					}, 1000);
-				}
+				setGame('guessError', [message.uuid, message.reason.type]);
 			})
 			.with({ type: 'newPrompt' }, (message) => {
-				setInvalidGuessError(null);
 				setGame(
 					produce((game) => {
 						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
@@ -177,90 +157,9 @@ const Game: Component = () => {
 		});
 	});
 
-	const ourTurn = () => state() === 'game' && game.currentTurn == connection.uuid;
-	const unusedLetters = () =>
-		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
-
-	createEffect(() => {
-		if (ourTurn()) {
-			sendMessage({
-				type: 'input',
-				input: game.input
-			});
-		}
-	});
-
-	createEffect(() => {
-		if (ourTurn()) {
-			gameInputRef.focus();
-		}
-	});
-
 	onCleanup(() => {
 		socket.close();
 	});
-
-	function Lobby() {
-		return (
-			<>
-				{lobby.startingCountdown && <h1>starting soon: {lobby.startingCountdown}</h1>}
-				{lobby.previousWinner && <h1>winner: {lobby.previousWinner}</h1>}
-				<h1>ready players: {lobby.readyPlayers.map((player) => player.username).join(' ')}</h1>
-				<button onClick={() => sendMessage({ type: 'ready' })}>ready</button>
-			</>
-		);
-	}
-
-	function InGame() {
-		return (
-			<>
-				<div class="flex gap-2">
-					<h1>turn</h1>
-					<h1 class="text-green-300">
-						{game.players.find((player) => player.uuid === game.currentTurn)!.username}
-					</h1>
-				</div>
-				<h1>{game.prompt}</h1>
-				<div class="flex gap-2">
-					<h1>players:</h1>
-					<For each={game.players}>
-						{(player, _) => (
-							<div>
-								<h1>{player.username}</h1>
-								<h1>{player.uuid}</h1>
-								<h1 class="min-w-16">input: {player.input}</h1>
-								<h1 class="text-red-400">lives: {player.lives}</h1>
-								<Show when={player.disconnected}>
-									<h1>i disconnected...</h1>
-								</Show>
-							</div>
-						)}
-					</For>
-				</div>
-				<div class="flex gap-1">
-					<h1>unused letters</h1>
-					<For each={unusedLetters()}>{(letter, _) => <h1>{letter}</h1>}</For>
-				</div>
-				{invalidGuessError() && <h1 class="text-red-400">{invalidGuessError()}</h1>}
-				<input
-					ref={gameInputRef}
-					class="border"
-					type="text"
-					disabled={game.currentTurn !== connection.uuid}
-					value={game.input}
-					onInput={(event) => setGame('input', event.target.value.substring(0, 35))}
-					onKeyDown={(event) => {
-						if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
-							sendMessage({
-								type: 'guess',
-								word: event.currentTarget.value
-							});
-						}
-					}}
-				/>
-			</>
-		);
-	}
 
 	return (
 		<Switch>
@@ -272,7 +171,14 @@ const Game: Component = () => {
 				<h1>{connectionError()}</h1>
 			</Match>
 			<Match when={state() === 'lobby' || state() === 'game'}>
-				<Dynamic component={state() === 'lobby' ? Lobby : InGame} />
+				<Switch>
+					<Match when={state() === 'lobby'}>
+						<Lobby sendMessage={sendMessage} />
+					</Match>
+					<Match when={state() === 'game'}>
+						<InGame sendMessage={sendMessage} />
+					</Match>
+				</Switch>
 				<input
 					class="border"
 					type="text"

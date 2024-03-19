@@ -17,6 +17,7 @@ export type GameData = {
 	players: Array<PlayerData>;
 	currentTurn: string;
 	prompt: string;
+	guessError: [string, string];
 	usedLetters: Set<string> | null;
 	input: string;
 };

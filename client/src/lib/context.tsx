@@ -22,6 +22,7 @@ function makeContext(room = '') {
 		players: [],
 		currentTurn: '',
 		prompt: '',
+		guessError: ['', ''],
 		usedLetters: new Set(),
 		input: ''
 	});
