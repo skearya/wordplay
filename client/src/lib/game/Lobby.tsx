@@ -8,12 +8,12 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 	const { lobby } = context[0];
 
 	return (
-		<>
+		<section>
 			{lobby.startingCountdown && <h1>starting soon: {lobby.startingCountdown}</h1>}
 			{lobby.previousWinner && <h1>winner: {lobby.previousWinner}</h1>}
 			<h1>ready players: {lobby.readyPlayers.map((player) => player.username).join(' ')}</h1>
 			<button onClick={() => props.sendMessage({ type: 'ready' })}>ready</button>
-		</>
+		</section>
 	);
 };
 

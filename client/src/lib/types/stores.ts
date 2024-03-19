@@ -1,4 +1,4 @@
-import { PlayerData, PlayerInfo } from './messages';
+import type { PlayerData, PlayerInfo } from './messages';
 
 export type ConnectionData = {
 	room: string;

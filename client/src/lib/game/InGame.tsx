@@ -31,6 +31,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 
 	createEffect(() => {
 		const [uuid, _reason] = game.guessError;
+		if (uuid == '') return;
 		const element = document.getElementById(uuid);
 
 		if (element) {
@@ -49,7 +50,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 	});
 
 	return (
-		<>
+		<section>
 			<div class="flex gap-2">
 				<h1>turn</h1>
 				<h1 class="text-green-300">
@@ -92,7 +93,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 					}
 				}}
 			/>
-		</>
+		</section>
 	);
 };
 

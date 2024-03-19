@@ -1,16 +1,17 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
-import { Switch, Match, For, onCleanup, batch, useContext, createSignal } from 'solid-js';
+import { Switch, Match, onCleanup, batch, useContext, createSignal } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
 import { Lobby } from '../lib/game/Lobby';
 import { InGame } from '../lib/game/InGame';
+import { ChatMessages } from '../lib/game/ChatMessages';
 
 const Game: Component = () => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-	const { connection, game, lobby, state } = context[0];
+	const { connection, game, state } = context[0];
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
 	const [connectionError, setConnectionError] = createSignal('');
@@ -179,21 +180,7 @@ const Game: Component = () => {
 						<InGame sendMessage={sendMessage} />
 					</Match>
 				</Switch>
-				<input
-					class="border"
-					type="text"
-					onKeyDown={(event) => {
-						if (event.key === 'Enter') {
-							sendMessage({
-								type: 'chatMessage',
-								content: event.currentTarget.value
-							});
-						}
-					}}
-				/>
-				<ul class="list-item">
-					<For each={connection.chatMessages}>{(message, _) => <li>{message}</li>}</For>
-				</ul>
+				<ChatMessages sendMessage={sendMessage} />
 			</Match>
 		</Switch>
 	);
