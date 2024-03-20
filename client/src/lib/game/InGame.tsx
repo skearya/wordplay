@@ -61,7 +61,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 			<div class="flex gap-2">
 				<h1>players:</h1>
 				<For each={game.players}>
-					{(player, _) => (
+					{(player) => (
 						<div id={player.uuid}>
 							<h1>{player.username}</h1>
 							<h1 class="min-w-16">input: {player.input}</h1>
@@ -75,12 +75,13 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 			</div>
 			<div class="flex gap-1">
 				<h1>unused letters</h1>
-				<For each={unusedLetters()}>{(letter, _) => <h1>{letter}</h1>}</For>
+				<For each={unusedLetters()}>{(letter) => <h1>{letter}</h1>}</For>
 			</div>
 			<input
 				ref={gameInputRef}
 				class="border"
 				type="text"
+				maxlength="35"
 				disabled={game.currentTurn !== connection.uuid}
 				value={game.input}
 				onInput={(event) => setGame('input', event.target.value.substring(0, 35))}
