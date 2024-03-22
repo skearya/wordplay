@@ -22,7 +22,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 			<h1 class="text-outline fixed bottom-4 right-4 skew-x-6 text-7xl font-semibold italic text-background">
 				{status()}
 			</h1>
-			<section class="flex h-screen w-full items-center justify-center">
+			<section class="flex min-h-screen w-full items-center justify-center">
 				<div class="flex flex-col items-center gap-4 rounded-xl border bg-secondary-100 p-4">
 					{lobby.previousWinner && <h1>winner: {lobby.previousWinner}</h1>}
 					<div class="flex flex-col gap-3">

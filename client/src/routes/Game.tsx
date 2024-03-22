@@ -8,6 +8,8 @@ import { Lobby } from '../lib/game/Lobby';
 import { InGame } from '../lib/game/InGame';
 import { ChatMessages } from '../lib/game/ChatMessages';
 import { Nav } from '../lib/game/Nav';
+import { Connecting } from '../lib/game/Connecting';
+import { Errored } from '../lib/game/Errored';
 
 const Game: Component = () => {
 	const context = useContext(Context);
@@ -15,7 +17,7 @@ const Game: Component = () => {
 	const { connection, game, state } = context[0];
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
-	const [connectionError, setConnectionError] = createSignal('');
+	const [connectionError, setConnectionError] = createSignal<string | null>(null);
 
 	const rejoinToken: string | undefined = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}')[
 		connection.room
@@ -168,11 +170,10 @@ const Game: Component = () => {
 			<Nav />
 			<Switch>
 				<Match when={state() === 'connecting'}>
-					<h1>connecting</h1>
+					<Connecting />
 				</Match>
 				<Match when={state() === 'error'}>
-					<h1>we errored</h1>
-					<h1>{connectionError()}</h1>
+					<Errored errorMessage={connectionError} />
 				</Match>
 				<Match when={state() === 'lobby' || state() === 'game'}>
 					<Switch>
