@@ -33,8 +33,10 @@ function makeContext(room = '') {
 	] as const;
 }
 
-export const Context = createContext<ReturnType<typeof makeContext>>();
+const Context = createContext<ReturnType<typeof makeContext>>();
 
-export const ContextProvider: ParentComponent<{ room: string }> = (props) => {
+const ContextProvider: ParentComponent<{ room: string }> = (props) => {
 	return <Context.Provider value={makeContext(props.room)}>{props.children}</Context.Provider>;
 };
+
+export { Context, ContextProvider };

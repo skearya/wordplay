@@ -8,6 +8,16 @@ const ChatMessages: Component<{ sendMessage: (message: ClientMessage) => void }>
 	const { connection } = context[0];
 
 	let messagesContainer!: HTMLUListElement;
+	let chatInput!: HTMLInputElement;
+
+	document.addEventListener('keydown', (event) => {
+		if (document.activeElement?.tagName === 'INPUT') return;
+
+		if (event.key === 't') {
+			event.preventDefault();
+			chatInput.focus();
+		}
+	});
 
 	createEffect(
 		on(
@@ -20,12 +30,13 @@ const ChatMessages: Component<{ sendMessage: (message: ClientMessage) => void }>
 		<section class="fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border bg-primary-50">
 			<ul
 				ref={messagesContainer}
-				class="m-2 mb-0 list-item h-64 overflow-y-scroll text-wrap break-all"
+				class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
 			>
 				<For each={connection.chatMessages}>{(message) => <li>{message}</li>}</For>
 			</ul>
 			<input
-				class="m-2 h-8 rounded-lg border bg-transparent placeholder-white/50 placeholder:text-center"
+				ref={chatInput}
+				class="m-2 h-10 rounded-lg border bg-transparent placeholder-white/50 placeholder:text-center"
 				type="text"
 				placeholder="send a message..."
 				maxlength="250"

@@ -7,6 +7,7 @@ import { Context } from '../lib/context';
 import { Lobby } from '../lib/game/Lobby';
 import { InGame } from '../lib/game/InGame';
 import { ChatMessages } from '../lib/game/ChatMessages';
+import { Nav } from '../lib/game/Nav';
 
 const Game: Component = () => {
 	const context = useContext(Context);
@@ -163,26 +164,29 @@ const Game: Component = () => {
 	});
 
 	return (
-		<Switch>
-			<Match when={state() === 'connecting'}>
-				<h1>connecting</h1>
-			</Match>
-			<Match when={state() === 'error'}>
-				<h1>we errored</h1>
-				<h1>{connectionError()}</h1>
-			</Match>
-			<Match when={state() === 'lobby' || state() === 'game'}>
-				<Switch>
-					<Match when={state() === 'lobby'}>
-						<Lobby sendMessage={sendMessage} />
-					</Match>
-					<Match when={state() === 'game'}>
-						<InGame sendMessage={sendMessage} />
-					</Match>
-				</Switch>
-				<ChatMessages sendMessage={sendMessage} />
-			</Match>
-		</Switch>
+		<>
+			<Nav />
+			<Switch>
+				<Match when={state() === 'connecting'}>
+					<h1>connecting</h1>
+				</Match>
+				<Match when={state() === 'error'}>
+					<h1>we errored</h1>
+					<h1>{connectionError()}</h1>
+				</Match>
+				<Match when={state() === 'lobby' || state() === 'game'}>
+					<Switch>
+						<Match when={state() === 'lobby'}>
+							<Lobby sendMessage={sendMessage} />
+						</Match>
+						<Match when={state() === 'game'}>
+							<InGame sendMessage={sendMessage} />
+						</Match>
+					</Switch>
+					<ChatMessages sendMessage={sendMessage} />
+				</Match>
+			</Switch>
+		</>
 	);
 };
 
