@@ -1,4 +1,4 @@
-import { useContext, type Component, For, createSignal, createEffect } from 'solid-js';
+import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
@@ -22,9 +22,19 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 			<h1 class="text-outline fixed bottom-4 right-4 skew-x-6 text-7xl font-semibold italic text-background">
 				{status()}
 			</h1>
-			<section class="flex min-h-screen w-full items-center justify-center">
+			<section class="flex min-h-screen w-full flex-col items-center justify-center gap-4">
+				<Show when={lobby.previousWinner}>
+					<div class="flex items-center gap-2 rounded-xl border p-4">
+						<h1 class="pr-2">Winner:</h1>
+						<img
+							class="h-10 w-10 rounded-full"
+							src={`https://avatar.vercel.sh/${lobby.previousWinner}`}
+							alt="avatar"
+						/>
+						<h1>{lobby.previousWinner}</h1>
+					</div>
+				</Show>
 				<div class="flex flex-col items-center gap-4 rounded-xl border bg-secondary-100 p-4">
-					{lobby.previousWinner && <h1>winner: {lobby.previousWinner}</h1>}
 					<div class="flex flex-col gap-3">
 						<h1 class="text-2xl">Ready Players</h1>
 						<div class="flex gap-4">
