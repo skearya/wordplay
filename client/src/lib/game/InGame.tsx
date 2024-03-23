@@ -50,14 +50,14 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 	});
 
 	return (
-		<section class="flex min-h-screen flex-col items-center justify-center">
+		<section class="flex min-h-screen flex-col items-center justify-center gap-y-2">
 			<div class="flex gap-2">
 				<h1>turn</h1>
 				<h1 class="text-green-300">
 					{game.players.find((player) => player.uuid === game.currentTurn)!.username}
 				</h1>
 			</div>
-			<h1>{game.prompt}</h1>
+			<h1 class="text-xl">{game.prompt}</h1>
 			<div class="flex gap-2">
 				<h1>players:</h1>
 				<For each={game.players}>
@@ -79,7 +79,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 			</div>
 			<input
 				ref={gameInputRef}
-				class="border"
+				class="border text-black"
 				type="text"
 				maxlength="35"
 				disabled={game.currentTurn !== connection.uuid}
