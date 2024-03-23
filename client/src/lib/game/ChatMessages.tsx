@@ -27,7 +27,7 @@ const ChatMessages: Component<{ sendMessage: (message: ClientMessage) => void }>
 	);
 
 	return (
-		<section class="fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border bg-primary-50">
+		<section class="bg-primary-50/25 fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border">
 			<ul
 				ref={messagesContainer}
 				class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
