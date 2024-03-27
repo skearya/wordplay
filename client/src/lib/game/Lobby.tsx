@@ -5,7 +5,7 @@ import { ClientMessage } from '../types/messages';
 const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-	const { lobby } = context[0];
+	const { connection, lobby } = context[0];
 
 	const [status, setStatus] = createSignal('waiting for players...');
 
@@ -19,7 +19,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 
 	return (
 		<>
-			<h1 class="text-outline fixed bottom-4 right-4 skew-x-6 text-7xl font-semibold italic text-background">
+			<h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
 				{status()}
 			</h1>
 			<section class="flex min-h-screen w-full flex-col items-center justify-center gap-4">
@@ -39,7 +39,11 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 						<h1 class="text-2xl">Ready Players</h1>
 						<div class="flex gap-4">
 							<For each={lobby.readyPlayers}>
-								{(player) => <Player username={player.username} />}
+								{(ready) => (
+									<Player
+										username={connection.clients.find((client) => client.uuid === ready)!.username}
+									/>
+								)}
 							</For>
 							<For each={new Array(Math.max(0, 2 - lobby.readyPlayers.length))}>
 								{() => <Player />}

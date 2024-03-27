@@ -1,23 +1,24 @@
-import type { PlayerData, PlayerInfo } from './messages';
+import type { ClientInfo, PlayerData, Uuid } from './messages';
 
 export type ConnectionData = {
-	room: string;
+	clients: Array<ClientInfo>;
+	uuid: Uuid;
 	username: string;
-	uuid: string;
+	room: string;
 	chatMessages: Array<string>;
 };
 
 export type LobbyData = {
-	readyPlayers: Array<PlayerInfo>;
+	readyPlayers: Array<Uuid>;
 	previousWinner: string | null;
 	startingCountdown: number | null;
 };
 
 export type GameData = {
-	players: Array<PlayerData>;
-	currentTurn: string;
+	players: Array<PlayerData & { username: string }>;
+	currentTurn: Uuid;
 	prompt: string;
-	guessError: [string, string];
-	usedLetters: Set<string> | null;
 	input: string;
+	guessError: [Uuid, string];
+	usedLetters: Set<string> | null;
 };

@@ -1,7 +1,7 @@
 use crate::{
     game::{Countdown, GameState, GuessInfo},
     messages::{
-        CountdownState, InvalidWordReason, PlayerData, PlayerInfo, PlayerUpdate, RoomState,
+        ClientInfo, ConnectionUpdate, CountdownState, InvalidWordReason, PlayerData, RoomState,
         ServerMessage,
     },
     Params,
@@ -92,21 +92,28 @@ impl AppState {
             }
         }) {
             Some(uuid) => {
-                clients.broadcast(ServerMessage::PlayerUpdate {
+                clients.broadcast(ServerMessage::ConnectionUpdate {
                     uuid,
-                    state: PlayerUpdate::Reconnected {
+                    state: ConnectionUpdate::Reconnected {
                         username: params.username.clone(),
                     },
                 });
 
                 uuid
             }
-            None => Uuid::new_v4(),
-        };
+            None => {
+                let uuid = Uuid::new_v4();
 
-        clients.broadcast(ServerMessage::ServerMessage {
-            content: format!("{} has joined", params.username),
-        });
+                clients.broadcast(ServerMessage::ConnectionUpdate {
+                    uuid,
+                    state: ConnectionUpdate::Connected {
+                        username: params.username.clone(),
+                    },
+                });
+
+                uuid
+            }
+        };
 
         let old_client = clients.insert(
             uuid,
@@ -129,22 +136,13 @@ impl AppState {
 
         let room_state = match state {
             GameState::Lobby(lobby) => RoomState::Lobby {
-                ready: lobby
-                    .ready
-                    .iter()
-                    .map(|uuid| PlayerInfo {
-                        uuid: *uuid,
-                        username: clients[uuid].username.clone(),
-                    })
-                    .collect(),
+                ready: lobby.ready.iter().cloned().collect(),
                 starting_countdown: lobby
                     .countdown
                     .as_ref()
                     .map(|countdown| countdown.time_left),
             },
             GameState::InGame(game) => RoomState::InGame {
-                prompt: game.prompt.clone(),
-                turn: game.current_turn,
                 players: game
                     .players
                     .iter()
@@ -156,6 +154,8 @@ impl AppState {
                         disconnected: clients[&player.uuid].socket.is_none(),
                     })
                     .collect(),
+                turn: game.current_turn,
+                prompt: game.prompt.clone(),
                 used_letters: game
                     .players
                     .iter()
@@ -168,6 +168,14 @@ impl AppState {
             .tx
             .send(
                 ServerMessage::RoomInfo {
+                    clients: clients
+                        .iter()
+                        .filter(|client| client.1.socket.is_some())
+                        .map(|(uuid, client)| ClientInfo {
+                            uuid: *uuid,
+                            username: client.username.clone(),
+                        })
+                        .collect(),
                     uuid,
                     state: room_state,
                 }
@@ -188,8 +196,6 @@ impl AppState {
                 .is_some_and(|client_socket| client_socket == socket_uuid)
         })?;
 
-        let username = client.username.clone();
-
         client.socket = None;
 
         if clients
@@ -200,22 +206,13 @@ impl AppState {
         {
             lock.rooms.remove(room);
         } else {
-            match state {
-                GameState::Lobby(lobby) => {
-                    clients.remove(&uuid);
+            if let GameState::Lobby(lobby) = state {
+                clients.remove(&uuid);
 
-                    if lobby.ready.remove(&uuid) {
-                        clients.broadcast(ServerMessage::ReadyPlayers {
-                            players: lobby
-                                .ready
-                                .iter()
-                                .map(|uuid| PlayerInfo {
-                                    uuid: *uuid,
-                                    username: clients[uuid].username.clone(),
-                                })
-                                .collect(),
-                        });
-                    }
+                if lobby.ready.remove(&uuid) {
+                    clients.broadcast(ServerMessage::ReadyPlayers {
+                        ready: lobby.ready.iter().cloned().collect(),
+                    });
 
                     if let Some(countdown) = &mut lobby.countdown {
                         if lobby.ready.len() < 2 {
@@ -228,16 +225,11 @@ impl AppState {
                         }
                     }
                 }
-                GameState::InGame(_) => {
-                    clients.broadcast(ServerMessage::PlayerUpdate {
-                        uuid,
-                        state: PlayerUpdate::Disconnected,
-                    });
-                }
             }
 
-            clients.broadcast(ServerMessage::ServerMessage {
-                content: format!("{username} has left"),
+            clients.broadcast(ServerMessage::ConnectionUpdate {
+                uuid,
+                state: ConnectionUpdate::Disconnected,
             });
         }
 
@@ -249,7 +241,7 @@ impl AppState {
         let Room { clients, .. } = lock.rooms.get(room)?;
 
         clients.broadcast(ServerMessage::ChatMessage {
-            author: clients[&uuid].username.clone(),
+            author: uuid,
             content,
         });
 
@@ -284,14 +276,7 @@ impl AppState {
         }
 
         clients.broadcast(ServerMessage::ReadyPlayers {
-            players: lobby
-                .ready
-                .iter()
-                .map(|uuid| PlayerInfo {
-                    uuid: *uuid,
-                    username: clients[uuid].username.clone(),
-                })
-                .collect(),
+            ready: lobby.ready.iter().cloned().collect(),
         });
 
         Some(())
@@ -334,9 +319,9 @@ impl AppState {
                     .map(|player| PlayerData {
                         uuid: player.uuid,
                         username: clients[&player.uuid].username.clone(),
+                        disconnected: false,
                         input: player.input.clone(),
                         lives: player.lives,
-                        disconnected: !clients.contains_key(&player.uuid),
                     })
                     .collect();
 

@@ -1,3 +1,5 @@
+export type Uuid = string;
+
 export type ClientMessage =
 	| { type: 'ready' }
 	| { type: 'unready' }
@@ -8,7 +10,8 @@ export type ClientMessage =
 export type ServerMessage =
 	| {
 			type: 'roomInfo';
-			uuid: string;
+			uuid: Uuid;
+			clients: Array<ClientInfo>;
 			state: RoomState;
 	  }
 	| {
@@ -17,12 +20,17 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'chatMessage';
-			author: string;
+			author: Uuid;
 			content: string;
 	  }
 	| {
+			type: 'connectionUpdate';
+			uuid: Uuid;
+			state: ConnectionUpdate;
+	  }
+	| {
 			type: 'readyPlayers';
-			players: Array<PlayerInfo>;
+			ready: Array<Uuid>;
 	  }
 	| {
 			type: 'startingCountdown';
@@ -31,23 +39,18 @@ export type ServerMessage =
 	| {
 			type: 'gameStarted';
 			rejoinToken?: string;
-			prompt: string;
-			turn: string;
 			players: Array<PlayerData>;
-	  }
-	| {
-			type: 'playerUpdate';
-			uuid: string;
-			state: PlayerUpdate;
+			prompt: string;
+			turn: Uuid;
 	  }
 	| {
 			type: 'inputUpdate';
-			uuid: string;
+			uuid: Uuid;
 			input: string;
 	  }
 	| {
 			type: 'invalidWord';
-			uuid: string;
+			uuid: Uuid;
 			reason: InvalidWordReason;
 	  }
 	| {
@@ -55,47 +58,51 @@ export type ServerMessage =
 			word?: string;
 			lifeChange: number;
 			newPrompt: string;
-			newTurn: string;
+			newTurn: Uuid;
 	  }
 	| {
 			type: 'gameEnded';
-			winner: string;
+			winner: Uuid;
 	  };
 
 type RoomState =
 	| {
 			type: 'lobby';
-			ready: Array<PlayerInfo>;
+			ready: Array<Uuid>;
 			startingCountdown?: number;
 	  }
 	| {
 			type: 'inGame';
-			prompt: string;
-			turn: string;
 			players: Array<PlayerData>;
+			turn: Uuid;
+			prompt: string;
 			usedLetters?: Array<string>;
 	  };
 
-export type PlayerInfo = {
-	uuid: string;
+export type ClientInfo = {
+	uuid: Uuid;
 	username: string;
 };
 
 export type PlayerData = {
-	uuid: string;
+	uuid: Uuid;
 	username: string;
+	disconnected: boolean;
 	input: string;
 	lives: number;
-	disconnected: boolean;
 };
 
-type PlayerUpdate =
+type ConnectionUpdate =
 	| {
-			type: 'disconnected';
+			type: 'connected';
+			username: string;
 	  }
 	| {
 			type: 'reconnected';
 			username: string;
+	  }
+	| {
+			type: 'disconnected';
 	  };
 
 type CountdownState =

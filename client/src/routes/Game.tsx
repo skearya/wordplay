@@ -40,6 +40,7 @@ const Game: Component = () => {
 		match(message)
 			.with({ type: 'roomInfo' }, (message) => {
 				setConnection('uuid', message.uuid);
+				setConnection('clients', message.clients);
 
 				batch(() => {
 					if (message.state.type === 'lobby') {
@@ -70,14 +71,51 @@ const Game: Component = () => {
 				const messageContent =
 					message.type === 'serverMessage'
 						? `server: ${message.content}`
-						: `${message.author}: ${message.content}`;
+						: `${connection.clients.find((client) => client.uuid === message.author)!.username}: ${message.content}`;
 
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 			})
+			.with({ type: 'connectionUpdate', state: { type: 'connected' } }, (message) => {
+				setConnection(
+					'chatMessages',
+					connection.chatMessages.length,
+					`${message.state.username} has joined`
+				);
+				setConnection('clients', connection.clients.length, {
+					uuid: message.uuid,
+					username: message.state.username
+				});
+			})
+			.with({ type: 'connectionUpdate', state: { type: 'reconnected' } }, (message) => {
+				setConnection(
+					'chatMessages',
+					connection.chatMessages.length,
+					`${message.state.username} has joined`
+				);
+				setConnection('clients', connection.clients.length, {
+					uuid: message.uuid,
+					username: message.state.username
+				});
+				setGame('players', (player) => player.uuid === message.uuid, {
+					disconnected: false,
+					username: message.state.username
+				});
+			})
+			.with({ type: 'connectionUpdate', state: { type: 'disconnected' } }, (message) => {
+				setConnection(
+					'chatMessages',
+					connection.chatMessages.length,
+					`${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
+				);
+				setConnection('clients', (clients) =>
+					clients.filter((client) => client.uuid != message.uuid)
+				);
+				setGame('players', (player) => player.uuid === message.uuid, 'disconnected', true);
+			})
 			.with({ type: 'readyPlayers' }, (message) => {
 				setLobby({
-					readyPlayers: message.players,
-					startingCountdown: message.players.length >= 2 ? 10 : null
+					readyPlayers: message.ready,
+					startingCountdown: message.ready.length >= 2 ? 10 : null
 				});
 			})
 			.with({ type: 'startingCountdown' }, (message) => {
@@ -103,18 +141,6 @@ const Game: Component = () => {
 						input: ''
 					});
 				});
-			})
-			.with({ type: 'playerUpdate' }, (message) => {
-				setGame(
-					'players',
-					(player) => player.uuid === message.uuid,
-					(player) => ({
-						...player,
-						disconnected: message.state.type === 'disconnected',
-						username:
-							message.state.type === 'reconnected' ? message.state.username : player.username
-					})
-				);
 			})
 			.with({ type: 'inputUpdate' }, (message) => {
 				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
@@ -145,7 +171,8 @@ const Game: Component = () => {
 				batch(() => {
 					setState('lobby');
 					setLobby({
-						previousWinner: game.players.find((player) => player.uuid === message.winner)!.username,
+						previousWinner: connection.clients.find((player) => player.uuid === message.winner)!
+							.username,
 						readyPlayers: [],
 						startingCountdown: null
 					});

@@ -1,9 +1,8 @@
 use crate::models::AppState;
 
-use std::collections::HashSet;
-
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 #[derive(Deserialize, Debug)]
@@ -29,30 +28,31 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     RoomInfo {
         uuid: Uuid,
+        clients: Vec<ClientInfo>,
         state: RoomState,
     },
     ServerMessage {
         content: String,
     },
     ChatMessage {
-        author: String,
+        author: Uuid,
         content: String,
     },
+    ConnectionUpdate {
+        uuid: Uuid,
+        state: ConnectionUpdate,
+    },
     ReadyPlayers {
-        players: Vec<PlayerInfo>,
+        ready: Vec<Uuid>,
     },
     StartingCountdown {
         state: CountdownState,
     },
     GameStarted {
         rejoin_token: Option<Uuid>,
+        players: Vec<PlayerData>,
         prompt: String,
         turn: Uuid,
-        players: Vec<PlayerData>,
-    },
-    PlayerUpdate {
-        uuid: Uuid,
-        state: PlayerUpdate,
     },
     InputUpdate {
         uuid: Uuid,
@@ -81,19 +81,19 @@ pub enum ServerMessage {
 )]
 pub enum RoomState {
     Lobby {
-        ready: Vec<PlayerInfo>,
+        ready: Vec<Uuid>,
         starting_countdown: Option<u8>,
     },
     InGame {
-        prompt: String,
-        turn: Uuid,
         players: Vec<PlayerData>,
+        turn: Uuid,
+        prompt: String,
         used_letters: Option<HashSet<char>>,
     },
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub struct PlayerInfo {
+pub struct ClientInfo {
     pub uuid: Uuid,
     pub username: String,
 }
@@ -102,9 +102,9 @@ pub struct PlayerInfo {
 pub struct PlayerData {
     pub uuid: Uuid,
     pub username: String,
+    pub disconnected: bool,
     pub input: String,
     pub lives: u8,
-    pub disconnected: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -113,9 +113,10 @@ pub struct PlayerData {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum PlayerUpdate {
-    Disconnected,
+pub enum ConnectionUpdate {
+    Connected { username: String },
     Reconnected { username: String },
+    Disconnected,
 }
 
 #[derive(Serialize, Clone, Debug)]
