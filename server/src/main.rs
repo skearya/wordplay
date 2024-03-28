@@ -96,5 +96,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
     }
 
     sending_task.abort();
-    state.remove_client(&room, uuid, socket_uuid);
+    state
+        .remove_client(&room, uuid, socket_uuid)
+        .unwrap_or_else(|e| eprintln!("failed to remove client: {e}"));
 }

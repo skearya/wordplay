@@ -14,7 +14,7 @@ import { Errored } from '../lib/game/Errored';
 const Game: Component = () => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-	const { connection, game, state } = context[0];
+	const { connection, state } = context[0];
 	const { setConnection, setGame, setLobby, setState } = context[1];
 
 	const [connectionError, setConnectionError] = createSignal<string | null>(null);
@@ -75,42 +75,36 @@ const Game: Component = () => {
 
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 			})
-			.with({ type: 'connectionUpdate', state: { type: 'connected' } }, (message) => {
-				setConnection(
-					'chatMessages',
-					connection.chatMessages.length,
-					`${message.state.username} has joined`
-				);
-				setConnection('clients', connection.clients.length, {
-					uuid: message.uuid,
-					username: message.state.username
-				});
-			})
-			.with({ type: 'connectionUpdate', state: { type: 'reconnected' } }, (message) => {
-				setConnection(
-					'chatMessages',
-					connection.chatMessages.length,
-					`${message.state.username} has joined`
-				);
-				setConnection('clients', connection.clients.length, {
-					uuid: message.uuid,
-					username: message.state.username
-				});
-				setGame('players', (player) => player.uuid === message.uuid, {
-					disconnected: false,
-					username: message.state.username
-				});
-			})
-			.with({ type: 'connectionUpdate', state: { type: 'disconnected' } }, (message) => {
-				setConnection(
-					'chatMessages',
-					connection.chatMessages.length,
-					`${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
-				);
-				setConnection('clients', (clients) =>
-					clients.filter((client) => client.uuid != message.uuid)
-				);
-				setGame('players', (player) => player.uuid === message.uuid, 'disconnected', true);
+			.with({ type: 'connectionUpdate' }, (message) => {
+				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
+					setConnection(
+						'chatMessages',
+						connection.chatMessages.length,
+						`${message.state.username} has joined`
+					);
+					setConnection('clients', connection.clients.length, {
+						uuid: message.uuid,
+						username: message.state.username
+					});
+				} else {
+					setConnection(
+						'chatMessages',
+						connection.chatMessages.length,
+						`${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
+					);
+					setConnection('clients', (clients) =>
+						clients.filter((client) => client.uuid != message.uuid)
+					);
+				}
+
+				if (message.state.type === 'reconnected') {
+					setGame('players', (player) => player.uuid === message.uuid, {
+						username: message.state.username,
+						disconnected: false
+					});
+				} else if (message.state.type === 'disconnected') {
+					setGame('players', (player) => player.uuid === message.uuid, 'disconnected', true);
+				}
 			})
 			.with({ type: 'readyPlayers' }, (message) => {
 				setLobby({

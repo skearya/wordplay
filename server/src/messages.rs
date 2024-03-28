@@ -1,5 +1,6 @@
 use crate::models::AppState;
 
+use anyhow::Ok;
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -144,26 +145,26 @@ pub enum InvalidWordReason {
 
 impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
-        let success = match self {
+        let result = match self {
             ClientMessage::Ready => state.client_ready(room, uuid),
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
                 if content.len() > 250 {
-                    None
+                    Ok(())
                 } else {
                     state.client_chat_message(room, uuid, content)
                 }
             }
             ClientMessage::Input { input } => {
                 if input.len() > 35 {
-                    None
+                    Ok(())
                 } else {
                     state.client_input_update(room, uuid, input)
                 }
             }
             ClientMessage::Guess { word } => {
                 if word.len() > 35 {
-                    None
+                    Ok(())
                 } else {
                     state.client_guess(
                         room,
@@ -178,9 +179,10 @@ impl ClientMessage {
             }
         };
 
-        if success.is_none() {
-            state.errored(room, uuid);
-        };
+        if let Err(e) = result {
+            eprintln!("error handling msg: {e}");
+            state.errored(room, uuid).ok();
+        }
     }
 }
 

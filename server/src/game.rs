@@ -1,5 +1,6 @@
 use crate::global::GLOBAL;
 
+use anyhow::{anyhow, Result};
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use std::{collections::HashSet, sync::Arc, time::Instant};
 use tokio::task::AbortHandle;
@@ -54,16 +55,16 @@ impl Default for GameState {
 }
 
 impl GameState {
-    pub fn try_lobby(&mut self) -> Option<&mut Lobby> {
+    pub fn try_lobby(&mut self) -> Result<&mut Lobby> {
         match self {
-            GameState::Lobby(lobby) => Some(lobby),
-            GameState::InGame(_) => None,
+            GameState::Lobby(lobby) => Ok(lobby),
+            GameState::InGame(_) => Err(anyhow!("Not in lobby")),
         }
     }
-    pub fn try_in_game(&mut self) -> Option<&mut InGame> {
+    pub fn try_in_game(&mut self) -> Result<&mut InGame> {
         match self {
-            GameState::Lobby(_) => None,
-            GameState::InGame(game) => Some(game),
+            GameState::Lobby(_) => Err(anyhow!("Not in game")),
+            GameState::InGame(game) => Ok(game),
         }
     }
 }
