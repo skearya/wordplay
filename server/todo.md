@@ -10,8 +10,6 @@
 
 -   possibly care about duplicate usernames
 
--   room owner able to start game early
-
 -   probably look into using dashmap instead of std hashmap for global game data for concurrent references
 
 -   probably use parking_lot because panics with a mutex lock DONT poison i think

@@ -6,10 +6,11 @@ function makeContext(room = '') {
 	const [state, setState] = createSignal<'connecting' | 'error' | 'lobby' | 'game'>('connecting');
 
 	const [connection, setConnection] = createStore<ConnectionData>({
-		clients: [],
+		room,
 		uuid: '',
 		username: prompt('username', 'skeary')!,
-		room,
+		roomOwner: '',
+		clients: [],
 		chatMessages: []
 	});
 

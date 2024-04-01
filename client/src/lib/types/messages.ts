@@ -2,6 +2,7 @@ export type Uuid = string;
 
 export type ClientMessage =
 	| { type: 'ready' }
+	| { type: 'startEarly' }
 	| { type: 'unready' }
 	| { type: 'chatMessage'; content: string }
 	| { type: 'input'; input: string }
@@ -11,6 +12,7 @@ export type ServerMessage =
 	| {
 			type: 'roomInfo';
 			uuid: Uuid;
+			roomOwner: Uuid;
 			clients: Array<ClientInfo>;
 			state: RoomState;
 	  }
@@ -63,6 +65,7 @@ export type ServerMessage =
 	| {
 			type: 'gameEnded';
 			winner: Uuid;
+			newRoomOwner?: Uuid;
 	  };
 
 type RoomState =
@@ -103,6 +106,7 @@ type ConnectionUpdate =
 	  }
 	| {
 			type: 'disconnected';
+			newRoomOwner?: Uuid;
 	  };
 
 type CountdownState =

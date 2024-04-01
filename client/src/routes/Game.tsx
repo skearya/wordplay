@@ -39,8 +39,11 @@ const Game: Component = () => {
 
 		match(message)
 			.with({ type: 'roomInfo' }, (message) => {
-				setConnection('uuid', message.uuid);
-				setConnection('clients', message.clients);
+				setConnection({
+					uuid: message.uuid,
+					clients: message.clients,
+					roomOwner: message.roomOwner
+				});
 
 				batch(() => {
 					if (message.state.type === 'lobby') {
@@ -76,22 +79,23 @@ const Game: Component = () => {
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 			})
 			.with({ type: 'connectionUpdate' }, (message) => {
+				setConnection(
+					'chatMessages',
+					connection.chatMessages.length,
+					message.state.type === 'connected' || message.state.type === 'reconnected'
+						? `${message.state.username} has joined`
+						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
+				);
+
 				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
-					setConnection(
-						'chatMessages',
-						connection.chatMessages.length,
-						`${message.state.username} has joined`
-					);
 					setConnection('clients', connection.clients.length, {
 						uuid: message.uuid,
 						username: message.state.username
 					});
 				} else {
-					setConnection(
-						'chatMessages',
-						connection.chatMessages.length,
-						`${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
-					);
+					if (message.state.newRoomOwner) {
+						setConnection('roomOwner', message.state.newRoomOwner);
+					}
 					setConnection('clients', (clients) =>
 						clients.filter((client) => client.uuid != message.uuid)
 					);
@@ -163,6 +167,10 @@ const Game: Component = () => {
 			})
 			.with({ type: 'gameEnded' }, (message) => {
 				batch(() => {
+					if (message.newRoomOwner) {
+						setConnection('roomOwner', message.newRoomOwner);
+					}
+
 					setState('lobby');
 					setLobby({
 						previousWinner: connection.clients.find((player) => player.uuid === message.winner)!

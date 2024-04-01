@@ -1,6 +1,5 @@
 use crate::models::AppState;
 
-use anyhow::Ok;
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -14,6 +13,7 @@ use uuid::Uuid;
 )]
 pub enum ClientMessage {
     Ready,
+    StartEarly,
     Unready,
     ChatMessage { content: String },
     Input { input: String },
@@ -29,6 +29,7 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     RoomInfo {
         uuid: Uuid,
+        room_owner: Uuid,
         clients: Vec<ClientInfo>,
         state: RoomState,
     },
@@ -71,6 +72,7 @@ pub enum ServerMessage {
     },
     GameEnded {
         winner: Uuid,
+        new_room_owner: Option<Uuid>,
     },
 }
 
@@ -117,7 +119,7 @@ pub struct PlayerData {
 pub enum ConnectionUpdate {
     Connected { username: String },
     Reconnected { username: String },
-    Disconnected,
+    Disconnected { new_room_owner: Option<Uuid> },
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -147,6 +149,7 @@ impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
         let result = match self {
             ClientMessage::Ready => state.client_ready(room, uuid),
+            ClientMessage::StartEarly => state.client_start_early(room, uuid),
             ClientMessage::Unready => todo!(),
             ClientMessage::ChatMessage { content } => {
                 if content.len() > 250 {

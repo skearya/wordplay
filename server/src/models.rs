@@ -10,6 +10,7 @@ use crate::{
 use anyhow::{Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use futures::{future::BoxFuture, FutureExt};
+use rand::{seq::IteratorRandom, thread_rng};
 use std::{
     borrow::Cow,
     collections::HashMap,
@@ -30,6 +31,7 @@ struct AppStateInner {
 
 #[derive(Default)]
 pub struct Room {
+    pub room_owner: Uuid,
     pub clients: HashMap<Uuid, Client>,
     pub state: GameState,
 }
@@ -39,6 +41,16 @@ pub struct Client {
     pub socket: Option<Uuid>,
     pub tx: UnboundedSender<Message>,
     pub username: String,
+}
+
+impl AppStateInner {
+    fn room(&self, room: &str) -> Result<&Room> {
+        self.rooms.get(room).context("Room not found")
+    }
+
+    fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
+        self.rooms.get_mut(room).context("Room not found")
+    }
 }
 
 impl AppState {
@@ -63,28 +75,59 @@ impl AppState {
         tx: UnboundedSender<Message>,
     ) -> Uuid {
         let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state } = lock.rooms.entry(room.to_string()).or_default();
+        let Room {
+            clients,
+            state,
+            room_owner,
+        } = lock.rooms.entry(room.to_string()).or_default();
 
-        let uuid = if let Some(uuid) = params.rejoin_token.and_then(|rejoin_token| {
-            if let GameState::InGame(game) = state {
+        let prev_client = params.rejoin_token.and_then(|rejoin_token| {
+            state.try_in_game().ok().and_then(|game| {
                 game.players
                     .iter()
-                    .find(|player| rejoin_token == player.rejoin_token)
-                    .map(|player| player.uuid)
-            } else {
-                None
+                    .find(|player| player.rejoin_token == rejoin_token)
+                    .map(|player| (player.uuid, clients.get_mut(&player.uuid).unwrap()))
+            })
+        });
+
+        let uuid = if let Some((prev_uuid, client)) = prev_client {
+            if client.socket.is_some() {
+                client
+                    .tx
+                    .send(Message::Close(Some(CloseFrame {
+                        code: close_code::ABNORMAL,
+                        reason: Cow::from("Connected on another client?"),
+                    })))
+                    .ok();
             }
-        }) {
+
+            client.socket = Some(socket_uuid);
+            client.tx = tx;
+            client.username = params.username.clone();
+
             clients.broadcast(ServerMessage::ConnectionUpdate {
-                uuid,
+                uuid: prev_uuid,
                 state: ConnectionUpdate::Reconnected {
-                    username: params.username.clone(),
+                    username: params.username,
                 },
             });
 
-            uuid
+            prev_uuid
         } else {
             let uuid = Uuid::new_v4();
+
+            if clients.is_empty() {
+                *room_owner = uuid;
+            }
+
+            clients.insert(
+                uuid,
+                Client {
+                    socket: Some(socket_uuid),
+                    tx,
+                    username: params.username.clone(),
+                },
+            );
 
             clients.broadcast(ServerMessage::ConnectionUpdate {
                 uuid,
@@ -94,25 +137,6 @@ impl AppState {
             });
 
             uuid
-        };
-
-        let old_client = clients.insert(
-            uuid,
-            Client {
-                socket: Some(socket_uuid),
-                tx,
-                username: params.username,
-            },
-        );
-
-        if let Some(old_client) = old_client.filter(|client| client.socket.is_some()) {
-            old_client
-                .tx
-                .send(Message::Close(Some(CloseFrame {
-                    code: close_code::ABNORMAL,
-                    reason: Cow::from("Connected on another client?"),
-                })))
-                .ok();
         };
 
         let room_state = match state {
@@ -149,6 +173,8 @@ impl AppState {
             .tx
             .send(
                 ServerMessage::RoomInfo {
+                    uuid,
+                    room_owner: *room_owner,
                     clients: clients
                         .iter()
                         .filter(|client| client.1.socket.is_some())
@@ -157,7 +183,6 @@ impl AppState {
                             username: client.username.clone(),
                         })
                         .collect(),
-                    uuid,
                     state: room_state,
                 }
                 .into(),
@@ -169,7 +194,11 @@ impl AppState {
 
     pub fn remove_client(&self, room: &str, uuid: Uuid, socket_uuid: Uuid) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
-        let (clients, state) = lock.room_mut(room)?;
+        let Room {
+            clients,
+            state,
+            room_owner,
+        } = lock.room_mut(room)?;
 
         let client = clients
             .get_mut(&uuid)
@@ -189,9 +218,24 @@ impl AppState {
             == 0
         {
             lock.rooms.remove(room);
-        } else {
-            if let GameState::Lobby(lobby) = state {
+            return Ok(());
+        }
+
+        match state {
+            GameState::Lobby(lobby) => {
                 clients.remove(&uuid);
+
+                let new_room_owner = if *room_owner == uuid {
+                    *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
+                    Some(*room_owner)
+                } else {
+                    None
+                };
+
+                clients.broadcast(ServerMessage::ConnectionUpdate {
+                    uuid,
+                    state: ConnectionUpdate::Disconnected { new_room_owner },
+                });
 
                 if lobby.ready.remove(&uuid) {
                     clients.broadcast(ServerMessage::ReadyPlayers {
@@ -203,6 +247,7 @@ impl AppState {
                             countdown.timer_handle.abort();
                             lobby.countdown = None;
 
+                            // TODO: unnecessary message?
                             clients.broadcast(ServerMessage::StartingCountdown {
                                 state: CountdownState::Stopped,
                             });
@@ -210,11 +255,14 @@ impl AppState {
                     }
                 }
             }
-
-            clients.broadcast(ServerMessage::ConnectionUpdate {
-                uuid,
-                state: ConnectionUpdate::Disconnected,
-            });
+            GameState::InGame(_) => {
+                clients.broadcast(ServerMessage::ConnectionUpdate {
+                    uuid,
+                    state: ConnectionUpdate::Disconnected {
+                        new_room_owner: None,
+                    },
+                });
+            }
         }
 
         Ok(())
@@ -222,7 +270,7 @@ impl AppState {
 
     pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) -> Result<()> {
         let lock = self.inner.lock().unwrap();
-        let (clients, _) = lock.room(room)?;
+        let Room { clients, .. } = lock.room(room)?;
 
         clients.broadcast(ServerMessage::ChatMessage {
             author: uuid,
@@ -234,7 +282,7 @@ impl AppState {
 
     pub fn client_ready(&self, room: &str, uuid: Uuid) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
-        let (clients, state) = lock.room_mut(room)?;
+        let Room { clients, state, .. } = lock.room_mut(room)?;
 
         let lobby = state.try_lobby()?;
 
@@ -266,12 +314,33 @@ impl AppState {
         Ok(())
     }
 
+    pub fn client_start_early(&self, room: &str, uuid: Uuid) -> Result<()> {
+        let mut lock = self.inner.lock().unwrap();
+        let Room {
+            clients,
+            state,
+            room_owner,
+        } = lock.room_mut(room)?;
+
+        let lobby = state.try_lobby()?;
+
+        if uuid == *room_owner && lobby.ready.len() >= 2 {
+            if let Some(countdown) = &lobby.countdown {
+                countdown.timer_handle.abort();
+            }
+
+            start_game(self.clone(), room.to_owned(), state, clients)?;
+        }
+
+        Ok(())
+    }
+
     pub async fn start_when_ready(&self, room: String) -> Result<()> {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let mut lock = self.inner.lock().unwrap();
-            let (clients, state) = lock.room_mut(&room)?;
+            let Room { clients, state, .. } = lock.room_mut(&room)?;
 
             let lobby = state.try_lobby()?;
             let countdown = lobby
@@ -286,53 +355,7 @@ impl AppState {
                     return Ok(());
                 }
 
-                let app_state = self.clone();
-                let room = room.clone();
-
-                *state = lobby.start_game(move |prompt, timer_len| {
-                    Arc::new(
-                        tokio::task::spawn(async move {
-                            app_state
-                                .check_for_timeout(room, timer_len, prompt)
-                                .await
-                                .ok();
-                        })
-                        .abort_handle(),
-                    )
-                });
-
-                let game = state.try_in_game()?;
-
-                let players: Vec<PlayerData> = game
-                    .players
-                    .iter()
-                    .map(|player| PlayerData {
-                        uuid: player.uuid,
-                        username: clients[&player.uuid].username.clone(),
-                        disconnected: false,
-                        input: player.input.clone(),
-                        lives: player.lives,
-                    })
-                    .collect();
-
-                for (uuid, client) in clients {
-                    client
-                        .tx
-                        .send(
-                            ServerMessage::GameStarted {
-                                rejoin_token: game
-                                    .players
-                                    .iter()
-                                    .find(|player| *uuid == player.uuid)
-                                    .map(|player| player.rejoin_token),
-                                prompt: game.prompt.clone(),
-                                turn: game.current_turn,
-                                players: players.clone(),
-                            }
-                            .into(),
-                        )
-                        .ok();
-                }
+                start_game(self.clone(), room.clone(), state, clients)?;
             } else {
                 clients.broadcast(ServerMessage::StartingCountdown {
                     state: CountdownState::InProgress {
@@ -347,7 +370,7 @@ impl AppState {
 
     pub fn client_input_update(&self, room: &str, uuid: Uuid, new_input: String) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
-        let (clients, state) = lock.room_mut(room)?;
+        let Room { clients, state, .. } = lock.room_mut(room)?;
 
         let game = state.try_in_game()?;
         let player = game
@@ -368,7 +391,7 @@ impl AppState {
 
     pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
-        let (clients, state) = lock.room_mut(room)?;
+        let Room { clients, state, .. } = lock.room_mut(room)?;
 
         let game = state.try_in_game()?;
 
@@ -431,7 +454,11 @@ impl AppState {
             tokio::time::sleep(Duration::from_secs(timer_len.into())).await;
 
             let mut lock = self.inner.lock().unwrap();
-            let (clients, state) = lock.room_mut(&room)?;
+            let Room {
+                clients,
+                state,
+                room_owner,
+            } = lock.room_mut(&room)?;
 
             let game = state.try_in_game()?;
 
@@ -439,13 +466,21 @@ impl AppState {
                 game.player_timed_out();
 
                 if game.alive_players().len() == 1 {
+                    clients.retain(|_uuid, client| client.socket.is_some());
+
+                    let new_room_owner = if clients.get(room_owner).is_some() {
+                        None
+                    } else {
+                        *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
+                        Some(*room_owner)
+                    };
+
                     clients.broadcast(ServerMessage::GameEnded {
                         winner: game.alive_players().first().unwrap().uuid,
+                        new_room_owner,
                     });
 
                     *state = game.end();
-
-                    clients.retain(|_uuid, client| client.socket.is_some());
                 } else {
                     clients.broadcast(ServerMessage::NewPrompt {
                         life_change: -1,
@@ -477,7 +512,7 @@ impl AppState {
 
     pub fn errored(&self, room: &str, uuid: Uuid) -> Result<()> {
         let lock = self.inner.lock().unwrap();
-        let (clients, _) = lock.room(room)?;
+        let Room { clients, .. } = lock.room(room)?;
 
         clients[&uuid]
             .tx
@@ -493,27 +528,69 @@ impl AppState {
     }
 }
 
-impl AppStateInner {
-    fn room(&self, room: &str) -> Result<(&HashMap<Uuid, Client>, &GameState)> {
-        let room = self.rooms.get(room).context("Room not found")?;
-        Ok((&room.clients, &room.state))
-    }
-    fn room_mut(&mut self, room: &str) -> Result<(&mut HashMap<Uuid, Client>, &mut GameState)> {
-        let room = self.rooms.get_mut(room).context("Room not found")?;
-        Ok((&mut room.clients, &mut room.state))
-    }
+fn start_game(
+    app_state: AppState,
+    room: String,
+    state: &mut GameState,
+    clients: &HashMap<Uuid, Client>,
+) -> Result<()> {
+    *state = state.try_lobby()?.start_game(move |prompt, timer_len| {
+        Arc::new(
+            tokio::task::spawn(async move {
+                app_state
+                    .check_for_timeout(room, timer_len, prompt)
+                    .await
+                    .ok();
+            })
+            .abort_handle(),
+        )
+    });
+
+    let game = state.try_in_game()?;
+
+    let players: Vec<PlayerData> = game
+        .players
+        .iter()
+        .map(|player| PlayerData {
+            uuid: player.uuid,
+            username: clients[&player.uuid].username.clone(),
+            input: player.input.clone(),
+            lives: player.lives,
+            disconnected: false,
+        })
+        .collect();
+
+    clients.send_each(|uuid, _client| ServerMessage::GameStarted {
+        rejoin_token: game
+            .players
+            .iter()
+            .find(|player| *uuid == player.uuid)
+            .map(|player| player.rejoin_token),
+        prompt: game.prompt.clone(),
+        turn: game.current_turn,
+        players: players.clone(),
+    });
+
+    Ok(())
 }
 
-pub trait Broadcast {
+pub trait Messaging {
+    fn send_each(&self, function: impl Fn(&Uuid, &Client) -> ServerMessage);
     fn broadcast(&self, message: ServerMessage);
 }
 
-impl Broadcast for HashMap<Uuid, Client> {
+impl Messaging for HashMap<Uuid, Client> {
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
+        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
+            client.tx.send(f(uuid, client).into()).ok();
+        }
+    }
+
     fn broadcast(&self, message: ServerMessage) {
-        let serialized = serde_json::to_string(&message).unwrap();
+        let serialized: Message = message.into();
 
         for client in self.values().filter(|client| client.socket.is_some()) {
-            client.tx.send(Message::Text(serialized.clone())).ok();
+            client.tx.send(serialized.clone()).ok();
         }
     }
 }

@@ -1,10 +1,11 @@
 import type { ClientInfo, PlayerData, Uuid } from './messages';
 
 export type ConnectionData = {
-	clients: Array<ClientInfo>;
+	room: string;
 	uuid: Uuid;
 	username: string;
-	room: string;
+	roomOwner: Uuid;
+	clients: Array<ClientInfo>;
 	chatMessages: Array<string>;
 };
 

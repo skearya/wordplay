@@ -50,12 +50,22 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 							</For>
 						</div>
 					</div>
-					<button
-						class="rounded-lg border bg-secondary p-2"
-						onClick={() => props.sendMessage({ type: 'ready' })}
-					>
-						Ready
-					</button>
+					<div class="flex gap-3">
+						<button
+							class="rounded-lg border bg-secondary px-3 py-2"
+							onClick={() => props.sendMessage({ type: 'ready' })}
+						>
+							Ready
+						</button>
+						<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
+							<button
+								class="rounded-lg border bg-sky-700 px-3 py-2"
+								onClick={() => props.sendMessage({ type: 'startEarly' })}
+							>
+								Start Early
+							</button>
+						</Show>
+					</div>
 				</div>
 			</section>
 		</>
