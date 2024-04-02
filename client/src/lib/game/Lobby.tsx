@@ -53,9 +53,13 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 					<div class="flex gap-3">
 						<button
 							class="rounded-lg border bg-secondary px-3 py-2"
-							onClick={() => props.sendMessage({ type: 'ready' })}
+							onClick={() =>
+								props.sendMessage({
+									type: lobby.readyPlayers.includes(connection.uuid) ? 'unready' : 'ready'
+								})
+							}
 						>
-							Ready
+							{lobby.readyPlayers.includes(connection.uuid) ? 'Unready' : 'Ready'}
 						</button>
 						<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
 							<button
@@ -87,7 +91,7 @@ const Player: Component<{ username?: string }> = (props) => {
 	}
 
 	return (
-		<div class="flex min-w-36 animate-pulse flex-col items-center gap-2 rounded-xl p-2 outline-dashed outline-1 outline-accent-500">
+		<div class="flex min-w-36 flex-col items-center gap-2 rounded-xl p-2 outline-dashed outline-1 outline-accent-500">
 			<div class="flex h-[100px] w-[100px] items-center justify-center text-xl">?</div>
 			<h1>Waiting...</h1>
 		</div>

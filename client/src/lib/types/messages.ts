@@ -33,10 +33,11 @@ export type ServerMessage =
 	| {
 			type: 'readyPlayers';
 			ready: Array<Uuid>;
+			countdownUpdate?: CountdownState;
 	  }
 	| {
 			type: 'startingCountdown';
-			state: CountdownState;
+			timeLeft: number;
 	  }
 	| {
 			type: 'gameStarted';

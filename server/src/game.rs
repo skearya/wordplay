@@ -61,6 +61,7 @@ impl GameState {
             GameState::InGame(_) => Err(anyhow!("Not in lobby")),
         }
     }
+
     pub fn try_in_game(&mut self) -> Result<&mut InGame> {
         match self {
             GameState::Lobby(_) => Err(anyhow!("Not in game")),

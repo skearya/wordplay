@@ -46,9 +46,10 @@ pub enum ServerMessage {
     },
     ReadyPlayers {
         ready: Vec<Uuid>,
+        countdown_update: Option<CountdownState>,
     },
     StartingCountdown {
-        state: CountdownState,
+        time_left: u8,
     },
     GameStarted {
         rejoin_token: Option<Uuid>,
@@ -150,7 +151,7 @@ impl ClientMessage {
         let result = match self {
             ClientMessage::Ready => state.client_ready(room, uuid),
             ClientMessage::StartEarly => state.client_start_early(room, uuid),
-            ClientMessage::Unready => todo!(),
+            ClientMessage::Unready => state.client_unready(room, uuid),
             ClientMessage::ChatMessage { content } => {
                 if content.len() > 250 {
                     Ok(())

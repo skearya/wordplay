@@ -79,15 +79,17 @@ const Game: Component = () => {
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 			})
 			.with({ type: 'connectionUpdate' }, (message) => {
-				setConnection(
-					'chatMessages',
-					connection.chatMessages.length,
+				const messageContent =
 					message.state.type === 'connected' || message.state.type === 'reconnected'
 						? `${message.state.username} has joined`
-						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`
-				);
+						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`;
+
+				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 
 				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
+					setConnection('clients', (clients) => [
+						...clients.filter((client) => client.uuid !== message.uuid)
+					]);
 					setConnection('clients', connection.clients.length, {
 						uuid: message.uuid,
 						username: message.state.username
@@ -111,15 +113,18 @@ const Game: Component = () => {
 				}
 			})
 			.with({ type: 'readyPlayers' }, (message) => {
-				setLobby({
-					readyPlayers: message.ready,
-					startingCountdown: message.ready.length >= 2 ? 10 : null
-				});
+				setLobby('readyPlayers', message.ready);
+
+				if (message.countdownUpdate) {
+					if (message.countdownUpdate.type === 'inProgress') {
+						setLobby('startingCountdown', message.countdownUpdate.timeLeft);
+					} else {
+						setLobby('startingCountdown', null);
+					}
+				}
 			})
 			.with({ type: 'startingCountdown' }, (message) => {
-				setLobby({
-					startingCountdown: message.state.type === 'inProgress' ? message.state.timeLeft : null
-				});
+				setLobby('startingCountdown', message.timeLeft);
 			})
 			.with({ type: 'gameStarted' }, (message) => {
 				if (message.rejoinToken) {
@@ -155,7 +160,6 @@ const Game: Component = () => {
 						if (turn.uuid === connection.uuid && message.word) {
 							game.usedLetters = new Set([...game.usedLetters!, ...message.word]);
 						}
-
 						if (message.newTurn === connection.uuid) {
 							game.input = '';
 						}

@@ -1,5 +1,5 @@
 use crate::{
-    game::{Countdown, GameState, GuessInfo},
+    game::{Countdown, GameState, GuessInfo, Lobby},
     messages::{
         ClientInfo, ConnectionUpdate, CountdownState, InvalidWordReason, PlayerData, RoomState,
         ServerMessage,
@@ -225,12 +225,7 @@ impl AppState {
             GameState::Lobby(lobby) => {
                 clients.remove(&uuid);
 
-                let new_room_owner = if *room_owner == uuid {
-                    *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
-                    Some(*room_owner)
-                } else {
-                    None
-                };
+                let new_room_owner = check_for_new_room_owner(clients, room_owner);
 
                 clients.broadcast(ServerMessage::ConnectionUpdate {
                     uuid,
@@ -238,21 +233,13 @@ impl AppState {
                 });
 
                 if lobby.ready.remove(&uuid) {
+                    let countdown_update =
+                        check_for_countdown_update(self.clone(), room.to_string(), lobby);
+
                     clients.broadcast(ServerMessage::ReadyPlayers {
                         ready: lobby.ready.iter().copied().collect(),
+                        countdown_update,
                     });
-
-                    if let Some(countdown) = &mut lobby.countdown {
-                        if lobby.ready.len() < 2 {
-                            countdown.timer_handle.abort();
-                            lobby.countdown = None;
-
-                            // TODO: unnecessary message?
-                            clients.broadcast(ServerMessage::StartingCountdown {
-                                state: CountdownState::Stopped,
-                            });
-                        }
-                    }
                 }
             }
             GameState::InGame(_) => {
@@ -286,29 +273,15 @@ impl AppState {
 
         let lobby = state.try_lobby()?;
 
-        lobby.ready.insert(uuid);
-
-        if lobby.ready.len() >= 2 {
-            if let Some(countdown) = &lobby.countdown {
-                countdown.timer_handle.abort();
-            }
-
-            let app_state = self.clone();
-            let room = room.to_string();
-
-            lobby.countdown = Some(Countdown {
-                timer_handle: Arc::new(
-                    tokio::task::spawn(async move {
-                        app_state.start_when_ready(room).await.ok();
-                    })
-                    .abort_handle(),
-                ),
-                time_left: 10,
-            });
+        if !lobby.ready.insert(uuid) {
+            return Ok(());
         }
+
+        let countdown_update = check_for_countdown_update(self.clone(), room.to_string(), lobby);
 
         clients.broadcast(ServerMessage::ReadyPlayers {
             ready: lobby.ready.iter().copied().collect(),
+            countdown_update,
         });
 
         Ok(())
@@ -331,6 +304,26 @@ impl AppState {
 
             start_game(self.clone(), room.to_owned(), state, clients)?;
         }
+
+        Ok(())
+    }
+
+    pub fn client_unready(&self, room: &str, uuid: Uuid) -> Result<()> {
+        let mut lock = self.inner.lock().unwrap();
+        let Room { clients, state, .. } = lock.room_mut(room)?;
+
+        let lobby = state.try_lobby()?;
+
+        if !lobby.ready.remove(&uuid) {
+            return Ok(());
+        }
+
+        let countdown_update = check_for_countdown_update(self.clone(), room.to_string(), lobby);
+
+        clients.broadcast(ServerMessage::ReadyPlayers {
+            ready: lobby.ready.iter().copied().collect(),
+            countdown_update,
+        });
 
         Ok(())
     }
@@ -358,9 +351,7 @@ impl AppState {
                 start_game(self.clone(), room.clone(), state, clients)?;
             } else {
                 clients.broadcast(ServerMessage::StartingCountdown {
-                    state: CountdownState::InProgress {
-                        time_left: countdown.time_left,
-                    },
+                    time_left: countdown.time_left,
                 });
             }
         }
@@ -468,12 +459,7 @@ impl AppState {
                 if game.alive_players().len() == 1 {
                     clients.retain(|_uuid, client| client.socket.is_some());
 
-                    let new_room_owner = if clients.get(room_owner).is_some() {
-                        None
-                    } else {
-                        *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
-                        Some(*room_owner)
-                    };
+                    let new_room_owner = check_for_new_room_owner(clients, room_owner);
 
                     clients.broadcast(ServerMessage::GameEnded {
                         winner: game.alive_players().first().unwrap().uuid,
@@ -525,6 +511,47 @@ impl AppState {
             .ok();
 
         Ok(())
+    }
+}
+
+fn check_for_countdown_update(
+    app_state: AppState,
+    room: String,
+    lobby: &mut Lobby,
+) -> Option<CountdownState> {
+    match &lobby.countdown {
+        Some(countdown) if lobby.ready.len() < 2 => {
+            countdown.timer_handle.abort();
+            lobby.countdown = None;
+
+            Some(CountdownState::Stopped)
+        }
+        None if lobby.ready.len() >= 2 => {
+            lobby.countdown = Some(Countdown {
+                timer_handle: Arc::new(
+                    tokio::task::spawn(async move {
+                        app_state.start_when_ready(room).await.ok();
+                    })
+                    .abort_handle(),
+                ),
+                time_left: 10,
+            });
+
+            Some(CountdownState::InProgress { time_left: 10 })
+        }
+        _ => None,
+    }
+}
+
+fn check_for_new_room_owner(
+    clients: &HashMap<Uuid, Client>,
+    room_owner: &mut Uuid,
+) -> Option<Uuid> {
+    if clients.get(room_owner).is_some() {
+        None
+    } else {
+        *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
+        Some(*room_owner)
     }
 }
 
