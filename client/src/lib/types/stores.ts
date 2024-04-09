@@ -2,6 +2,7 @@ import type { ClientInfo, PlayerData, Uuid } from './messages';
 
 export type ConnectionData = {
 	room: string;
+	public: boolean;
 	uuid: Uuid;
 	username: string;
 	roomOwner: Uuid;

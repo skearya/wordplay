@@ -12,6 +12,7 @@ use uuid::Uuid;
     rename_all_fields = "camelCase"
 )]
 pub enum ClientMessage {
+    GameSettings { public: bool },
     Ready,
     StartEarly,
     Unready,
@@ -27,11 +28,12 @@ pub enum ClientMessage {
     rename_all_fields = "camelCase"
 )]
 pub enum ServerMessage {
-    RoomInfo {
+    Info {
         uuid: Uuid,
-        room_owner: Uuid,
-        clients: Vec<ClientInfo>,
-        state: RoomState,
+        room: RoomInfo,
+    },
+    GameSettings {
+        public: bool,
     },
     ServerMessage {
         content: String,
@@ -75,6 +77,15 @@ pub enum ServerMessage {
         winner: Uuid,
         new_room_owner: Option<Uuid>,
     },
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub struct RoomInfo {
+    pub public: bool,
+    pub owner: Uuid,
+    pub clients: Vec<ClientInfo>,
+    pub state: RoomState,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -149,6 +160,9 @@ pub enum InvalidWordReason {
 impl ClientMessage {
     pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
         let result = match self {
+            ClientMessage::GameSettings { public } => {
+                state.client_game_settings(room, uuid, public)
+            }
             ClientMessage::Ready => state.client_ready(room, uuid),
             ClientMessage::StartEarly => state.client_start_early(room, uuid),
             ClientMessage::Unready => state.client_unready(room, uuid),

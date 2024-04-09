@@ -39,36 +39,39 @@ const Game: Component = () => {
 
 		match(message)
 			.with({ type: 'roomInfo' }, (message) => {
+				const { uuid, room } = message;
+
 				setConnection({
-					uuid: message.uuid,
-					clients: message.clients,
-					roomOwner: message.roomOwner
+					uuid: uuid,
+					clients: room.clients,
+					roomOwner: room.owner
 				});
 
 				batch(() => {
-					if (message.state.type === 'lobby') {
+					if (room.state.type === 'lobby') {
 						setState('lobby');
 						setLobby({
-							readyPlayers: message.state.ready,
-							startingCountdown: message.state.startingCountdown
+							readyPlayers: room.state.ready,
+							startingCountdown: room.state.startingCountdown
 						});
 					} else {
-						const usedLetters = message.state.usedLetters
-							? new Set(message.state.usedLetters)
-							: null;
+						const usedLetters = room.state.usedLetters ? new Set(room.state.usedLetters) : null;
 						const input =
-							message.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
+							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
 						setState('game');
 						setGame({
-							players: message.state.players,
-							currentTurn: message.state.turn,
-							prompt: message.state.prompt,
+							players: room.state.players,
+							currentTurn: room.state.turn,
+							prompt: room.state.prompt,
 							usedLetters,
 							input
 						});
 					}
 				});
+			})
+			.with({ type: 'gameSettings' }, (message) => {
+				setConnection('public', message.public);
 			})
 			.with({ type: P.union('serverMessage', 'chatMessage') }, (message) => {
 				const messageContent =

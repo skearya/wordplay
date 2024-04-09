@@ -1,10 +1,10 @@
 use crate::{
     game::{Countdown, GameState, GuessInfo, Lobby},
     messages::{
-        ClientInfo, ConnectionUpdate, CountdownState, InvalidWordReason, PlayerData, RoomState,
-        ServerMessage,
+        ClientInfo, ConnectionUpdate, CountdownState, InvalidWordReason, PlayerData, RoomInfo,
+        RoomState, ServerMessage,
     },
-    Params,
+    Info, Params, RoomData,
 };
 
 use anyhow::{Context, Result};
@@ -31,7 +31,8 @@ struct AppStateInner {
 
 #[derive(Default)]
 pub struct Room {
-    pub room_owner: Uuid,
+    pub public: bool,
+    pub owner: Uuid,
     pub clients: HashMap<Uuid, Client>,
     pub state: GameState,
 }
@@ -62,9 +63,20 @@ impl AppState {
         }
     }
 
-    pub fn clients_connected(&self) -> usize {
+    pub fn info(&self) -> Info {
         let lock = self.inner.lock().unwrap();
-        lock.rooms.values().map(|room| room.clients.len()).sum()
+
+        Info {
+            clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
+            rooms: lock
+                .rooms
+                .iter()
+                .map(|(name, data)| RoomData {
+                    name: name.clone(),
+                    players: data.clients.len(),
+                })
+                .collect(),
+        }
     }
 
     pub fn add_client(
@@ -78,7 +90,8 @@ impl AppState {
         let Room {
             clients,
             state,
-            room_owner,
+            owner,
+            public,
         } = lock.rooms.entry(room.to_string()).or_default();
 
         let prev_client = params.rejoin_token.and_then(|rejoin_token| {
@@ -117,7 +130,7 @@ impl AppState {
             let uuid = Uuid::new_v4();
 
             if clients.is_empty() {
-                *room_owner = uuid;
+                *owner = uuid;
             }
 
             clients.insert(
@@ -172,18 +185,21 @@ impl AppState {
         clients[&uuid]
             .tx
             .send(
-                ServerMessage::RoomInfo {
+                ServerMessage::Info {
                     uuid,
-                    room_owner: *room_owner,
-                    clients: clients
-                        .iter()
-                        .filter(|client| client.1.socket.is_some())
-                        .map(|(uuid, client)| ClientInfo {
-                            uuid: *uuid,
-                            username: client.username.clone(),
-                        })
-                        .collect(),
-                    state: room_state,
+                    room: RoomInfo {
+                        public: *public,
+                        owner: *owner,
+                        clients: clients
+                            .iter()
+                            .filter(|client| client.1.socket.is_some())
+                            .map(|(uuid, client)| ClientInfo {
+                                uuid: *uuid,
+                                username: client.username.clone(),
+                            })
+                            .collect(),
+                        state: room_state,
+                    },
                 }
                 .into(),
             )
@@ -197,7 +213,8 @@ impl AppState {
         let Room {
             clients,
             state,
-            room_owner,
+            owner,
+            ..
         } = lock.room_mut(room)?;
 
         let client = clients
@@ -225,7 +242,7 @@ impl AppState {
             GameState::Lobby(lobby) => {
                 clients.remove(&uuid);
 
-                let new_room_owner = check_for_new_room_owner(clients, room_owner);
+                let new_room_owner = check_for_new_room_owner(clients, owner);
 
                 clients.broadcast(ServerMessage::ConnectionUpdate {
                     uuid,
@@ -255,18 +272,6 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) -> Result<()> {
-        let lock = self.inner.lock().unwrap();
-        let Room { clients, .. } = lock.room(room)?;
-
-        clients.broadcast(ServerMessage::ChatMessage {
-            author: uuid,
-            content,
-        });
-
-        Ok(())
-    }
-
     pub fn client_ready(&self, room: &str, uuid: Uuid) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
@@ -292,12 +297,13 @@ impl AppState {
         let Room {
             clients,
             state,
-            room_owner,
+            owner,
+            ..
         } = lock.room_mut(room)?;
 
         let lobby = state.try_lobby()?;
 
-        if uuid == *room_owner && lobby.ready.len() >= 2 {
+        if uuid == *owner && lobby.ready.len() >= 2 {
             if let Some(countdown) = &lobby.countdown {
                 countdown.timer_handle.abort();
             }
@@ -354,6 +360,34 @@ impl AppState {
                     time_left: countdown.time_left,
                 });
             }
+        }
+
+        Ok(())
+    }
+
+    pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) -> Result<()> {
+        let lock = self.inner.lock().unwrap();
+        let Room { clients, .. } = lock.room(room)?;
+
+        clients.broadcast(ServerMessage::ChatMessage {
+            author: uuid,
+            content,
+        });
+
+        Ok(())
+    }
+
+    pub fn client_game_settings(
+        &self,
+        room: &str,
+        uuid: Uuid,
+        visibility_update: bool,
+    ) -> Result<()> {
+        let mut lock = self.inner.lock().unwrap();
+        let Room { public, owner, .. } = lock.room_mut(room)?;
+
+        if uuid == *owner {
+            *public = visibility_update;
         }
 
         Ok(())
@@ -448,7 +482,8 @@ impl AppState {
             let Room {
                 clients,
                 state,
-                room_owner,
+                owner,
+                ..
             } = lock.room_mut(&room)?;
 
             let game = state.try_in_game()?;
@@ -459,7 +494,7 @@ impl AppState {
                 if game.alive_players().len() == 1 {
                     clients.retain(|_uuid, client| client.socket.is_some());
 
-                    let new_room_owner = check_for_new_room_owner(clients, room_owner);
+                    let new_room_owner = check_for_new_room_owner(clients, owner);
 
                     clients.broadcast(ServerMessage::GameEnded {
                         winner: game.alive_players().first().unwrap().uuid,
@@ -543,15 +578,12 @@ fn check_for_countdown_update(
     }
 }
 
-fn check_for_new_room_owner(
-    clients: &HashMap<Uuid, Client>,
-    room_owner: &mut Uuid,
-) -> Option<Uuid> {
-    if clients.get(room_owner).is_some() {
+fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uuid) -> Option<Uuid> {
+    if clients.get(owner).is_some() {
         None
     } else {
-        *room_owner = *clients.keys().choose(&mut thread_rng()).unwrap();
-        Some(*room_owner)
+        *owner = *clients.keys().choose(&mut thread_rng()).unwrap();
+        Some(*owner)
     }
 }
 
