@@ -4,12 +4,12 @@ use std::sync::OnceLock;
 pub static GLOBAL: OnceLock<GlobalData> = OnceLock::new();
 
 #[derive(Debug)]
-pub struct GlobalData<'a> {
-    words: Vec<&'a str>,
-    prompts: Vec<&'a str>,
+pub struct GlobalData {
+    words: Vec<&'static str>,
+    prompts: Vec<&'static str>,
 }
 
-impl GlobalData<'_> {
+impl GlobalData {
     pub fn new() -> Self {
         Self {
             words: include_str!("./static/words_alpha.txt").lines().collect(),

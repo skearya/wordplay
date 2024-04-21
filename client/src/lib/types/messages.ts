@@ -1,6 +1,7 @@
 export type Uuid = string;
 
 export type ClientMessage =
+	| { type: 'gameSettings'; public: boolean }
 	| { type: 'ready' }
 	| { type: 'startEarly' }
 	| { type: 'unready' }
@@ -10,11 +11,13 @@ export type ClientMessage =
 
 export type ServerMessage =
 	| {
-			type: 'roomInfo';
+			type: 'info';
 			uuid: Uuid;
-			roomOwner: Uuid;
-			clients: Array<ClientInfo>;
-			state: RoomState;
+			room: RoomInfo;
+	  }
+	| {
+			type: 'gameSettings';
+			public: boolean;
 	  }
 	| {
 			type: 'serverMessage';
@@ -68,6 +71,13 @@ export type ServerMessage =
 			winner: Uuid;
 			newRoomOwner?: Uuid;
 	  };
+
+type RoomInfo = {
+	public: boolean;
+	owner: Uuid;
+	clients: Array<ClientInfo>;
+	state: RoomState;
+};
 
 type RoomState =
 	| {

@@ -18,61 +18,79 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 	});
 
 	return (
-		<>
+		<section class="flex min-h-screen w-full flex-col items-center justify-center gap-4">
 			<h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
 				{status()}
 			</h1>
-			<section class="flex min-h-screen w-full flex-col items-center justify-center gap-4">
-				<Show when={lobby.previousWinner}>
-					<div class="flex items-center gap-2 rounded-xl border p-4">
-						<h1 class="pr-2">Winner:</h1>
-						<img
-							class="h-10 w-10 rounded-full"
-							src={`https://avatar.vercel.sh/${lobby.previousWinner}`}
-							alt="avatar"
+			<div class="fixed bottom-1/2 left-4 space-y-1">
+				{['public', 'private'].map((visibility) => (
+					<div class="space-x-2">
+						<input
+							type="radio"
+							id={visibility}
+							name="visibility"
+							value={visibility}
+							disabled={connection.roomOwner !== connection.uuid}
+							checked={connection.public ? visibility === 'public' : visibility === 'private'}
+							onChange={() => {
+								props.sendMessage({ type: 'gameSettings', public: visibility === 'public' });
+							}}
 						/>
-						<h1>{lobby.previousWinner}</h1>
+						<label for={visibility} class="capitalize">
+							{visibility}
+						</label>
 					</div>
-				</Show>
-				<div class="flex flex-col items-center gap-4 rounded-xl border bg-secondary-100 p-4">
-					<div class="flex flex-col gap-3">
-						<h1 class="text-2xl">Ready Players</h1>
-						<div class="flex gap-4">
-							<For each={lobby.readyPlayers}>
-								{(ready) => (
-									<Player
-										username={connection.clients.find((client) => client.uuid === ready)!.username}
-									/>
-								)}
-							</For>
-							<For each={new Array(Math.max(0, 2 - lobby.readyPlayers.length))}>
-								{() => <Player />}
-							</For>
-						</div>
-					</div>
-					<div class="flex gap-3">
-						<button
-							class="rounded-lg border bg-secondary px-3 py-2"
-							onClick={() =>
-								props.sendMessage({
-									type: lobby.readyPlayers.includes(connection.uuid) ? 'unready' : 'ready'
-								})
-							}
-						>
-							{lobby.readyPlayers.includes(connection.uuid) ? 'Unready' : 'Ready'}
-						</button>
-						<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
-							<button
-								class="rounded-lg border bg-sky-700 px-3 py-2"
-								onClick={() => props.sendMessage({ type: 'startEarly' })}
-							>
-								Start Early
-							</button>
-						</Show>
+				))}
+			</div>
+			<Show when={lobby.previousWinner}>
+				<div class="flex items-center gap-2 rounded-xl border p-4">
+					<h1 class="pr-2">Winner:</h1>
+					<img
+						class="h-10 w-10 rounded-full"
+						src={`https://avatar.vercel.sh/${lobby.previousWinner}`}
+						alt="avatar"
+					/>
+					<h1>{lobby.previousWinner}</h1>
+				</div>
+			</Show>
+			<div class="flex flex-col items-center gap-4 rounded-xl border bg-secondary-100 p-4">
+				<div class="flex flex-col gap-3">
+					<h1 class="text-2xl">Ready Players</h1>
+					<div class="flex gap-4">
+						<For each={lobby.readyPlayers}>
+							{(ready) => (
+								<Player
+									username={connection.clients.find((client) => client.uuid === ready)!.username}
+								/>
+							)}
+						</For>
+						<For each={new Array(Math.max(0, 2 - lobby.readyPlayers.length))}>
+							{() => <Player />}
+						</For>
 					</div>
 				</div>
-			</section>
-		</>
+				<div class="flex gap-3">
+					<button
+						class="rounded-lg border bg-secondary px-3 py-2"
+						onClick={() =>
+							props.sendMessage({
+								type: lobby.readyPlayers.includes(connection.uuid) ? 'unready' : 'ready'
+							})
+						}
+					>
+						{lobby.readyPlayers.includes(connection.uuid) ? 'Unready' : 'Ready'}
+					</button>
+					<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
+						<button
+							class="rounded-lg border bg-sky-700 px-3 py-2"
+							onClick={() => props.sendMessage({ type: 'startEarly' })}
+						>
+							Start Early
+						</button>
+					</Show>
+				</div>
+			</div>
+		</section>
 	);
 };
 

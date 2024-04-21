@@ -8,6 +8,7 @@ function makeContext(room = '') {
 	const [connection, setConnection] = createStore<ConnectionData>({
 		room,
 		uuid: '',
+		public: false,
 		username: prompt('username', 'skeary')!,
 		roomOwner: '',
 		clients: [],

@@ -29,7 +29,7 @@ const Game: Component = () => {
 	});
 
 	const socket = new WebSocket(
-		`${import.meta.env.PUBLIC_SERVER}/rooms/${connection.room}?${params.toString()}`
+		`${(import.meta.env.PUBLIC_SERVER as string).replace('http', 'ws')}/rooms/${connection.room}?${params.toString()}`
 	);
 
 	const sendMessage = (data: ClientMessage) => socket.send(JSON.stringify(data));
@@ -38,37 +38,41 @@ const Game: Component = () => {
 		const message: ServerMessage = JSON.parse(event.data);
 
 		match(message)
-			.with({ type: 'roomInfo' }, (message) => {
+			.with({ type: 'info' }, (message) => {
+				const { uuid, room } = message;
+
 				setConnection({
-					uuid: message.uuid,
-					clients: message.clients,
-					roomOwner: message.roomOwner
+					uuid: uuid,
+					clients: room.clients,
+					roomOwner: room.owner,
+					public: room.public
 				});
 
 				batch(() => {
-					if (message.state.type === 'lobby') {
+					if (room.state.type === 'lobby') {
 						setState('lobby');
 						setLobby({
-							readyPlayers: message.state.ready,
-							startingCountdown: message.state.startingCountdown
+							readyPlayers: room.state.ready,
+							startingCountdown: room.state.startingCountdown
 						});
 					} else {
-						const usedLetters = message.state.usedLetters
-							? new Set(message.state.usedLetters)
-							: null;
+						const usedLetters = room.state.usedLetters ? new Set(room.state.usedLetters) : null;
 						const input =
-							message.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
+							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
 						setState('game');
 						setGame({
-							players: message.state.players,
-							currentTurn: message.state.turn,
-							prompt: message.state.prompt,
+							players: room.state.players,
+							currentTurn: room.state.turn,
+							prompt: room.state.prompt,
 							usedLetters,
 							input
 						});
 					}
 				});
+			})
+			.with({ type: 'gameSettings' }, (message) => {
+				setConnection('public', message.public);
 			})
 			.with({ type: P.union('serverMessage', 'chatMessage') }, (message) => {
 				const messageContent =
