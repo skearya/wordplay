@@ -80,7 +80,6 @@ pub enum ServerMessage {
 }
 
 #[derive(Serialize, Clone, Debug)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub struct RoomInfo {
     pub public: bool,
     pub owner: Uuid,

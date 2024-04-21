@@ -29,7 +29,7 @@ const Game: Component = () => {
 	});
 
 	const socket = new WebSocket(
-		`${import.meta.env.PUBLIC_SERVER}/rooms/${connection.room}?${params.toString()}`
+		`${(import.meta.env.PUBLIC_SERVER as string).replace('http', 'ws')}/rooms/${connection.room}?${params.toString()}`
 	);
 
 	const sendMessage = (data: ClientMessage) => socket.send(JSON.stringify(data));
@@ -38,13 +38,14 @@ const Game: Component = () => {
 		const message: ServerMessage = JSON.parse(event.data);
 
 		match(message)
-			.with({ type: 'roomInfo' }, (message) => {
+			.with({ type: 'info' }, (message) => {
 				const { uuid, room } = message;
 
 				setConnection({
 					uuid: uuid,
 					clients: room.clients,
-					roomOwner: room.owner
+					roomOwner: room.owner,
+					public: room.public
 				});
 
 				batch(() => {

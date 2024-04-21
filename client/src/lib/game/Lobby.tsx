@@ -22,11 +22,26 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 			<h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
 				{status()}
 			</h1>
-			<ul class="fixed bottom-1/2 left-0">
-				<li>Private</li>
-				<li>Public</li>
-				<input type="radio" id />
-			</ul>
+			<div class="fixed bottom-1/2 left-4 space-y-1">
+				{['public', 'private'].map((visibility) => (
+					<div class="space-x-2">
+						<input
+							type="radio"
+							id={visibility}
+							name="visibility"
+							value={visibility}
+							disabled={connection.roomOwner !== connection.uuid}
+							checked={connection.public ? visibility === 'public' : visibility === 'private'}
+							onChange={() => {
+								props.sendMessage({ type: 'gameSettings', public: visibility === 'public' });
+							}}
+						/>
+						<label for={visibility} class="capitalize">
+							{visibility}
+						</label>
+					</div>
+				))}
+			</div>
 			<Show when={lobby.previousWinner}>
 				<div class="flex items-center gap-2 rounded-xl border p-4">
 					<h1 class="pr-2">Winner:</h1>

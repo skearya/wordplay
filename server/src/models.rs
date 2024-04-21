@@ -68,9 +68,10 @@ impl AppState {
 
         Info {
             clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
-            rooms: lock
+            public_rooms: lock
                 .rooms
                 .iter()
+                .filter(|(_, room)| room.public)
                 .map(|(name, data)| RoomData {
                     name: name.clone(),
                     players: data.clients.len(),
@@ -384,10 +385,17 @@ impl AppState {
         visibility_update: bool,
     ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
-        let Room { public, owner, .. } = lock.room_mut(room)?;
+        let Room {
+            clients,
+            public,
+            owner,
+            ..
+        } = lock.room_mut(room)?;
 
         if uuid == *owner {
             *public = visibility_update;
+
+            clients.broadcast(ServerMessage::GameSettings { public: *public });
         }
 
         Ok(())

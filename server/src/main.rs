@@ -20,6 +20,7 @@ use axum_extra::TypedHeader;
 use futures::{stream::StreamExt, SinkExt, TryFutureExt};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tower_http::cors::{self, CorsLayer};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -32,6 +33,7 @@ async fn main() {
     let app = Router::new()
         .route("/info", get(info))
         .route("/rooms/*room", get(ws_handler))
+        .layer(CorsLayer::new().allow_origin(cors::Any))
         .with_state(AppState::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -44,7 +46,7 @@ async fn main() {
 #[serde(rename_all = "camelCase")]
 pub struct Info {
     pub clients_connected: usize,
-    pub rooms: Vec<RoomData>,
+    pub public_rooms: Vec<RoomData>,
 }
 
 #[derive(Serialize)]

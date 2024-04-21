@@ -11,7 +11,7 @@ export type ClientMessage =
 
 export type ServerMessage =
 	| {
-			type: 'roomInfo';
+			type: 'info';
 			uuid: Uuid;
 			room: RoomInfo;
 	  }
