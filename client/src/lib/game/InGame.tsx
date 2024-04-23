@@ -50,7 +50,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 	});
 
 	return (
-		<section class="flex min-h-screen flex-col items-center justify-center gap-y-2">
+		<section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
 			<div class="flex gap-2">
 				<h1>turn</h1>
 				<h1 class="text-green-300">
@@ -58,13 +58,12 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 				</h1>
 			</div>
 			<h1 class="text-xl">{game.prompt}</h1>
-			<div class="flex gap-2">
-				<h1>players:</h1>
+			<div class="flex gap-4">
 				<For each={game.players}>
 					{(player) => (
-						<div id={player.uuid}>
+						<div id={player.uuid} class="flex flex-col items-center">
 							<h1>{player.username}</h1>
-							<h1 class="min-w-16">input: {player.input}</h1>
+							<h1>{player.input}</h1>
 							<h1 class="text-red-400">lives: {player.lives}</h1>
 							<Show when={player.disconnected}>
 								<h1>i disconnected...</h1>
@@ -73,9 +72,11 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 					)}
 				</For>
 			</div>
-			<div class="flex gap-1">
+			<div class="flex flex-col items-center gap-1">
 				<h1>unused letters</h1>
-				<For each={unusedLetters()}>{(letter) => <h1>{letter}</h1>}</For>
+				<div class="flex gap-0.5">
+					<For each={unusedLetters()}>{(letter) => <kbd>{letter}</kbd>}</For>
+				</div>
 			</div>
 			<input
 				ref={gameInputRef}

@@ -44,7 +44,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 			</div>
 			<Show when={lobby.previousWinner}>
 				<div class="flex items-center gap-2 rounded-xl border p-4">
-					<h1 class="pr-2">Winner:</h1>
+					<h1 class="pr-2">Winner</h1>
 					<img
 						class="h-10 w-10 rounded-full"
 						src={`https://avatar.vercel.sh/${lobby.previousWinner}`}

@@ -9,7 +9,7 @@ function makeContext(room = '') {
 		room,
 		uuid: '',
 		public: false,
-		username: prompt('username', 'skeary')!,
+		username: prompt('username', 'username')!,
 		roomOwner: '',
 		clients: [],
 		chatMessages: []
