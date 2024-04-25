@@ -1,11 +1,11 @@
-use crate::models::AppState;
+use crate::state::AppState;
 
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -21,7 +21,7 @@ pub enum ClientMessage {
     Guess { word: String },
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -79,7 +79,7 @@ pub enum ServerMessage {
     },
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 pub struct RoomInfo {
     pub public: bool,
     pub owner: Uuid,
@@ -87,7 +87,7 @@ pub struct RoomInfo {
     pub state: RoomState,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -106,13 +106,13 @@ pub enum RoomState {
     },
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 pub struct ClientInfo {
     pub uuid: Uuid,
     pub username: String,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone)]
 pub struct PlayerData {
     pub uuid: Uuid,
     pub username: String,
@@ -121,7 +121,7 @@ pub struct PlayerData {
     pub lives: u8,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -133,7 +133,7 @@ pub enum ConnectionUpdate {
     Disconnected { new_room_owner: Option<Uuid> },
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -144,7 +144,7 @@ pub enum CountdownState {
     Stopped,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -206,7 +206,6 @@ impl ClientMessage {
 impl From<ServerMessage> for Message {
     fn from(msg: ServerMessage) -> Self {
         let serialized = serde_json::to_string(&msg).unwrap();
-
         Self::Text(serialized)
     }
 }

@@ -1,11 +1,10 @@
-pub mod game;
 mod global;
-pub mod messages;
-mod models;
+mod messages;
+mod state;
 
 use global::{GlobalData, GLOBAL};
 use messages::ClientMessage;
-use models::AppState;
+use state::AppState;
 
 use axum::{
     extract::{
@@ -26,8 +25,6 @@ use uuid::Uuid;
 #[tokio::main]
 async fn main() {
     GLOBAL.set(GlobalData::new()).unwrap();
-
-    dotenvy::dotenv().ok();
     console_subscriber::init();
 
     let app = Router::new()

@@ -1,24 +1,24 @@
+mod word_bomb;
+
 use crate::global::GLOBAL;
 
 use anyhow::{anyhow, Result};
-use rand::{seq::SliceRandom, thread_rng, Rng};
+use rand::prelude::SliceRandom;
+use rand::{thread_rng, Rng};
 use std::{collections::HashSet, sync::Arc, time::Instant};
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
 pub struct Lobby {
     pub ready: HashSet<Uuid>,
     pub countdown: Option<Countdown>,
 }
 
-#[derive(Debug, Clone)]
 pub struct Countdown {
     pub time_left: u8,
     pub timer_handle: Arc<AbortHandle>,
 }
 
-#[derive(Debug, Clone)]
 pub struct InGame {
     pub timeout_task: Arc<AbortHandle>,
     pub timer_len: u8,
@@ -30,7 +30,6 @@ pub struct InGame {
     pub current_turn: Uuid,
 }
 
-#[derive(Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
     pub rejoin_token: Uuid,
@@ -39,7 +38,6 @@ pub struct Player {
     pub used_letters: HashSet<char>,
 }
 
-#[derive(Debug, Clone)]
 pub enum GameState {
     Lobby(Lobby),
     InGame(InGame),
@@ -78,7 +76,6 @@ impl Lobby {
         let timer_len = thread_rng().gen_range(10..=30);
         let prompt = GLOBAL.get().unwrap().random_prompt();
         let mut players: Vec<Player> = self.ready.iter().map(|uuid| Player::new(*uuid)).collect();
-
         players.shuffle(&mut thread_rng());
 
         GameState::InGame(InGame {
@@ -98,7 +95,7 @@ pub enum GuessInfo {
     PromptNotIn,
     NotEnglish,
     AlreadyUsed,
-    Valid(i8),
+    Valid { extra_life: bool },
 }
 
 impl InGame {
@@ -106,11 +103,9 @@ impl InGame {
         if !guess.contains(&self.prompt) {
             return GuessInfo::PromptNotIn;
         }
-
         if !GLOBAL.get().unwrap().is_valid(guess) {
             return GuessInfo::NotEnglish;
         }
-
         if !self.used_words.insert(guess.to_owned()) {
             return GuessInfo::AlreadyUsed;
         }
@@ -134,7 +129,7 @@ impl InGame {
             current_player.used_letters.clear();
         }
 
-        GuessInfo::Valid(extra_life.into())
+        GuessInfo::Valid { extra_life }
     }
 
     pub fn new_prompt(&mut self) {
