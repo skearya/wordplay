@@ -1,16 +1,66 @@
-use super::{lobby::check_for_countdown_update, AppState, Client, Room};
+use super::{
+    games::word_bomb::WordBomb,
+    lobby::{check_for_countdown_update, Lobby},
+    AppState, ClientUtils,
+};
 use crate::{
-    messages::{ClientInfo, ConnectionUpdate, PlayerData, RoomInfo, RoomState, ServerMessage},
-    state::games::GameState,
+    messages::{ClientInfo, ConnectionUpdate, PlayerData, RoomInfo, RoomStateInfo, ServerMessage},
     Params,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
-use std::{borrow::Cow, collections::HashMap};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
+
+#[derive(Default)]
+pub struct Room {
+    pub public: bool,
+    pub owner: Uuid,
+    pub clients: HashMap<Uuid, Client>,
+    pub state: State,
+}
+
+pub struct Client {
+    pub socket: Option<Uuid>,
+    pub tx: UnboundedSender<Message>,
+    pub username: String,
+}
+
+pub enum State {
+    Lobby(Lobby),
+    WordBomb(WordBomb),
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State::Lobby(Lobby {
+            ready: HashSet::new(),
+            countdown: None,
+        })
+    }
+}
+
+impl State {
+    pub fn try_lobby(&mut self) -> Result<&mut Lobby> {
+        match self {
+            State::Lobby(lobby) => Ok(lobby),
+            State::WordBomb(_) => Err(anyhow!("Not in lobby")),
+        }
+    }
+
+    pub fn try_word_bomb(&mut self) -> Result<&mut WordBomb> {
+        match self {
+            State::Lobby(_) => Err(anyhow!("Not in game")),
+            State::WordBomb(game) => Ok(game),
+        }
+    }
+}
 
 impl AppState {
     pub fn add_client(
@@ -29,7 +79,7 @@ impl AppState {
         } = lock.rooms.entry(room.to_string()).or_default();
 
         let prev_client = params.rejoin_token.and_then(|rejoin_token| {
-            state.try_in_game().ok().and_then(|game| {
+            state.try_word_bomb().ok().and_then(|game| {
                 game.players
                     .iter()
                     .find(|player| player.rejoin_token == rejoin_token)
@@ -87,14 +137,14 @@ impl AppState {
         };
 
         let room_state = match state {
-            GameState::Lobby(lobby) => RoomState::Lobby {
+            State::Lobby(lobby) => RoomStateInfo::Lobby {
                 ready: lobby.ready.iter().copied().collect(),
                 starting_countdown: lobby
                     .countdown
                     .as_ref()
                     .map(|countdown| countdown.time_left),
             },
-            GameState::InGame(game) => RoomState::InGame {
+            State::WordBomb(game) => RoomStateInfo::WordBomb {
                 players: game
                     .players
                     .iter()
@@ -173,7 +223,7 @@ impl AppState {
         }
 
         match state {
-            GameState::Lobby(lobby) => {
+            State::Lobby(lobby) => {
                 clients.remove(&uuid);
 
                 let new_room_owner = check_for_new_room_owner(clients, owner);
@@ -193,7 +243,7 @@ impl AppState {
                     });
                 }
             }
-            GameState::InGame(_) => {
+            State::WordBomb(_) => {
                 clients.broadcast(ServerMessage::ConnectionUpdate {
                     uuid,
                     state: ConnectionUpdate::Disconnected {
@@ -218,15 +268,15 @@ impl AppState {
         Ok(())
     }
 
-    pub fn errored(&self, room: &str, uuid: Uuid) -> Result<()> {
+    pub fn send_error_msg(&self, room: &str, uuid: Uuid, message: &str) -> Result<()> {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
         clients[&uuid]
             .tx
             .send(
-                ServerMessage::ServerMessage {
-                    content: "something went wrong...".into(),
+                ServerMessage::Text {
+                    content: format!("something went wrong: {message}"),
                 }
                 .into(),
             )
@@ -242,26 +292,5 @@ pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uui
     } else {
         *owner = *clients.keys().choose(&mut thread_rng()).unwrap();
         Some(*owner)
-    }
-}
-
-pub trait Messaging {
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
-    fn broadcast(&self, message: ServerMessage);
-}
-
-impl Messaging for HashMap<Uuid, Client> {
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
-        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
-            client.tx.send(f(uuid, client).into()).ok();
-        }
-    }
-
-    fn broadcast(&self, message: ServerMessage) {
-        let serialized: Message = message.into();
-
-        for client in self.values().filter(|client| client.socket.is_some()) {
-            client.tx.send(serialized.clone()).ok();
-        }
     }
 }

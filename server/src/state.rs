@@ -1,9 +1,9 @@
-pub mod games;
+mod games;
 mod lobby;
 mod room;
 
-use self::games::GameState;
-use crate::{Info, RoomData};
+use self::room::{Client, Room};
+use crate::{messages::ServerMessage, Info, RoomData};
 
 use anyhow::{Context, Result};
 use axum::extract::ws::Message;
@@ -11,7 +11,6 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -21,30 +20,6 @@ pub struct AppState {
 
 pub struct AppStateInner {
     rooms: HashMap<String, Room>,
-}
-
-#[derive(Default)]
-pub struct Room {
-    pub public: bool,
-    pub owner: Uuid,
-    pub clients: HashMap<Uuid, Client>,
-    pub state: GameState,
-}
-
-pub struct Client {
-    pub socket: Option<Uuid>,
-    pub tx: UnboundedSender<Message>,
-    pub username: String,
-}
-
-impl AppStateInner {
-    pub fn room(&self, room: &str) -> Result<&Room> {
-        self.rooms.get(room).context("Room not found")
-    }
-
-    pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
-        self.rooms.get_mut(room).context("Room not found")
-    }
 }
 
 impl AppState {
@@ -70,6 +45,37 @@ impl AppState {
                     players: data.clients.len(),
                 })
                 .collect(),
+        }
+    }
+}
+
+impl AppStateInner {
+    pub fn room(&self, room: &str) -> Result<&Room> {
+        self.rooms.get(room).context("Room not found")
+    }
+
+    pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
+        self.rooms.get_mut(room).context("Room not found")
+    }
+}
+
+pub trait ClientUtils {
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
+    fn broadcast(&self, message: ServerMessage);
+}
+
+impl ClientUtils for HashMap<Uuid, Client> {
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
+        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
+            client.tx.send(f(uuid, client).into()).ok();
+        }
+    }
+
+    fn broadcast(&self, message: ServerMessage) {
+        let serialized: Message = message.into();
+
+        for client in self.values().filter(|client| client.socket.is_some()) {
+            client.tx.send(serialized.clone()).ok();
         }
     }
 }

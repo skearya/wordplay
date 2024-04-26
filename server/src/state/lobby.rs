@@ -1,19 +1,62 @@
-use super::{room::Messaging, AppState, Client, Room};
+use super::{
+    games::word_bomb::{Player, WordBomb},
+    room::{Client, State},
+    AppState, ClientUtils, Room,
+};
 use crate::{
+    global::GLOBAL,
     messages::{CountdownState, PlayerData, ServerMessage},
-    state::games::{Countdown, GameState, Lobby},
 };
 
 use anyhow::{Context, Result};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use rand::prelude::SliceRandom;
+use rand::{thread_rng, Rng};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::{Duration, Instant},
+};
+use tokio::task::AbortHandle;
 use uuid::Uuid;
+
+pub struct Lobby {
+    pub ready: HashSet<Uuid>,
+    pub countdown: Option<Countdown>,
+}
+
+pub struct Countdown {
+    pub time_left: u8,
+    pub timer_handle: Arc<AbortHandle>,
+}
+
+impl Lobby {
+    pub fn start_game(
+        &self,
+        timeout_task_handle: impl FnOnce(String, u8) -> Arc<AbortHandle>,
+    ) -> State {
+        let timer_len = thread_rng().gen_range(10..=30);
+        let prompt = GLOBAL.get().unwrap().random_prompt();
+        let mut players: Vec<Player> = self.ready.iter().map(|uuid| Player::new(*uuid)).collect();
+        players.shuffle(&mut thread_rng());
+
+        State::WordBomb(WordBomb {
+            timeout_task: timeout_task_handle(prompt.clone(), timer_len),
+            timer_len,
+            starting_time: Instant::now(),
+            prompt,
+            prompt_uses: 0,
+            used_words: HashSet::new(),
+            current_turn: players[0].uuid,
+            players,
+        })
+    }
+}
 
 impl AppState {
     pub fn client_ready(&self, room: &str, uuid: Uuid) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
-
         if !lobby.ready.insert(uuid) {
             return Ok(());
         }
@@ -53,7 +96,6 @@ impl AppState {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
-
         if !lobby.ready.remove(&uuid) {
             return Ok(());
         }
@@ -74,7 +116,6 @@ impl AppState {
 
             let mut lock = self.inner.lock().unwrap();
             let Room { clients, state, .. } = lock.room_mut(&room)?;
-
             let lobby = state.try_lobby()?;
             let countdown = lobby
                 .countdown
@@ -137,7 +178,7 @@ pub fn check_for_countdown_update(
         None if lobby.ready.len() >= 2 => {
             lobby.countdown = Some(Countdown {
                 timer_handle: Arc::new(
-                    tokio::task::spawn(async move {
+                    tokio::spawn(async move {
                         app_state.start_when_ready(room).await.ok();
                     })
                     .abort_handle(),
@@ -154,12 +195,12 @@ pub fn check_for_countdown_update(
 fn start_game(
     app_state: AppState,
     room: String,
-    state: &mut GameState,
+    state: &mut State,
     clients: &HashMap<Uuid, Client>,
 ) -> Result<()> {
-    *state = state.try_lobby()?.start_game(move |prompt, timer_len| {
+    *state = state.try_lobby()?.start_game(|prompt, timer_len| {
         Arc::new(
-            tokio::task::spawn(async move {
+            tokio::spawn(async move {
                 app_state
                     .check_for_timeout(room, timer_len, prompt)
                     .await
@@ -169,7 +210,7 @@ fn start_game(
         )
     });
 
-    let game = state.try_in_game()?;
+    let game = state.try_word_bomb()?;
 
     let players: Vec<PlayerData> = game
         .players

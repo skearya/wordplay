@@ -32,11 +32,11 @@ pub enum ServerMessage {
         uuid: Uuid,
         room: RoomInfo,
     },
+    Text {
+        content: String,
+    },
     GameSettings {
         public: bool,
-    },
-    ServerMessage {
-        content: String,
     },
     ChatMessage {
         author: Uuid,
@@ -84,7 +84,7 @@ pub struct RoomInfo {
     pub public: bool,
     pub owner: Uuid,
     pub clients: Vec<ClientInfo>,
-    pub state: RoomState,
+    pub state: RoomStateInfo,
 }
 
 #[derive(Serialize)]
@@ -93,12 +93,12 @@ pub struct RoomInfo {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum RoomState {
+pub enum RoomStateInfo {
     Lobby {
         ready: Vec<Uuid>,
         starting_countdown: Option<u8>,
     },
-    InGame {
+    WordBomb {
         players: Vec<PlayerData>,
         turn: Uuid,
         prompt: String,
@@ -145,11 +145,7 @@ pub enum CountdownState {
 }
 
 #[derive(Serialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum InvalidWordReason {
     PromptNotIn,
     NotEnglish,
@@ -198,7 +194,7 @@ impl ClientMessage {
 
         if let Err(e) = result {
             eprintln!("error handling msg: {e}");
-            state.errored(room, uuid).ok();
+            state.send_error_msg(room, uuid, &e.to_string()).ok();
         }
     }
 }
