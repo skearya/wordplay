@@ -1,17 +1,15 @@
-mod games;
+pub mod games;
 mod lobby;
-mod room;
+pub mod room;
 
-use self::room::{Client, Room};
-use crate::{messages::ServerMessage, Info, RoomData};
+use self::room::Room;
+use crate::{Info, RoomData};
 
 use anyhow::{Context, Result};
-use axum::extract::ws::Message;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -39,7 +37,7 @@ impl AppState {
             public_rooms: lock
                 .rooms
                 .iter()
-                .filter(|(_, room)| room.public)
+                .filter(|(_, room)| room.settings.public)
                 .map(|(name, data)| RoomData {
                     name: name.clone(),
                     players: data.clients.len(),
@@ -56,26 +54,5 @@ impl AppStateInner {
 
     pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
         self.rooms.get_mut(room).context("Room not found")
-    }
-}
-
-pub trait ClientUtils {
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
-    fn broadcast(&self, message: ServerMessage);
-}
-
-impl ClientUtils for HashMap<Uuid, Client> {
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
-        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
-            client.tx.send(f(uuid, client).into()).ok();
-        }
-    }
-
-    fn broadcast(&self, message: ServerMessage) {
-        let serialized: Message = message.into();
-
-        for client in self.values().filter(|client| client.socket.is_some()) {
-            client.tx.send(serialized.clone()).ok();
-        }
     }
 }

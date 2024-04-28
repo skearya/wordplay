@@ -1,16 +1,16 @@
 use crate::{
     global::GLOBAL,
-    messages::{InvalidWordReason, ServerMessage},
+    messages::ServerMessage,
     state::{
         lobby::Lobby,
-        room::{check_for_new_room_owner, State},
-        AppState, ClientUtils, Room,
+        room::{check_for_new_room_owner, ClientUtils, State},
+        AppState, Room,
     },
 };
 
 use anyhow::{Context, Result};
-use futures::{future::BoxFuture, FutureExt};
 use rand::{thread_rng, Rng};
+use serde::Serialize;
 use std::{
     collections::HashSet,
     sync::Arc,
@@ -38,6 +38,12 @@ pub struct Player {
     pub used_letters: HashSet<char>,
 }
 
+#[derive(Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum GuessInfo {
     PromptNotIn,
     NotEnglish,
@@ -46,7 +52,7 @@ pub enum GuessInfo {
 }
 
 impl WordBomb {
-    pub fn parse_prompt(&mut self, guess: &str) -> GuessInfo {
+    pub fn check_guess(&mut self, guess: &str) -> GuessInfo {
         if !guess.contains(&self.prompt) {
             return GuessInfo::PromptNotIn;
         }
@@ -175,7 +181,7 @@ impl AppState {
 
         player.input = new_input.clone();
 
-        clients.broadcast(ServerMessage::InputUpdate {
+        clients.broadcast(ServerMessage::WordBombInput {
             uuid,
             input: new_input,
         });
@@ -191,84 +197,77 @@ impl AppState {
             return Ok(());
         }
 
-        match game.parse_prompt(guess) {
+        match game.check_guess(guess) {
             GuessInfo::Valid { extra_life } => {
                 game.new_prompt();
                 game.update_turn();
                 game.update_timer_len();
 
-                clients.broadcast(ServerMessage::NewPrompt {
+                clients.broadcast(ServerMessage::WordBombPrompt {
+                    correct_guess: Some(guess.to_string()),
                     life_change: extra_life.into(),
-                    word: Some(guess.to_string()),
-                    new_prompt: game.prompt.clone(),
-                    new_turn: game.current_turn,
+                    prompt: game.prompt.clone(),
+                    turn: game.current_turn,
                 });
 
                 game.timeout_task.abort();
                 spawn_timeout_task(self.clone(), game, room.to_string());
             }
             guess_info => {
-                let reason = match guess_info {
-                    GuessInfo::PromptNotIn => InvalidWordReason::PromptNotIn,
-                    GuessInfo::NotEnglish => InvalidWordReason::NotEnglish,
-                    GuessInfo::AlreadyUsed => InvalidWordReason::AlreadyUsed,
-                    GuessInfo::Valid { .. } => unreachable!(),
-                };
-
-                clients.broadcast(ServerMessage::InvalidWord { uuid, reason });
+                clients.broadcast(ServerMessage::WordBombInvalidGuess {
+                    uuid,
+                    reason: guess_info,
+                });
             }
         };
 
         Ok(())
     }
 
-    pub fn check_for_timeout(
+    pub async fn check_for_timeout(
         &self,
         room: String,
         timer_len: u8,
         original_prompt: String,
-    ) -> BoxFuture<'_, Result<()>> {
-        async move {
-            tokio::time::sleep(Duration::from_secs(timer_len.into())).await;
+    ) -> Result<()> {
+        tokio::time::sleep(Duration::from_secs(timer_len.into())).await;
 
-            let mut lock = self.inner.lock().unwrap();
-            let Room {
-                clients,
-                state,
-                owner,
-                ..
-            } = lock.room_mut(&room)?;
-            let game = state.try_word_bomb()?;
+        let mut lock = self.inner.lock().unwrap();
+        let Room {
+            clients,
+            state,
+            owner,
+            ..
+        } = lock.room_mut(&room)?;
+        let game = state.try_word_bomb()?;
 
-            if original_prompt == game.prompt {
-                game.player_timed_out();
+        if original_prompt == game.prompt {
+            game.player_timed_out();
 
-                if game.alive_players().len() == 1 {
-                    clients.retain(|_uuid, client| client.socket.is_some());
+            if game.alive_players().len() == 1 {
+                clients.retain(|_uuid, client| client.socket.is_some());
 
-                    let new_room_owner = check_for_new_room_owner(clients, owner);
+                let new_room_owner = check_for_new_room_owner(clients, owner);
 
-                    clients.broadcast(ServerMessage::GameEnded {
-                        winner: game.alive_players().first().unwrap().uuid,
-                        new_room_owner,
-                    });
+                clients.broadcast(ServerMessage::GameEnded {
+                    winner: game.alive_players().first().unwrap().uuid,
+                    new_room_owner,
+                });
 
-                    *state = WordBomb::end();
-                } else {
-                    clients.broadcast(ServerMessage::NewPrompt {
-                        life_change: -1,
-                        word: None,
-                        new_prompt: game.prompt.clone(),
-                        new_turn: game.current_turn,
-                    });
+                *state = WordBomb::end();
+            } else {
+                clients.broadcast(ServerMessage::WordBombPrompt {
+                    correct_guess: None,
+                    life_change: -1,
+                    prompt: game.prompt.clone(),
+                    turn: game.current_turn,
+                });
 
-                    spawn_timeout_task(self.clone(), game, room);
-                }
+                spawn_timeout_task(self.clone(), game, room);
             }
-
-            Ok(())
         }
-        .boxed()
+
+        Ok(())
     }
 }
 

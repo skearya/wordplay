@@ -6,6 +6,8 @@
 
 -   dont use `.allow_origin(cors::Any)`
 
+-   store previous winners
+
 -   possibly care about duplicate usernames
 
 -   probably look into using dashmap instead of std hashmap for global game data for concurrent references

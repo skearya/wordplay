@@ -1,11 +1,14 @@
 use super::{
-    games::word_bomb::{Player, WordBomb},
-    room::{Client, State},
-    AppState, ClientUtils, Room,
+    games::{
+        anagrams::{self, Anagrams},
+        word_bomb::{self, WordBomb},
+    },
+    room::{Client, ClientUtils, RoomSettings, State},
+    AppState, Room,
 };
 use crate::{
     global::GLOBAL,
-    messages::{CountdownState, PlayerData, ServerMessage},
+    messages::{CountdownState, Games, ServerMessage, WordBombPlayerData},
 };
 
 use anyhow::{Context, Result};
@@ -30,13 +33,17 @@ pub struct Countdown {
 }
 
 impl Lobby {
-    pub fn start_game(
+    pub fn start_word_bomb(
         &self,
         timeout_task_handle: impl FnOnce(String, u8) -> Arc<AbortHandle>,
     ) -> State {
         let timer_len = thread_rng().gen_range(10..=30);
         let prompt = GLOBAL.get().unwrap().random_prompt();
-        let mut players: Vec<Player> = self.ready.iter().map(|uuid| Player::new(*uuid)).collect();
+        let mut players: Vec<word_bomb::Player> = self
+            .ready
+            .iter()
+            .map(|uuid| word_bomb::Player::new(*uuid))
+            .collect();
         players.shuffle(&mut thread_rng());
 
         State::WordBomb(WordBomb {
@@ -49,6 +56,10 @@ impl Lobby {
             current_turn: players[0].uuid,
             players,
         })
+    }
+
+    pub fn start_anagrams(&self) -> State {
+        todo!()
     }
 }
 
@@ -76,8 +87,8 @@ impl AppState {
         let Room {
             clients,
             state,
+            settings,
             owner,
-            ..
         } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
 
@@ -86,7 +97,7 @@ impl AppState {
                 countdown.timer_handle.abort();
             }
 
-            start_game(self.clone(), room.to_owned(), state, clients)?;
+            start_game(self.clone(), room.to_owned(), state, clients, settings)?;
         }
 
         Ok(())
@@ -115,7 +126,12 @@ impl AppState {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let mut lock = self.inner.lock().unwrap();
-            let Room { clients, state, .. } = lock.room_mut(&room)?;
+            let Room {
+                clients,
+                state,
+                settings,
+                ..
+            } = lock.room_mut(&room)?;
             let lobby = state.try_lobby()?;
             let countdown = lobby
                 .countdown
@@ -129,7 +145,7 @@ impl AppState {
                     return Ok(());
                 }
 
-                start_game(self.clone(), room.clone(), state, clients)?;
+                start_game(self.clone(), room.clone(), state, clients, settings)?;
             } else {
                 clients.broadcast(ServerMessage::StartingCountdown {
                     time_left: countdown.time_left,
@@ -140,23 +156,23 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_game_settings(
+    pub fn client_room_settings(
         &self,
         room: &str,
         uuid: Uuid,
-        visibility_update: bool,
+        settings_update: RoomSettings,
     ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
             state,
             owner,
-            public,
+            settings,
         } = lock.room_mut(room)?;
 
         if state.try_lobby().is_ok() && uuid == *owner {
-            *public = visibility_update;
-            clients.broadcast(ServerMessage::GameSettings { public: *public });
+            *settings = settings_update.clone();
+            clients.broadcast(ServerMessage::RoomSettings(settings_update));
         }
 
         Ok(())
@@ -197,43 +213,51 @@ fn start_game(
     room: String,
     state: &mut State,
     clients: &HashMap<Uuid, Client>,
+    settings: &RoomSettings,
 ) -> Result<()> {
-    *state = state.try_lobby()?.start_game(|prompt, timer_len| {
-        Arc::new(
-            tokio::spawn(async move {
-                app_state
-                    .check_for_timeout(room, timer_len, prompt)
-                    .await
-                    .ok();
-            })
-            .abort_handle(),
-        )
-    });
+    match settings.game {
+        Games::WordBomb => {
+            *state = state.try_lobby()?.start_word_bomb(|prompt, timer_len| {
+                Arc::new(
+                    tokio::spawn(async move {
+                        app_state
+                            .check_for_timeout(room, timer_len, prompt)
+                            .await
+                            .ok();
+                    })
+                    .abort_handle(),
+                )
+            });
 
-    let game = state.try_word_bomb()?;
+            let game = state.try_word_bomb()?;
 
-    let players: Vec<PlayerData> = game
-        .players
-        .iter()
-        .map(|player| PlayerData {
-            uuid: player.uuid,
-            username: clients[&player.uuid].username.clone(),
-            input: player.input.clone(),
-            lives: player.lives,
-            disconnected: false,
-        })
-        .collect();
+            let players: Vec<WordBombPlayerData> = game
+                .players
+                .iter()
+                .map(|player| WordBombPlayerData {
+                    uuid: player.uuid,
+                    username: clients[&player.uuid].username.clone(),
+                    input: player.input.clone(),
+                    lives: player.lives,
+                    disconnected: false,
+                })
+                .collect();
 
-    clients.send_each(|uuid, _client| ServerMessage::GameStarted {
-        rejoin_token: game
-            .players
-            .iter()
-            .find(|player| *uuid == player.uuid)
-            .map(|player| player.rejoin_token),
-        prompt: game.prompt.clone(),
-        turn: game.current_turn,
-        players: players.clone(),
-    });
+            clients.send_each(|uuid, _client| ServerMessage::WordBombStarted {
+                rejoin_token: game
+                    .players
+                    .iter()
+                    .find(|player| *uuid == player.uuid)
+                    .map(|player| player.rejoin_token),
+                prompt: game.prompt.clone(),
+                turn: game.current_turn,
+                players: players.clone(),
+            });
+        }
+        Games::Anagrams => {
+            todo!()
+        }
+    }
 
     Ok(())
 }

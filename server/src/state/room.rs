@@ -1,16 +1,20 @@
 use super::{
-    games::word_bomb::WordBomb,
+    games::{anagrams::Anagrams, word_bomb::WordBomb},
     lobby::{check_for_countdown_update, Lobby},
-    AppState, ClientUtils,
+    AppState,
 };
 use crate::{
-    messages::{ClientInfo, ConnectionUpdate, PlayerData, RoomInfo, RoomStateInfo, ServerMessage},
+    messages::{
+        AnagramsPlayerData, ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo,
+        ServerMessage, WordBombPlayerData,
+    },
     Params,
 };
 
 use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
+use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -20,10 +24,25 @@ use uuid::Uuid;
 
 #[derive(Default)]
 pub struct Room {
-    pub public: bool,
     pub owner: Uuid,
+    pub settings: RoomSettings,
     pub clients: HashMap<Uuid, Client>,
     pub state: State,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RoomSettings {
+    pub public: bool,
+    pub game: Games,
+}
+
+impl Default for RoomSettings {
+    fn default() -> Self {
+        Self {
+            public: false,
+            game: Games::WordBomb,
+        }
+    }
 }
 
 pub struct Client {
@@ -35,11 +54,12 @@ pub struct Client {
 pub enum State {
     Lobby(Lobby),
     WordBomb(WordBomb),
+    Anagrams(Anagrams),
 }
 
 impl Default for State {
     fn default() -> Self {
-        State::Lobby(Lobby {
+        Self::Lobby(Lobby {
             ready: HashSet::new(),
             countdown: None,
         })
@@ -50,14 +70,21 @@ impl State {
     pub fn try_lobby(&mut self) -> Result<&mut Lobby> {
         match self {
             State::Lobby(lobby) => Ok(lobby),
-            State::WordBomb(_) => Err(anyhow!("Not in lobby")),
+            _ => Err(anyhow!("Not in lobby")),
         }
     }
 
     pub fn try_word_bomb(&mut self) -> Result<&mut WordBomb> {
         match self {
-            State::Lobby(_) => Err(anyhow!("Not in game")),
             State::WordBomb(game) => Ok(game),
+            _ => Err(anyhow!("Not in word bomb")),
+        }
+    }
+
+    pub fn try_anagrams(&mut self) -> Result<&mut Anagrams> {
+        match self {
+            State::Anagrams(game) => Ok(game),
+            _ => Err(anyhow!("Not in anagrams")),
         }
     }
 }
@@ -75,7 +102,7 @@ impl AppState {
             clients,
             state,
             owner,
-            public,
+            settings,
         } = lock.rooms.entry(room.to_string()).or_default();
 
         let prev_client = params.rejoin_token.and_then(|rejoin_token| {
@@ -148,7 +175,7 @@ impl AppState {
                 players: game
                     .players
                     .iter()
-                    .map(|player| PlayerData {
+                    .map(|player| WordBombPlayerData {
                         uuid: player.uuid,
                         username: clients[&player.uuid].username.clone(),
                         input: player.input.clone(),
@@ -164,6 +191,24 @@ impl AppState {
                     .find(|player| uuid == player.uuid)
                     .map(|player| player.used_letters.clone()),
             },
+            State::Anagrams(game) => RoomStateInfo::Anagrams {
+                players: game
+                    .players
+                    .iter()
+                    .map(|player| AnagramsPlayerData {
+                        uuid: player.uuid,
+                        username: clients[&player.uuid].username.clone(),
+                        disconnected: clients[&player.uuid].socket.is_none(),
+                        used_words: player.used_words.clone().into_iter().collect(),
+                    })
+                    .collect(),
+                prompt: game.prompt.clone(),
+                used_words: game
+                    .players
+                    .iter()
+                    .flat_map(|player| player.used_words.clone().into_iter())
+                    .collect(),
+            },
         };
 
         clients[&uuid]
@@ -172,8 +217,8 @@ impl AppState {
                 ServerMessage::Info {
                     uuid,
                     room: RoomInfo {
-                        public: *public,
                         owner: *owner,
+                        settings: settings.clone(),
                         clients: clients
                             .iter()
                             .filter(|client| client.1.socket.is_some())
@@ -243,7 +288,7 @@ impl AppState {
                     });
                 }
             }
-            State::WordBomb(_) => {
+            _ => {
                 clients.broadcast(ServerMessage::ConnectionUpdate {
                     uuid,
                     state: ConnectionUpdate::Disconnected {
@@ -275,7 +320,7 @@ impl AppState {
         clients[&uuid]
             .tx
             .send(
-                ServerMessage::Text {
+                ServerMessage::Error {
                     content: format!("something went wrong: {message}"),
                 }
                 .into(),
@@ -292,5 +337,26 @@ pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uui
     } else {
         *owner = *clients.keys().choose(&mut thread_rng()).unwrap();
         Some(*owner)
+    }
+}
+
+pub trait ClientUtils {
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
+    fn broadcast(&self, message: ServerMessage);
+}
+
+impl ClientUtils for HashMap<Uuid, Client> {
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
+        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
+            client.tx.send(f(uuid, client).into()).ok();
+        }
+    }
+
+    fn broadcast(&self, message: ServerMessage) {
+        let serialized: Message = message.into();
+
+        for client in self.values().filter(|client| client.socket.is_some()) {
+            client.tx.send(serialized.clone()).ok();
+        }
     }
 }
