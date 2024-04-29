@@ -1,11 +1,7 @@
 use crate::{
     global::GLOBAL,
     messages::ServerMessage,
-    state::{
-        lobby::Lobby,
-        room::{check_for_new_room_owner, ClientUtils, State},
-        AppState, Room, SenderInfo,
-    },
+    state::{lobby::end_game, room::ClientUtils, AppState, Room, SenderInfo},
 };
 
 use anyhow::{Context, Result};
@@ -32,7 +28,6 @@ pub struct WordBomb {
 
 pub struct Player {
     pub uuid: Uuid,
-    pub rejoin_token: Uuid,
     pub input: String,
     pub lives: u8,
     pub used_letters: HashSet<char>,
@@ -147,20 +142,12 @@ impl WordBomb {
             .filter(|player| player.lives > 0)
             .collect()
     }
-
-    pub fn end() -> State {
-        State::Lobby(Lobby {
-            ready: HashSet::new(),
-            countdown: None,
-        })
-    }
 }
 
 impl Player {
     pub fn new(uuid: Uuid) -> Self {
         Self {
             uuid,
-            rejoin_token: Uuid::new_v4(),
             input: String::new(),
             lives: 2,
             used_letters: HashSet::new(),
@@ -253,16 +240,8 @@ impl AppState {
             game.player_timed_out();
 
             if game.alive_players().len() == 1 {
-                clients.retain(|_uuid, client| client.socket.is_some());
-
-                let new_room_owner = check_for_new_room_owner(clients, owner);
-
-                clients.broadcast(ServerMessage::GameEnded {
-                    winner: game.alive_players().first().unwrap().uuid,
-                    new_room_owner,
-                });
-
-                *state = WordBomb::end();
+                let winner = game.alive_players().first().unwrap().uuid;
+                end_game(state, clients, owner, winner)
             } else {
                 clients.broadcast(ServerMessage::WordBombPrompt {
                     correct_guess: None,

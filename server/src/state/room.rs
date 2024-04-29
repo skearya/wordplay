@@ -15,10 +15,7 @@ use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
 use serde::{Deserialize, Serialize};
-use std::{
-    borrow::Cow,
-    collections::{HashMap, HashSet},
-};
+use std::{borrow::Cow, collections::HashMap};
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
@@ -49,6 +46,7 @@ pub struct Client {
     pub socket: Option<Uuid>,
     pub tx: UnboundedSender<Message>,
     pub username: String,
+    pub rejoin_token: Option<Uuid>,
 }
 
 pub enum State {
@@ -59,10 +57,7 @@ pub enum State {
 
 impl Default for State {
     fn default() -> Self {
-        Self::Lobby(Lobby {
-            ready: HashSet::new(),
-            countdown: None,
-        })
+        Self::Lobby(Lobby::new())
     }
 }
 
@@ -106,11 +101,10 @@ impl AppState {
         } = lock.rooms.entry(room.to_string()).or_default();
 
         let prev_client = params.rejoin_token.and_then(|rejoin_token| {
-            state.try_word_bomb().ok().and_then(|game| {
-                game.players
-                    .iter()
-                    .find(|player| player.rejoin_token == rejoin_token)
-                    .map(|player| (player.uuid, clients.get_mut(&player.uuid).unwrap()))
+            clients.iter_mut().find(|(_uuid, client)| {
+                client
+                    .rejoin_token
+                    .is_some_and(|client_token| client_token == rejoin_token)
             })
         });
 
@@ -129,14 +123,16 @@ impl AppState {
             client.tx = tx;
             client.username = params.username.clone();
 
+            let uuid = prev_uuid.clone();
+
             clients.broadcast(ServerMessage::ConnectionUpdate {
-                uuid: prev_uuid,
+                uuid,
                 state: ConnectionUpdate::Reconnected {
                     username: params.username,
                 },
             });
 
-            prev_uuid
+            uuid
         } else {
             let uuid = Uuid::new_v4();
 
@@ -150,6 +146,7 @@ impl AppState {
                     socket: Some(socket_uuid),
                     tx,
                     username: params.username.clone(),
+                    rejoin_token: None,
                 },
             );
 

@@ -3,7 +3,7 @@ use super::{
         anagrams::{self, Anagrams},
         word_bomb::{self, WordBomb},
     },
-    room::{Client, ClientUtils, RoomSettings, State},
+    room::{check_for_new_room_owner, Client, ClientUtils, RoomSettings, State},
     AppState, Room, SenderInfo,
 };
 use crate::{
@@ -35,6 +35,13 @@ pub struct Countdown {
 }
 
 impl Lobby {
+    pub fn new() -> Self {
+        Self {
+            ready: HashSet::new(),
+            countdown: None,
+        }
+    }
+
     pub fn start_word_bomb(
         &self,
         timeout_task_handle: impl FnOnce(String, u8) -> Arc<AbortHandle>,
@@ -224,12 +231,18 @@ fn start_game(
     app_state: AppState,
     room: String,
     state: &mut State,
-    clients: &HashMap<Uuid, Client>,
+    clients: &mut HashMap<Uuid, Client>,
     settings: &RoomSettings,
 ) -> Result<()> {
+    let lobby = state.try_lobby()?;
+
+    for uuid in &lobby.ready {
+        clients.get_mut(uuid).unwrap().rejoin_token = Some(Uuid::new_v4());
+    }
+
     match settings.game {
         Games::WordBomb => {
-            *state = state.try_lobby()?.start_word_bomb(|prompt, timer_len| {
+            *state = lobby.start_word_bomb(|prompt, timer_len| {
                 Arc::new(
                     tokio::spawn(async move {
                         app_state
@@ -255,12 +268,8 @@ fn start_game(
                 })
                 .collect();
 
-            clients.send_each(|uuid, _client| ServerMessage::GameStarted {
-                rejoin_token: game
-                    .players
-                    .iter()
-                    .find(|player| *uuid == player.uuid)
-                    .map(|player| player.rejoin_token),
+            clients.send_each(|_uuid, client| ServerMessage::GameStarted {
+                rejoin_token: client.rejoin_token,
                 game: RoomStateInfo::WordBomb {
                     prompt: game.prompt.clone(),
                     turn: game.current_turn,
@@ -270,7 +279,7 @@ fn start_game(
             });
         }
         Games::Anagrams => {
-            *state = state.try_lobby()?.start_anagrams(app_state, room);
+            *state = lobby.start_anagrams(app_state, room);
 
             let game = state.try_anagrams()?;
 
@@ -285,12 +294,8 @@ fn start_game(
                 })
                 .collect();
 
-            clients.send_each(|uuid, _client| ServerMessage::GameStarted {
-                rejoin_token: game
-                    .players
-                    .iter()
-                    .find(|player| *uuid == player.uuid)
-                    .map(|player| player.rejoin_token),
+            clients.send_each(|_uuid, client| ServerMessage::GameStarted {
+                rejoin_token: client.rejoin_token,
                 game: RoomStateInfo::Anagrams {
                     players: players.clone(),
                     prompt: game.prompt.clone(),
@@ -301,4 +306,26 @@ fn start_game(
     }
 
     Ok(())
+}
+
+pub fn end_game(
+    state: &mut State,
+    clients: &mut HashMap<Uuid, Client>,
+    owner: &mut Uuid,
+    winner: Uuid,
+) {
+    clients.retain(|_uuid, client| client.socket.is_some());
+
+    for client in clients.values_mut() {
+        client.rejoin_token = None;
+    }
+
+    let new_room_owner = check_for_new_room_owner(clients, owner);
+
+    clients.broadcast(ServerMessage::GameEnded {
+        winner,
+        new_room_owner,
+    });
+
+    *state = State::Lobby(Lobby::new())
 }

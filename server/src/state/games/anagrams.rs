@@ -6,8 +6,8 @@ use crate::{
     global::GLOBAL,
     messages::ServerMessage,
     state::{
-        lobby::Lobby,
-        room::{check_for_new_room_owner, ClientUtils, Room, State},
+        lobby::end_game,
+        room::{ClientUtils, Room},
         AppState, SenderInfo,
     },
 };
@@ -19,7 +19,6 @@ pub struct Anagrams {
 
 pub struct Player {
     pub uuid: Uuid,
-    pub rejoin_token: Uuid,
     pub used_words: HashSet<String>,
 }
 
@@ -60,20 +59,12 @@ impl Anagrams {
         // TODO
         self.players.first().unwrap().uuid
     }
-
-    pub fn end() -> State {
-        State::Lobby(Lobby {
-            ready: HashSet::new(),
-            countdown: None,
-        })
-    }
 }
 
 impl Player {
     pub fn new(uuid: Uuid) -> Self {
         Self {
             uuid,
-            rejoin_token: Uuid::new_v4(),
             used_words: HashSet::new(),
         }
     }
@@ -108,16 +99,8 @@ impl AppState {
         } = lock.room_mut(&room)?;
         let game = state.try_anagrams()?;
 
-        clients.retain(|_uuid, client| client.socket.is_some());
-
-        let new_room_owner = check_for_new_room_owner(clients, owner);
-
-        clients.broadcast(ServerMessage::GameEnded {
-            winner: game.winner(),
-            new_room_owner,
-        });
-
-        *state = Anagrams::end();
+        let winner = game.winner();
+        end_game(state, clients, owner, winner);
 
         Ok(())
     }
