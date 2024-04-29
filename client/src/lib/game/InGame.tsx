@@ -17,7 +17,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 	createEffect(() => {
 		if (ourTurn()) {
 			props.sendMessage({
-				type: 'input',
+				type: 'wordBombInput',
 				input: game.input
 			});
 		}
@@ -89,7 +89,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
 						props.sendMessage({
-							type: 'guess',
+							type: 'wordBombGuess',
 							word: event.currentTarget.value
 						});
 					}

@@ -1,14 +1,18 @@
-use std::{collections::HashSet, sync::Arc};
-use tokio::task::AbortHandle;
+use anyhow::{Context, Result};
+use std::{collections::HashSet, time::Duration};
 use uuid::Uuid;
 
 use crate::{
     global::GLOBAL,
-    state::{lobby::Lobby, room::State},
+    messages::ServerMessage,
+    state::{
+        lobby::Lobby,
+        room::{check_for_new_room_owner, ClientUtils, Room, State},
+        AppState, SenderInfo,
+    },
 };
 
 pub struct Anagrams {
-    pub timeout_task: Arc<AbortHandle>,
     pub prompt: String,
     pub players: Vec<Player>,
 }
@@ -52,6 +56,11 @@ impl Anagrams {
         Some(guess_info)
     }
 
+    pub fn winner(&self) -> Uuid {
+        // TODO
+        self.players.first().unwrap().uuid
+    }
+
     pub fn end() -> State {
         State::Lobby(Lobby {
             ready: HashSet::new(),
@@ -67,5 +76,49 @@ impl Player {
             rejoin_token: Uuid::new_v4(),
             used_words: HashSet::new(),
         }
+    }
+}
+
+impl AppState {
+    pub fn anagrams_guess(&self, SenderInfo { uuid, room }: SenderInfo, guess: &str) -> Result<()> {
+        let mut lock = self.inner.lock().unwrap();
+        let Room { clients, state, .. } = lock.room_mut(&room)?;
+        let game = state.try_anagrams()?;
+
+        match game.check_guess(uuid, guess).context("Not a player")? {
+            GuessInfo::Valid => clients.broadcast(ServerMessage::AnagramsCorrectGuess {
+                uuid,
+                guess: guess.to_string(),
+            }),
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    pub async fn anagrams_timer(&self, room: String) -> Result<()> {
+        tokio::time::sleep(Duration::from_secs(30)).await;
+
+        let mut lock = self.inner.lock().unwrap();
+        let Room {
+            clients,
+            state,
+            owner,
+            ..
+        } = lock.room_mut(&room)?;
+        let game = state.try_anagrams()?;
+
+        clients.retain(|_uuid, client| client.socket.is_some());
+
+        let new_room_owner = check_for_new_room_owner(clients, owner);
+
+        clients.broadcast(ServerMessage::GameEnded {
+            winner: game.winner(),
+            new_room_owner,
+        });
+
+        *state = Anagrams::end();
+
+        Ok(())
     }
 }

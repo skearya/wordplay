@@ -4,11 +4,13 @@ use super::{
         word_bomb::{self, WordBomb},
     },
     room::{Client, ClientUtils, RoomSettings, State},
-    AppState, Room,
+    AppState, Room, SenderInfo,
 };
 use crate::{
     global::GLOBAL,
-    messages::{CountdownState, Games, ServerMessage, WordBombPlayerData},
+    messages::{
+        AnagramsPlayerData, CountdownState, Games, RoomStateInfo, ServerMessage, WordBombPlayerData,
+    },
 };
 
 use anyhow::{Context, Result};
@@ -58,13 +60,24 @@ impl Lobby {
         })
     }
 
-    pub fn start_anagrams(&self) -> State {
-        todo!()
+    pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
+        tokio::spawn(async move {
+            app_state.anagrams_timer(room).await.ok();
+        });
+
+        State::Anagrams(Anagrams {
+            prompt: GLOBAL.get().unwrap().random_prompt(),
+            players: self
+                .ready
+                .iter()
+                .map(|uuid| anagrams::Player::new(*uuid))
+                .collect(),
+        })
     }
 }
 
 impl AppState {
-    pub fn client_ready(&self, room: &str, uuid: Uuid) -> Result<()> {
+    pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -82,7 +95,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_start_early(&self, room: &str, uuid: Uuid) -> Result<()> {
+    pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -103,7 +116,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_unready(&self, room: &str, uuid: Uuid) -> Result<()> {
+    pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -158,8 +171,7 @@ impl AppState {
 
     pub fn client_room_settings(
         &self,
-        room: &str,
-        uuid: Uuid,
+        SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
     ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
@@ -221,7 +233,7 @@ fn start_game(
                 Arc::new(
                     tokio::spawn(async move {
                         app_state
-                            .check_for_timeout(room, timer_len, prompt)
+                            .word_bomb_timer(room, timer_len, prompt)
                             .await
                             .ok();
                     })
@@ -243,19 +255,48 @@ fn start_game(
                 })
                 .collect();
 
-            clients.send_each(|uuid, _client| ServerMessage::WordBombStarted {
+            clients.send_each(|uuid, _client| ServerMessage::GameStarted {
                 rejoin_token: game
                     .players
                     .iter()
                     .find(|player| *uuid == player.uuid)
                     .map(|player| player.rejoin_token),
-                prompt: game.prompt.clone(),
-                turn: game.current_turn,
-                players: players.clone(),
+                game: RoomStateInfo::WordBomb {
+                    prompt: game.prompt.clone(),
+                    turn: game.current_turn,
+                    players: players.clone(),
+                    used_letters: None,
+                },
             });
         }
         Games::Anagrams => {
-            todo!()
+            *state = state.try_lobby()?.start_anagrams(app_state, room);
+
+            let game = state.try_anagrams()?;
+
+            let players: Vec<AnagramsPlayerData> = game
+                .players
+                .iter()
+                .map(|player| AnagramsPlayerData {
+                    uuid: player.uuid,
+                    username: clients[&player.uuid].username.clone(),
+                    used_words: player.used_words.clone().into_iter().collect(),
+                    disconnected: false,
+                })
+                .collect();
+
+            clients.send_each(|uuid, _client| ServerMessage::GameStarted {
+                rejoin_token: game
+                    .players
+                    .iter()
+                    .find(|player| *uuid == player.uuid)
+                    .map(|player| player.rejoin_token),
+                game: RoomStateInfo::Anagrams {
+                    players: players.clone(),
+                    prompt: game.prompt.clone(),
+                    used_words: None,
+                },
+            })
         }
     }
 

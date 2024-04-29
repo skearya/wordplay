@@ -1,8 +1,8 @@
-import type { ClientInfo, PlayerData, Uuid } from './messages';
+import type { ClientInfo, WordBombPlayerData, Uuid, RoomSettings } from './messages';
 
 export type ConnectionData = {
 	room: string;
-	public: boolean;
+	settings: RoomSettings;
 	uuid: Uuid;
 	username: string;
 	roomOwner: Uuid;
@@ -17,7 +17,7 @@ export type LobbyData = {
 };
 
 export type GameData = {
-	players: Array<PlayerData & { username: string }>;
+	players: Array<WordBombPlayerData & { username: string }>;
 	currentTurn: Uuid;
 	prompt: string;
 	input: string;

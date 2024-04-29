@@ -4,7 +4,7 @@ use crate::{
     state::{
         lobby::Lobby,
         room::{check_for_new_room_owner, ClientUtils, State},
-        AppState, Room,
+        AppState, Room, SenderInfo,
     },
 };
 
@@ -169,7 +169,11 @@ impl Player {
 }
 
 impl AppState {
-    pub fn client_input_update(&self, room: &str, uuid: Uuid, new_input: String) -> Result<()> {
+    pub fn word_bomb_input(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        new_input: String,
+    ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;
@@ -189,7 +193,11 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_guess(&self, room: &str, uuid: Uuid, guess: &str) -> Result<()> {
+    pub fn word_bomb_guess(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        guess: &str,
+    ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;
@@ -224,7 +232,7 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn check_for_timeout(
+    pub async fn word_bomb_timer(
         &self,
         room: String,
         timer_len: u8,
@@ -278,7 +286,7 @@ fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
     game.timeout_task = Arc::new(
         tokio::spawn(async move {
             app_state
-                .check_for_timeout(room, timer_len, current_prompt)
+                .word_bomb_timer(room, timer_len, current_prompt)
                 .await
                 .ok();
         })

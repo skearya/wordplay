@@ -1,13 +1,16 @@
 export type Uuid = string;
 
+type Games = 'wordBomb' | 'anagrams';
+
 export type ClientMessage =
-	| { type: 'gameSettings'; public: boolean }
 	| { type: 'ready' }
 	| { type: 'startEarly' }
 	| { type: 'unready' }
+	| ({ type: 'roomSettings' } & RoomSettings)
 	| { type: 'chatMessage'; content: string }
-	| { type: 'input'; input: string }
-	| { type: 'guess'; word: string };
+	| { type: 'wordBombInput'; input: string }
+	| { type: 'wordBombGuess'; word: string }
+	| { type: 'anagramsGuess'; word: string };
 
 export type ServerMessage =
 	| {
@@ -16,13 +19,12 @@ export type ServerMessage =
 			room: RoomInfo;
 	  }
 	| {
-			type: 'gameSettings';
-			public: boolean;
-	  }
-	| {
-			type: 'serverMessage';
+			type: 'error';
 			content: string;
 	  }
+	| ({
+			type: 'roomSettings';
+	  } & RoomSettings)
 	| {
 			type: 'chatMessage';
 			author: Uuid;
@@ -45,65 +47,86 @@ export type ServerMessage =
 	| {
 			type: 'gameStarted';
 			rejoinToken?: string;
-			players: Array<PlayerData>;
-			prompt: string;
-			turn: Uuid;
-	  }
-	| {
-			type: 'inputUpdate';
-			uuid: Uuid;
-			input: string;
-	  }
-	| {
-			type: 'invalidWord';
-			uuid: Uuid;
-			reason: InvalidWordReason;
-	  }
-	| {
-			type: 'newPrompt';
-			word?: string;
-			lifeChange: number;
-			newPrompt: string;
-			newTurn: Uuid;
+			game: RoomStateInfo;
 	  }
 	| {
 			type: 'gameEnded';
 			winner: Uuid;
 			newRoomOwner?: Uuid;
+	  }
+	| {
+			type: 'wordBombInput';
+			uuid: Uuid;
+			input: string;
+	  }
+	| {
+			type: 'wordBombInvalidGuess';
+			uuid: Uuid;
+			reason: WordBombGuessInfo;
+	  }
+	| {
+			type: 'wordBombPrompt';
+			correctGuess?: string;
+			lifeChange: number;
+			prompt: string;
+			turn: Uuid;
+	  }
+	| {
+			type: 'anagramsCorrectGuess';
+			uuid: Uuid;
+			guess: string;
 	  };
 
 type RoomInfo = {
-	public: boolean;
 	owner: Uuid;
+	settings: RoomSettings;
 	clients: Array<ClientInfo>;
-	state: RoomState;
+	state: RoomStateInfo;
 };
 
-type RoomState =
+type RoomStateInfo =
 	| {
 			type: 'lobby';
 			ready: Array<Uuid>;
 			startingCountdown?: number;
 	  }
 	| {
-			type: 'inGame';
-			players: Array<PlayerData>;
+			type: 'wordBomb';
+			players: Array<WordBombPlayerData>;
 			turn: Uuid;
 			prompt: string;
 			usedLetters?: Array<string>;
+	  }
+	| {
+			type: 'anagrams';
+			players: Array<AnagramsPlayerData>;
+			prompt: string;
+			usedWords?: Array<String>;
 	  };
+
+export type RoomSettings = {
+	public: boolean;
+	game: Games;
+};
 
 export type ClientInfo = {
 	uuid: Uuid;
 	username: string;
 };
 
-export type PlayerData = {
+export type WordBombPlayerData = {
 	uuid: Uuid;
 	username: string;
 	disconnected: boolean;
 	input: string;
 	lives: number;
+};
+
+export type AnagramsPlayerData = {
+	puuid: Uuid;
+	username: string;
+	disconnected: boolean;
+	used_words: Array<string>;
 };
 
 type ConnectionUpdate =
@@ -129,7 +152,7 @@ type CountdownState =
 			type: 'stopped';
 	  };
 
-type InvalidWordReason =
+type WordBombGuessInfo =
 	| {
 			type: 'promptNotIn';
 	  }

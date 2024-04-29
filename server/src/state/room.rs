@@ -1,7 +1,7 @@
 use super::{
     games::{anagrams::Anagrams, word_bomb::WordBomb},
     lobby::{check_for_countdown_update, Lobby},
-    AppState,
+    AppState, SenderInfo,
 };
 use crate::{
     messages::{
@@ -203,11 +203,12 @@ impl AppState {
                     })
                     .collect(),
                 prompt: game.prompt.clone(),
-                used_words: game
-                    .players
-                    .iter()
-                    .flat_map(|player| player.used_words.clone().into_iter())
-                    .collect(),
+                used_words: Some(
+                    game.players
+                        .iter()
+                        .flat_map(|player| player.used_words.clone().into_iter())
+                        .collect(),
+                ),
             },
         };
 
@@ -237,7 +238,11 @@ impl AppState {
         uuid
     }
 
-    pub fn remove_client(&self, room: &str, uuid: Uuid, socket_uuid: Uuid) -> Result<()> {
+    pub fn remove_client(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        socket_uuid: Uuid,
+    ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -271,13 +276,6 @@ impl AppState {
             State::Lobby(lobby) => {
                 clients.remove(&uuid);
 
-                let new_room_owner = check_for_new_room_owner(clients, owner);
-
-                clients.broadcast(ServerMessage::ConnectionUpdate {
-                    uuid,
-                    state: ConnectionUpdate::Disconnected { new_room_owner },
-                });
-
                 if lobby.ready.remove(&uuid) {
                     let countdown_update =
                         check_for_countdown_update(self.clone(), room.to_string(), lobby);
@@ -287,6 +285,13 @@ impl AppState {
                         countdown_update,
                     });
                 }
+
+                let new_room_owner = check_for_new_room_owner(clients, owner);
+
+                clients.broadcast(ServerMessage::ConnectionUpdate {
+                    uuid,
+                    state: ConnectionUpdate::Disconnected { new_room_owner },
+                });
             }
             _ => {
                 clients.broadcast(ServerMessage::ConnectionUpdate {
@@ -301,7 +306,11 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_chat_message(&self, room: &str, uuid: Uuid, content: String) -> Result<()> {
+    pub fn client_chat_message(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        content: String,
+    ) -> Result<()> {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
@@ -313,7 +322,11 @@ impl AppState {
         Ok(())
     }
 
-    pub fn send_error_msg(&self, room: &str, uuid: Uuid, message: &str) -> Result<()> {
+    pub fn send_error_msg(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        message: &str,
+    ) -> Result<()> {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 

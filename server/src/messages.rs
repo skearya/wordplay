@@ -1,4 +1,4 @@
-use crate::state::{games::word_bomb, room::RoomSettings, AppState};
+use crate::state::{games::word_bomb, room::RoomSettings};
 
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
@@ -19,13 +19,14 @@ pub enum Games {
     rename_all_fields = "camelCase"
 )]
 pub enum ClientMessage {
-    RoomSettings(RoomSettings),
     Ready,
     StartEarly,
     Unready,
+    RoomSettings(RoomSettings),
     ChatMessage { content: String },
     WordBombInput { input: String },
     WordBombGuess { word: String },
+    AnagramsGuess { word: String },
 }
 
 #[derive(Serialize)]
@@ -59,18 +60,16 @@ pub enum ServerMessage {
     StartingCountdown {
         time_left: u8,
     },
+    GameStarted {
+        rejoin_token: Option<Uuid>,
+        game: RoomStateInfo,
+    },
     GameEnded {
         winner: Uuid,
         new_room_owner: Option<Uuid>,
     },
 
     // word bomb
-    WordBombStarted {
-        rejoin_token: Option<Uuid>,
-        players: Vec<WordBombPlayerData>,
-        prompt: String,
-        turn: Uuid,
-    },
     WordBombInput {
         uuid: Uuid,
         input: String,
@@ -84,6 +83,12 @@ pub enum ServerMessage {
         life_change: i8,
         prompt: String,
         turn: Uuid,
+    },
+
+    // anagrams
+    AnagramsCorrectGuess {
+        uuid: Uuid,
+        guess: String,
     },
 }
 
@@ -115,7 +120,7 @@ pub enum RoomStateInfo {
     Anagrams {
         players: Vec<AnagramsPlayerData>,
         prompt: String,
-        used_words: Vec<String>,
+        used_words: Option<Vec<String>>,
     },
 }
 
@@ -163,53 +168,6 @@ pub struct AnagramsPlayerData {
     pub username: String,
     pub disconnected: bool,
     pub used_words: Vec<String>,
-}
-
-impl ClientMessage {
-    pub fn handle(self, state: &AppState, room: &str, uuid: Uuid) {
-        let result = match self {
-            ClientMessage::RoomSettings(room_settings) => {
-                state.client_room_settings(room, uuid, room_settings)
-            }
-            ClientMessage::Ready => state.client_ready(room, uuid),
-            ClientMessage::StartEarly => state.client_start_early(room, uuid),
-            ClientMessage::Unready => state.client_unready(room, uuid),
-            ClientMessage::ChatMessage { content } => {
-                if content.len() > 250 {
-                    Ok(())
-                } else {
-                    state.client_chat_message(room, uuid, content)
-                }
-            }
-            ClientMessage::WordBombInput { input } => {
-                if input.len() > 35 {
-                    Ok(())
-                } else {
-                    state.client_input_update(room, uuid, input)
-                }
-            }
-            ClientMessage::WordBombGuess { word } => {
-                if word.len() > 35 {
-                    Ok(())
-                } else {
-                    state.client_guess(
-                        room,
-                        uuid,
-                        &word
-                            .to_ascii_lowercase()
-                            .chars()
-                            .filter(|char| char.is_alphabetic())
-                            .collect::<String>(),
-                    )
-                }
-            }
-        };
-
-        if let Err(e) = result {
-            eprintln!("error handling msg: {e}");
-            state.send_error_msg(room, uuid, &e.to_string()).ok();
-        }
-    }
 }
 
 impl From<ServerMessage> for Message {

@@ -31,9 +31,15 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 							name="visibility"
 							value={visibility}
 							disabled={connection.roomOwner !== connection.uuid}
-							checked={connection.public ? visibility === 'public' : visibility === 'private'}
+							checked={
+								connection.settings.public ? visibility === 'public' : visibility === 'private'
+							}
 							onChange={() => {
-								props.sendMessage({ type: 'gameSettings', public: visibility === 'public' });
+								props.sendMessage({
+									type: 'roomSettings',
+									game: 'wordBomb',
+									public: visibility === 'public'
+								});
 							}}
 						/>
 						<label for={visibility} class="capitalize">

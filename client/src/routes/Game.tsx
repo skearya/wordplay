@@ -45,7 +45,7 @@ const Game: Component = () => {
 					uuid: uuid,
 					clients: room.clients,
 					roomOwner: room.owner,
-					public: room.public
+					settings: room.settings
 				});
 
 				batch(() => {
@@ -55,7 +55,7 @@ const Game: Component = () => {
 							readyPlayers: room.state.ready,
 							startingCountdown: room.state.startingCountdown
 						});
-					} else {
+					} else if (room.state.type === 'wordBomb') {
 						const usedLetters = room.state.usedLetters ? new Set(room.state.usedLetters) : null;
 						const input =
 							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
@@ -68,15 +68,18 @@ const Game: Component = () => {
 							usedLetters,
 							input
 						});
+					} else {
+						// TODO
 					}
 				});
 			})
-			.with({ type: 'gameSettings' }, (message) => {
-				setConnection('public', message.public);
+			.with({ type: 'roomSettings' }, (message) => {
+				// TODO
+				setConnection('settings', message);
 			})
-			.with({ type: P.union('serverMessage', 'chatMessage') }, (message) => {
+			.with({ type: P.union('chatMessage', 'error') }, (message) => {
 				const messageContent =
-					message.type === 'serverMessage'
+					message.type === 'error'
 						? `server: ${message.content}`
 						: `${connection.clients.find((client) => client.uuid === message.author)!.username}: ${message.content}`;
 
@@ -137,41 +140,20 @@ const Game: Component = () => {
 					localStorage.setItem('rejoinTokens', JSON.stringify(tokens));
 				}
 
-				batch(() => {
-					setState('game');
-					setGame({
-						players: message.players,
-						currentTurn: message.turn,
-						prompt: message.prompt,
-						guessError: ['', ''],
-						usedLetters: new Set(),
-						input: ''
+				if (message.game.type === 'wordBomb') {
+					const { players, turn, prompt } = message.game;
+					batch(() => {
+						setState('game');
+						setGame({
+							players,
+							currentTurn: turn,
+							prompt,
+							guessError: ['', ''],
+							usedLetters: new Set(),
+							input: ''
+						});
 					});
-				});
-			})
-			.with({ type: 'inputUpdate' }, (message) => {
-				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
-			})
-			.with({ type: 'invalidWord' }, (message) => {
-				setGame('guessError', [message.uuid, message.reason.type]);
-			})
-			.with({ type: 'newPrompt' }, (message) => {
-				setGame(
-					produce((game) => {
-						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
-						turn.lives += message.lifeChange;
-
-						if (turn.uuid === connection.uuid && message.word) {
-							game.usedLetters = new Set([...game.usedLetters!, ...message.word]);
-						}
-						if (message.newTurn === connection.uuid) {
-							game.input = '';
-						}
-
-						game.prompt = message.newPrompt;
-						game.currentTurn = message.newTurn;
-					})
-				);
+				}
 			})
 			.with({ type: 'gameEnded' }, (message) => {
 				batch(() => {
@@ -187,6 +169,33 @@ const Game: Component = () => {
 						startingCountdown: null
 					});
 				});
+			})
+			.with({ type: 'wordBombInput' }, (message) => {
+				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
+			})
+			.with({ type: 'wordBombInvalidGuess' }, (message) => {
+				setGame('guessError', [message.uuid, message.reason.type]);
+			})
+			.with({ type: 'wordBombPrompt' }, (message) => {
+				setGame(
+					produce((game) => {
+						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
+						turn.lives += message.lifeChange;
+
+						if (turn.uuid === connection.uuid && message.correctGuess) {
+							game.usedLetters = new Set([...game.usedLetters!, ...message.correctGuess]);
+						}
+						if (message.turn === connection.uuid) {
+							game.input = '';
+						}
+
+						game.prompt = message.prompt;
+						game.currentTurn = message.turn;
+					})
+				);
+			})
+			.with({ type: 'anagramsCorrectGuess' }, (message) => {
+				// TODO
 			})
 			.exhaustive();
 	});

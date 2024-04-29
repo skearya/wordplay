@@ -4,7 +4,7 @@ mod state;
 
 use global::{GlobalData, GLOBAL};
 use messages::ClientMessage;
-use state::AppState;
+use state::{AppState, SenderInfo};
 
 use axum::{
     extract::{
@@ -86,6 +86,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
 
     let socket_uuid = Uuid::new_v4();
     let uuid = state.add_client(&room, params, socket_uuid, proxy);
+    let info = SenderInfo { uuid, room: &room };
 
     let sending_task = tokio::spawn(async move {
         while let Some(msg) = inbox.recv().await {
@@ -102,7 +103,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
         if let Ok(msg) = msg {
             if let Message::Text(text) = msg {
                 if let Ok(msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    msg.handle(&state, &room, uuid);
+                    state.handle(info, msg);
                 } else {
                     eprintln!("couldnt parse message: {text}");
                 }
@@ -114,6 +115,6 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
 
     sending_task.abort();
     state
-        .remove_client(&room, uuid, socket_uuid)
+        .remove_client(info, socket_uuid)
         .unwrap_or_else(|e| eprintln!("failed to remove client: {e}"));
 }
