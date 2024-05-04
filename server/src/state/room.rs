@@ -327,12 +327,6 @@ fn room_state_info(clients: &HashMap<Uuid, Client>, state: &State, uuid: Uuid) -
                 })
                 .collect(),
             prompt: game.prompt.clone(),
-            used_words: Some(
-                game.players
-                    .iter()
-                    .flat_map(|player| player.used_words.clone().into_iter())
-                    .collect(),
-            ),
         },
     }
 }

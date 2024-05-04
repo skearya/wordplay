@@ -1,4 +1,4 @@
-import { ConnectionData, GameData, LobbyData, State } from './types/stores';
+import { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/stores';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
@@ -21,7 +21,7 @@ function makeContext(room = '') {
 		startingCountdown: null
 	});
 
-	const [game, setGame] = createStore<GameData>({
+	const [wordBomb, setWordBomb] = createStore<WordBombData>({
 		players: [],
 		currentTurn: '',
 		prompt: '',
@@ -30,9 +30,16 @@ function makeContext(room = '') {
 		input: ''
 	});
 
+	const [anagrams, setAnagrams] = createStore<AnagramsData>({
+		players: [],
+		prompt: '',
+		guessError: [''],
+		input: ''
+	});
+
 	return [
-		{ state, connection, lobby, game },
-		{ setState, setConnection, setLobby, setGame }
+		{ state, connection, lobby, wordBomb, anagrams },
+		{ setState, setConnection, setLobby, setWordBomb, setAnagrams }
 	] as const;
 }
 

@@ -1,21 +1,22 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
 import { Switch, Match, onCleanup, batch, useContext, createSignal } from 'solid-js';
-import { produce } from 'solid-js/store';
+import { produce, reconcile } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
-import { Lobby } from '../lib/game/Lobby';
-import { InGame } from '../lib/game/InGame';
-import { ChatMessages } from '../lib/game/ChatMessages';
 import { Nav } from '../lib/game/Nav';
 import { Connecting } from '../lib/game/Connecting';
 import { Errored } from '../lib/game/Errored';
+import { ChatMessages } from '../lib/game/ChatMessages';
+import { Lobby } from '../lib/game/Lobby';
+import { WordBomb } from '../lib/game/WordBomb';
+import { Anagrams } from '../lib/game/Anagrams';
 
 const Game: Component = () => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, state } = context[0];
-	const { setConnection, setGame, setLobby, setState } = context[1];
+	const { setConnection, setState, setLobby, setWordBomb, setAnagrams } = context[1];
 
 	const [connectionError, setConnectionError] = createSignal<string | null>(null);
 
@@ -61,7 +62,7 @@ const Game: Component = () => {
 						const input =
 							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
-						setGame({
+						setWordBomb({
 							players: room.state.players,
 							currentTurn: room.state.turn,
 							prompt: room.state.prompt,
@@ -69,13 +70,17 @@ const Game: Component = () => {
 							input
 						});
 					} else {
-						// TODO
+						setAnagrams({
+							players: room.state.players,
+							prompt: room.state.prompt
+						});
 					}
 				});
 			})
 			.with({ type: 'roomSettings' }, (message) => {
-				// TODO
-				setConnection('settings', message);
+				const { type, ...settings } = message;
+
+				setConnection('settings', reconcile(settings));
 			})
 			.with({ type: P.union('chatMessage', 'error') }, (message) => {
 				const messageContent =
@@ -111,12 +116,12 @@ const Game: Component = () => {
 				}
 
 				if (message.state.type === 'reconnected') {
-					setGame('players', (player) => player.uuid === message.uuid, {
+					setWordBomb('players', (player) => player.uuid === message.uuid, {
 						username: message.state.username,
 						disconnected: false
 					});
 				} else if (message.state.type === 'disconnected') {
-					setGame('players', (player) => player.uuid === message.uuid, 'disconnected', true);
+					setWordBomb('players', (player) => player.uuid === message.uuid, 'disconnected', true);
 				}
 			})
 			.with({ type: 'readyPlayers' }, (message) => {
@@ -144,17 +149,19 @@ const Game: Component = () => {
 					setState(message.game.type);
 
 					if (message.game.type === 'wordBomb') {
-						const { players, turn, prompt } = message.game;
-						setGame({
-							players,
-							currentTurn: turn,
-							prompt,
+						setWordBomb({
+							players: message.game.players,
+							currentTurn: message.game.turn,
+							prompt: message.game.prompt,
 							guessError: ['', ''],
 							usedLetters: new Set(),
 							input: ''
 						});
 					} else {
-						// TODO
+						setAnagrams({
+							players: message.game.players,
+							prompt: message.game.prompt
+						});
 					}
 				});
 			})
@@ -171,16 +178,17 @@ const Game: Component = () => {
 						readyPlayers: [],
 						startingCountdown: null
 					});
+					setAnagrams('guessError', ['']);
 				});
 			})
 			.with({ type: 'wordBombInput' }, (message) => {
-				setGame('players', (player) => player.uuid === message.uuid, 'input', message.input);
+				setWordBomb('players', (player) => player.uuid === message.uuid, 'input', message.input);
 			})
 			.with({ type: 'wordBombInvalidGuess' }, (message) => {
-				setGame('guessError', [message.uuid, message.reason.type]);
+				setWordBomb('guessError', [message.uuid, message.reason.type]);
 			})
 			.with({ type: 'wordBombPrompt' }, (message) => {
-				setGame(
+				setWordBomb(
 					produce((game) => {
 						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
 						turn.lives += message.lifeChange;
@@ -198,7 +206,21 @@ const Game: Component = () => {
 				);
 			})
 			.with({ type: 'anagramsCorrectGuess' }, (message) => {
-				// TODO
+				if (message.uuid == connection.uuid) {
+					setAnagrams('input', '');
+				}
+
+				setAnagrams(
+					'players',
+					(player) => player.uuid === message.uuid,
+					'usedWords',
+					(words) => [...words, message.guess]
+				);
+
+				console.log(context[0].anagrams.players);
+			})
+			.with({ type: 'anagramsInvalidGuess' }, (message) => {
+				setAnagrams('guessError', [message.reason.type]);
 			})
 			.exhaustive();
 	});
@@ -230,9 +252,11 @@ const Game: Component = () => {
 							<Lobby sender={sender} />
 						</Match>
 						<Match when={state() === 'wordBomb'}>
-							<InGame sender={sender} />
+							<WordBomb sender={sender} />
 						</Match>
-						<Match when={state() === 'anagrams'}></Match>
+						<Match when={state() === 'anagrams'}>
+							<Anagrams sender={sender} />
+						</Match>
 					</Switch>
 					<ChatMessages sender={sender} />
 				</Match>

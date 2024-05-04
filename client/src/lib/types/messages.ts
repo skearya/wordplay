@@ -72,6 +72,10 @@ export type ServerMessage =
 			turn: Uuid;
 	  }
 	| {
+			type: 'anagramsInvalidGuess';
+			reason: AnagramsGuessInfo;
+	  }
+	| {
 			type: 'anagramsCorrectGuess';
 			uuid: Uuid;
 			guess: string;
@@ -101,7 +105,6 @@ type RoomStateInfo =
 			type: 'anagrams';
 			players: Array<AnagramsPlayerData>;
 			prompt: string;
-			usedWords?: Array<String>;
 	  };
 
 export type RoomSettings = {
@@ -126,7 +129,7 @@ export type AnagramsPlayerData = {
 	uuid: Uuid;
 	username: string;
 	disconnected: boolean;
-	used_words: Array<string>;
+	usedWords: Array<string>;
 };
 
 type ConnectionUpdate =
@@ -155,6 +158,20 @@ type CountdownState =
 type WordBombGuessInfo =
 	| {
 			type: 'promptNotIn';
+	  }
+	| {
+			type: 'notEnglish';
+	  }
+	| {
+			type: 'alreadyUsed';
+	  };
+
+type AnagramsGuessInfo =
+	| {
+			type: 'notLongEnough';
+	  }
+	| {
+			type: 'promptMismatch';
 	  }
 	| {
 			type: 'notEnglish';

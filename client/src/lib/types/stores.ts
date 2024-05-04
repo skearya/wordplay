@@ -1,4 +1,10 @@
-import type { ClientInfo, WordBombPlayerData, Uuid, RoomSettings } from './messages';
+import type {
+	ClientInfo,
+	WordBombPlayerData,
+	Uuid,
+	RoomSettings,
+	AnagramsPlayerData
+} from './messages';
 
 export type State = 'connecting' | 'error' | 'lobby' | 'wordBomb' | 'anagrams';
 
@@ -18,11 +24,19 @@ export type LobbyData = {
 	startingCountdown: number | null;
 };
 
-export type GameData = {
-	players: Array<WordBombPlayerData & { username: string }>;
+export type WordBombData = {
+	players: Array<WordBombPlayerData>;
 	currentTurn: Uuid;
 	prompt: string;
 	input: string;
 	guessError: [Uuid, string];
 	usedLetters: Set<string> | null;
+};
+
+export type AnagramsData = {
+	players: Array<AnagramsPlayerData>;
+	prompt: string;
+	// [string] to push reactive updates with the same content
+	guessError: [string];
+	input: string;
 };

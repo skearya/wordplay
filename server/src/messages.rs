@@ -126,7 +126,6 @@ pub enum RoomStateInfo {
     Anagrams {
         players: Vec<AnagramsPlayerData>,
         prompt: String,
-        used_words: Option<Vec<String>>,
     },
 }
 
@@ -169,6 +168,7 @@ pub struct WordBombPlayerData {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AnagramsPlayerData {
     pub uuid: Uuid,
     pub username: String,

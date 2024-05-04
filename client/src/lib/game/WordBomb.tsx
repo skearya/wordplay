@@ -2,11 +2,11 @@ import { type Component, useContext, For, Show, createEffect } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const InGame: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
+const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-	const { connection, game } = context[0];
-	const { setGame } = context[1];
+	const { connection, wordBomb: game } = context[0];
+	const { setWordBomb } = context[1];
 
 	let gameInputRef!: HTMLInputElement;
 
@@ -35,17 +35,7 @@ const InGame: Component<{ sender: (message: ClientMessage) => void }> = (props) 
 		const element = document.getElementById(uuid);
 
 		if (element) {
-			element.animate(
-				[
-					{
-						color: '#FF0000'
-					},
-					{
-						color: '#FFF'
-					}
-				],
-				1000
-			);
+			element.animate([{ color: '#FF0000' }, { color: '#FFF' }], 1000);
 		}
 	});
 
@@ -85,7 +75,7 @@ const InGame: Component<{ sender: (message: ClientMessage) => void }> = (props) 
 				maxlength="35"
 				disabled={game.currentTurn !== connection.uuid}
 				value={game.input}
-				onInput={(event) => setGame('input', event.target.value.substring(0, 35))}
+				onInput={(event) => setWordBomb('input', event.target.value.substring(0, 35))}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
 						props.sender({
@@ -99,4 +89,4 @@ const InGame: Component<{ sender: (message: ClientMessage) => void }> = (props) 
 	);
 };
 
-export { InGame };
+export { WordBomb };

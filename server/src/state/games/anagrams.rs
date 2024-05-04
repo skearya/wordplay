@@ -65,7 +65,7 @@ impl Anagrams {
     }
 
     pub fn leaderboard(&self) -> Vec<(Uuid, u16)> {
-        let mut points: Vec<(Uuid, u16)> = self
+        let mut leaderboard: Vec<(Uuid, u16)> = self
             .players
             .iter()
             .map(|player| {
@@ -79,8 +79,8 @@ impl Anagrams {
             })
             .collect();
 
-        points.sort();
-        points
+        leaderboard.sort_by_key(|player| player.1);
+        leaderboard
     }
 }
 

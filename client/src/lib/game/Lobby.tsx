@@ -27,24 +27,45 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 					<div class="space-x-2">
 						<input
 							type="radio"
-							id={visibility}
-							name="visibility"
-							value={visibility}
+							name={visibility}
 							disabled={connection.roomOwner !== connection.uuid}
 							checked={
 								connection.settings.public ? visibility === 'public' : visibility === 'private'
 							}
-							onChange={() => {
-								props.sender({
-									type: 'roomSettings',
-									game: 'wordBomb',
-									public: visibility === 'public'
-								});
+							onChange={(event) => {
+								if (event.target.checked) {
+									props.sender({
+										type: 'roomSettings',
+										...connection.settings,
+										public: visibility === 'public'
+									});
+								}
 							}}
 						/>
-						<label for={visibility} class="capitalize">
-							{visibility}
-						</label>
+						<label for={visibility}>{visibility}</label>
+					</div>
+				))}
+				<div class="h-[1px] w-full bg-white"></div>
+				{['word bomb', 'anagrams'].map((game) => (
+					<div class="space-x-2">
+						<input
+							type="radio"
+							name={game}
+							disabled={connection.roomOwner !== connection.uuid}
+							checked={
+								connection.settings.game === (game === 'word bomb' ? 'wordBomb' : 'anagrams')
+							}
+							onChange={(event) => {
+								if (event.target.checked) {
+									props.sender({
+										type: 'roomSettings',
+										...connection.settings,
+										game: game === 'word bomb' ? 'wordBomb' : 'anagrams'
+									});
+								}
+							}}
+						/>
+						<label for={game}>{game}</label>
 					</div>
 				))}
 			</div>

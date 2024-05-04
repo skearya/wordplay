@@ -73,7 +73,7 @@ impl Lobby {
         });
 
         State::Anagrams(Anagrams {
-            prompt: GLOBAL.get().unwrap().random_anagram().to_string(),
+            prompt: GLOBAL.get().unwrap().random_anagram(),
             players: self
                 .ready
                 .iter()
@@ -299,7 +299,6 @@ fn start_game(
                 game: RoomStateInfo::Anagrams {
                     players: players.clone(),
                     prompt: game.prompt.clone(),
-                    used_words: None,
                 },
             });
         }
