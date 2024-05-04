@@ -47,7 +47,7 @@ export type ServerMessage =
 	| {
 			type: 'gameStarted';
 			rejoinToken?: string;
-			game: RoomStateInfo;
+			game: Exclude<RoomStateInfo, { type: 'lobby' }>;
 	  }
 	| {
 			type: 'gameEnded';
@@ -123,7 +123,7 @@ export type WordBombPlayerData = {
 };
 
 export type AnagramsPlayerData = {
-	puuid: Uuid;
+	uuid: Uuid;
 	username: string;
 	disconnected: boolean;
 	used_words: Array<string>;

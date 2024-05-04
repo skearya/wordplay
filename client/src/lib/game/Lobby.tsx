@@ -2,7 +2,7 @@ import { useContext, type Component, For, createSignal, createEffect, Show } fro
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (props) => {
+const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, lobby } = context[0];
@@ -35,7 +35,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 								connection.settings.public ? visibility === 'public' : visibility === 'private'
 							}
 							onChange={() => {
-								props.sendMessage({
+								props.sender({
 									type: 'roomSettings',
 									game: 'wordBomb',
 									public: visibility === 'public'
@@ -79,7 +79,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 					<button
 						class="rounded-lg border bg-secondary px-3 py-2"
 						onClick={() =>
-							props.sendMessage({
+							props.sender({
 								type: lobby.readyPlayers.includes(connection.uuid) ? 'unready' : 'ready'
 							})
 						}
@@ -89,7 +89,7 @@ const Lobby: Component<{ sendMessage: (message: ClientMessage) => void }> = (pro
 					<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
 						<button
 							class="rounded-lg border bg-sky-700 px-3 py-2"
-							onClick={() => props.sendMessage({ type: 'startEarly' })}
+							onClick={() => props.sender({ type: 'startEarly' })}
 						>
 							Start Early
 						</button>

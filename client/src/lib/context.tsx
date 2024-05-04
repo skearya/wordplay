@@ -1,9 +1,9 @@
-import { ConnectionData, GameData, LobbyData } from './types/stores';
+import { ConnectionData, GameData, LobbyData, State } from './types/stores';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 function makeContext(room = '') {
-	const [state, setState] = createSignal<'connecting' | 'error' | 'lobby' | 'game'>('connecting');
+	const [state, setState] = createSignal<State>('connecting');
 
 	const [connection, setConnection] = createStore<ConnectionData>({
 		room,

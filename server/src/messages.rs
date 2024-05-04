@@ -1,4 +1,7 @@
-use crate::state::{games::word_bomb, room::RoomSettings};
+use crate::state::{
+    games::{anagrams, word_bomb},
+    room::RoomSettings,
+};
 
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
@@ -86,6 +89,9 @@ pub enum ServerMessage {
     },
 
     // anagrams
+    AnagramsInvalidGuess {
+        reason: anagrams::GuessInfo,
+    },
     AnagramsCorrectGuess {
         uuid: Uuid,
         guess: String,

@@ -47,7 +47,7 @@ impl Lobby {
         timeout_task_handle: impl FnOnce(String, u8) -> Arc<AbortHandle>,
     ) -> State {
         let timer_len = thread_rng().gen_range(10..=30);
-        let prompt = GLOBAL.get().unwrap().random_prompt();
+        let prompt = GLOBAL.get().unwrap().random_prompt().to_string();
         let mut players: Vec<word_bomb::Player> = self
             .ready
             .iter()
@@ -73,7 +73,7 @@ impl Lobby {
         });
 
         State::Anagrams(Anagrams {
-            prompt: GLOBAL.get().unwrap().random_prompt(),
+            prompt: GLOBAL.get().unwrap().random_anagram().to_string(),
             players: self
                 .ready
                 .iter()
@@ -301,7 +301,7 @@ fn start_game(
                     prompt: game.prompt.clone(),
                     used_words: None,
                 },
-            })
+            });
         }
     }
 
@@ -327,5 +327,5 @@ pub fn end_game(
         new_room_owner,
     });
 
-    *state = State::Lobby(Lobby::new())
+    *state = State::Lobby(Lobby::new());
 }

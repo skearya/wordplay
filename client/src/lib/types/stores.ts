@@ -1,5 +1,7 @@
 import type { ClientInfo, WordBombPlayerData, Uuid, RoomSettings } from './messages';
 
+export type State = 'connecting' | 'error' | 'lobby' | 'wordBomb' | 'anagrams';
+
 export type ConnectionData = {
 	room: string;
 	settings: RoomSettings;

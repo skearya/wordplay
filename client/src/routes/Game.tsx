@@ -32,7 +32,7 @@ const Game: Component = () => {
 		`${(import.meta.env.PUBLIC_SERVER as string).replace('http', 'ws')}/rooms/${connection.room}?${params.toString()}`
 	);
 
-	const sendMessage = (data: ClientMessage) => socket.send(JSON.stringify(data));
+	const sender = (data: ClientMessage) => socket.send(JSON.stringify(data));
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
@@ -49,8 +49,9 @@ const Game: Component = () => {
 				});
 
 				batch(() => {
+					setState(room.state.type);
+
 					if (room.state.type === 'lobby') {
-						setState('lobby');
 						setLobby({
 							readyPlayers: room.state.ready,
 							startingCountdown: room.state.startingCountdown
@@ -60,7 +61,6 @@ const Game: Component = () => {
 						const input =
 							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
-						setState('game');
 						setGame({
 							players: room.state.players,
 							currentTurn: room.state.turn,
@@ -140,10 +140,11 @@ const Game: Component = () => {
 					localStorage.setItem('rejoinTokens', JSON.stringify(tokens));
 				}
 
-				if (message.game.type === 'wordBomb') {
-					const { players, turn, prompt } = message.game;
-					batch(() => {
-						setState('game');
+				batch(() => {
+					setState(message.game.type);
+
+					if (message.game.type === 'wordBomb') {
+						const { players, turn, prompt } = message.game;
 						setGame({
 							players,
 							currentTurn: turn,
@@ -152,8 +153,10 @@ const Game: Component = () => {
 							usedLetters: new Set(),
 							input: ''
 						});
-					});
-				}
+					} else {
+						// TODO
+					}
+				});
 			})
 			.with({ type: 'gameEnded' }, (message) => {
 				batch(() => {
@@ -221,16 +224,17 @@ const Game: Component = () => {
 				<Match when={state() === 'error'}>
 					<Errored errorMessage={connectionError} />
 				</Match>
-				<Match when={state() === 'lobby' || state() === 'game'}>
+				<Match when={state() !== 'connecting' || state() !== 'error'}>
 					<Switch>
 						<Match when={state() === 'lobby'}>
-							<Lobby sendMessage={sendMessage} />
+							<Lobby sender={sender} />
 						</Match>
-						<Match when={state() === 'game'}>
-							<InGame sendMessage={sendMessage} />
+						<Match when={state() === 'wordBomb'}>
+							<InGame sender={sender} />
 						</Match>
+						<Match when={state() === 'anagrams'}></Match>
 					</Switch>
-					<ChatMessages sendMessage={sendMessage} />
+					<ChatMessages sender={sender} />
 				</Match>
 			</Switch>
 		</>

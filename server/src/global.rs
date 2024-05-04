@@ -17,8 +17,18 @@ impl GlobalData {
         }
     }
 
-    pub fn random_prompt(&self) -> String {
-        (*self.prompts.choose(&mut thread_rng()).unwrap()).to_string()
+    pub fn random_prompt(&self) -> &str {
+        self.prompts.choose(&mut thread_rng()).unwrap()
+    }
+
+    pub fn random_anagram(&self) -> &str {
+        loop {
+            let anagram = *self.words.choose(&mut thread_rng()).unwrap();
+
+            if anagram.len() == 6 {
+                break anagram;
+            }
+        }
     }
 
     pub fn is_valid(&self, word: &str) -> bool {

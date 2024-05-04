@@ -123,7 +123,7 @@ impl AppState {
             client.tx = tx;
             client.username = params.username.clone();
 
-            let uuid = prev_uuid.clone();
+            let uuid = *prev_uuid;
 
             clients.broadcast(ServerMessage::ConnectionUpdate {
                 uuid,
@@ -160,55 +160,6 @@ impl AppState {
             uuid
         };
 
-        let room_state = match state {
-            State::Lobby(lobby) => RoomStateInfo::Lobby {
-                ready: lobby.ready.iter().copied().collect(),
-                starting_countdown: lobby
-                    .countdown
-                    .as_ref()
-                    .map(|countdown| countdown.time_left),
-            },
-            State::WordBomb(game) => RoomStateInfo::WordBomb {
-                players: game
-                    .players
-                    .iter()
-                    .map(|player| WordBombPlayerData {
-                        uuid: player.uuid,
-                        username: clients[&player.uuid].username.clone(),
-                        input: player.input.clone(),
-                        lives: player.lives,
-                        disconnected: clients[&player.uuid].socket.is_none(),
-                    })
-                    .collect(),
-                turn: game.current_turn,
-                prompt: game.prompt.clone(),
-                used_letters: game
-                    .players
-                    .iter()
-                    .find(|player| uuid == player.uuid)
-                    .map(|player| player.used_letters.clone()),
-            },
-            State::Anagrams(game) => RoomStateInfo::Anagrams {
-                players: game
-                    .players
-                    .iter()
-                    .map(|player| AnagramsPlayerData {
-                        uuid: player.uuid,
-                        username: clients[&player.uuid].username.clone(),
-                        disconnected: clients[&player.uuid].socket.is_none(),
-                        used_words: player.used_words.clone().into_iter().collect(),
-                    })
-                    .collect(),
-                prompt: game.prompt.clone(),
-                used_words: Some(
-                    game.players
-                        .iter()
-                        .flat_map(|player| player.used_words.clone().into_iter())
-                        .collect(),
-                ),
-            },
-        };
-
         clients[&uuid]
             .tx
             .send(
@@ -218,14 +169,13 @@ impl AppState {
                         owner: *owner,
                         settings: settings.clone(),
                         clients: clients
-                            .iter()
-                            .filter(|client| client.1.socket.is_some())
+                            .connected()
                             .map(|(uuid, client)| ClientInfo {
                                 uuid: *uuid,
                                 username: client.username.clone(),
                             })
                             .collect(),
-                        state: room_state,
+                        state: room_state_info(clients, state, uuid),
                     },
                 }
                 .into(),
@@ -259,12 +209,7 @@ impl AppState {
 
         client.socket = None;
 
-        if clients
-            .values()
-            .filter(|client| client.socket.is_some())
-            .count()
-            == 0
-        {
+        if clients.connected().count() == 0 {
             lock.rooms.remove(room);
             return Ok(());
         }
@@ -341,6 +286,57 @@ impl AppState {
     }
 }
 
+fn room_state_info(clients: &HashMap<Uuid, Client>, state: &State, uuid: Uuid) -> RoomStateInfo {
+    match state {
+        State::Lobby(lobby) => RoomStateInfo::Lobby {
+            ready: lobby.ready.iter().copied().collect(),
+            starting_countdown: lobby
+                .countdown
+                .as_ref()
+                .map(|countdown| countdown.time_left),
+        },
+        State::WordBomb(game) => RoomStateInfo::WordBomb {
+            players: game
+                .players
+                .iter()
+                .map(|player| WordBombPlayerData {
+                    uuid: player.uuid,
+                    username: clients[&player.uuid].username.clone(),
+                    input: player.input.clone(),
+                    lives: player.lives,
+                    disconnected: clients[&player.uuid].socket.is_none(),
+                })
+                .collect(),
+            turn: game.current_turn,
+            prompt: game.prompt.clone(),
+            used_letters: game
+                .players
+                .iter()
+                .find(|player| uuid == player.uuid)
+                .map(|player| player.used_letters.clone()),
+        },
+        State::Anagrams(game) => RoomStateInfo::Anagrams {
+            players: game
+                .players
+                .iter()
+                .map(|player| AnagramsPlayerData {
+                    uuid: player.uuid,
+                    username: clients[&player.uuid].username.clone(),
+                    disconnected: clients[&player.uuid].socket.is_none(),
+                    used_words: player.used_words.clone().into_iter().collect(),
+                })
+                .collect(),
+            prompt: game.prompt.clone(),
+            used_words: Some(
+                game.players
+                    .iter()
+                    .flat_map(|player| player.used_words.clone().into_iter())
+                    .collect(),
+            ),
+        },
+    }
+}
+
 pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uuid) -> Option<Uuid> {
     if clients.get(owner).is_some() {
         None
@@ -351,13 +347,18 @@ pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uui
 }
 
 pub trait ClientUtils {
+    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)>;
     fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
     fn broadcast(&self, message: ServerMessage);
 }
 
 impl ClientUtils for HashMap<Uuid, Client> {
+    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
+        self.iter().filter(|client| client.1.socket.is_some())
+    }
+
     fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
-        for (uuid, client) in self.iter().filter(|client| client.1.socket.is_some()) {
+        for (uuid, client) in self.connected() {
             client.tx.send(f(uuid, client).into()).ok();
         }
     }
@@ -365,7 +366,7 @@ impl ClientUtils for HashMap<Uuid, Client> {
     fn broadcast(&self, message: ServerMessage) {
         let serialized: Message = message.into();
 
-        for client in self.values().filter(|client| client.socket.is_some()) {
+        for (_uuid, client) in self.connected() {
             client.tx.send(serialized.clone()).ok();
         }
     }

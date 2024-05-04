@@ -2,7 +2,7 @@ import { type Component, useContext, For, Show, createEffect } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (props) => {
+const InGame: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, game } = context[0];
@@ -16,7 +16,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 
 	createEffect(() => {
 		if (ourTurn()) {
-			props.sendMessage({
+			props.sender({
 				type: 'wordBombInput',
 				input: game.input
 			});
@@ -88,7 +88,7 @@ const InGame: Component<{ sendMessage: (message: ClientMessage) => void }> = (pr
 				onInput={(event) => setGame('input', event.target.value.substring(0, 35))}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
-						props.sendMessage({
+						props.sender({
 							type: 'wordBombGuess',
 							word: event.currentTarget.value
 						});

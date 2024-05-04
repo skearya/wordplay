@@ -85,7 +85,7 @@ impl WordBomb {
             let new_prompt = GLOBAL.get().unwrap().random_prompt();
 
             if new_prompt != self.prompt {
-                break new_prompt;
+                break new_prompt.to_string();
             }
         };
 
@@ -241,7 +241,7 @@ impl AppState {
 
             if game.alive_players().len() == 1 {
                 let winner = game.alive_players().first().unwrap().uuid;
-                end_game(state, clients, owner, winner)
+                end_game(state, clients, owner, winner);
             } else {
                 clients.broadcast(ServerMessage::WordBombPrompt {
                     correct_guess: None,
