@@ -218,7 +218,14 @@ const Game: Component = () => {
 				);
 			})
 			.with({ type: 'anagramsInvalidGuess' }, (message) => {
-				setAnagrams('guessError', [message.reason.type]);
+				let reason: string = message.reason.type;
+
+				if (reason === 'notLongEnough') reason = 'not long enough';
+				if (reason === 'promptMismatch') reason = 'prompt mismatch';
+				if (reason === 'notEnglish') reason = 'not english';
+				if (reason === 'alreadyUsed') reason = 'already used';
+
+				setAnagrams('guessError', [reason]);
 			})
 			.exhaustive();
 	});

@@ -9,12 +9,14 @@ const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props
 	const { setAnagrams } = context[1];
 
 	let gameInputRef!: HTMLInputElement;
+	let errorTextRef!: HTMLHeadingElement;
 
 	createEffect(() => {
-		const [reason] = game.guessError;
-		if (reason == '') return;
+		let [reason] = game.guessError;
+		if (reason === '') return;
 
 		gameInputRef.animate([{ backgroundColor: '#FF0000' }, { backgroundColor: '#FFF' }], 1000);
+		errorTextRef.animate([{ opacity: 100 }, { opacity: 0 }], 1000);
 	});
 
 	return (
@@ -53,6 +55,9 @@ const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props
 					)}
 				</For>
 			</div>
+			<h1 ref={errorTextRef} class="text-red-400 opacity-0">
+				{game.guessError[0]}
+			</h1>
 		</section>
 	);
 };
