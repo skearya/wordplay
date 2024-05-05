@@ -22,56 +22,60 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 			<h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
 				{status()}
 			</h1>
-			<div class="fixed bottom-1/2 left-4 space-y-1">
-				{['public', 'private'].map((visibility) => (
-					<div class="space-x-2">
-						<input
-							type="radio"
-							name={visibility}
-							disabled={connection.roomOwner !== connection.uuid}
-							checked={
-								connection.settings.public ? visibility === 'public' : visibility === 'private'
-							}
-							onChange={(event) => {
-								if (event.target.checked) {
-									props.sender({
-										type: 'roomSettings',
-										...connection.settings,
-										public: visibility === 'public'
-									});
+			<div class="fixed bottom-1/2 left-4 space-y-2">
+				<div>
+					{['public', 'private'].map((visibility) => (
+						<div class="space-x-2">
+							<input
+								type="radio"
+								name={visibility}
+								disabled={connection.roomOwner !== connection.uuid}
+								checked={
+									connection.settings.public ? visibility === 'public' : visibility === 'private'
 								}
-							}}
-						/>
-						<label for={visibility}>{visibility}</label>
-					</div>
-				))}
-				<div class="h-[1px] w-full bg-white"></div>
-				{['word bomb', 'anagrams'].map((game) => (
-					<div class="space-x-2">
-						<input
-							type="radio"
-							name={game}
-							disabled={connection.roomOwner !== connection.uuid}
-							checked={
-								connection.settings.game === (game === 'word bomb' ? 'wordBomb' : 'anagrams')
-							}
-							onChange={(event) => {
-								if (event.target.checked) {
-									props.sender({
-										type: 'roomSettings',
-										...connection.settings,
-										game: game === 'word bomb' ? 'wordBomb' : 'anagrams'
-									});
+								onChange={(event) => {
+									if (event.target.checked) {
+										props.sender({
+											type: 'roomSettings',
+											...connection.settings,
+											public: visibility === 'public'
+										});
+									}
+								}}
+							/>
+							<label for={visibility}>{visibility}</label>
+						</div>
+					))}
+				</div>
+				<div class="h-[2px] w-full bg-primary"></div>
+				<div>
+					{['word bomb', 'anagrams'].map((game) => (
+						<div class="space-x-2">
+							<input
+								type="radio"
+								name={game}
+								disabled={connection.roomOwner !== connection.uuid}
+								checked={
+									connection.settings.game === (game === 'word bomb' ? 'wordBomb' : 'anagrams')
 								}
-							}}
-						/>
-						<label for={game}>{game}</label>
-					</div>
-				))}
+								onChange={(event) => {
+									if (event.target.checked) {
+										props.sender({
+											type: 'roomSettings',
+											...connection.settings,
+											game: game === 'word bomb' ? 'wordBomb' : 'anagrams'
+										});
+									}
+								}}
+							/>
+							<label for={game}>{game}</label>
+						</div>
+					))}
+				</div>
 			</div>
 			<Show when={lobby.previousWinner}>
 				<div class="flex items-center gap-2 rounded-xl border p-4">
-					<h1 class="pr-2">Winner</h1>
+					<h1 class="pr-2">winner</h1>
 					<img
 						class="h-10 w-10 rounded-full"
 						src={`https://avatar.vercel.sh/${lobby.previousWinner}`}

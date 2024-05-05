@@ -216,8 +216,6 @@ const Game: Component = () => {
 					'usedWords',
 					(words) => [...words, message.guess]
 				);
-
-				console.log(context[0].anagrams.players);
 			})
 			.with({ type: 'anagramsInvalidGuess' }, (message) => {
 				setAnagrams('guessError', [message.reason.type]);
