@@ -115,20 +115,17 @@ export type RoomSettings = {
 export type ClientInfo = {
 	uuid: Uuid;
 	username: string;
+	disconnected: boolean;
 };
 
 export type WordBombPlayerData = {
 	uuid: Uuid;
-	username: string;
-	disconnected: boolean;
 	input: string;
 	lives: number;
 };
 
 export type AnagramsPlayerData = {
 	uuid: Uuid;
-	username: string;
-	disconnected: boolean;
 	usedWords: Array<string>;
 };
 

@@ -99,29 +99,28 @@ const Game: Component = () => {
 				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 
 				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
-					setConnection('clients', (clients) => [
-						...clients.filter((client) => client.uuid !== message.uuid)
-					]);
-					setConnection('clients', connection.clients.length, {
+					const newClient = {
 						uuid: message.uuid,
-						username: message.state.username
-					});
+						username: message.state.username,
+						disconnected: false
+					};
+
+					setConnection('clients', (clients) => [
+						...clients.filter((client) => client.uuid !== message.uuid),
+						newClient
+					]);
 				} else {
 					if (message.state.newRoomOwner) {
 						setConnection('roomOwner', message.state.newRoomOwner);
 					}
-					setConnection('clients', (clients) =>
-						clients.filter((client) => client.uuid != message.uuid)
-					);
-				}
 
-				if (message.state.type === 'reconnected') {
-					setWordBomb('players', (player) => player.uuid === message.uuid, {
-						username: message.state.username,
-						disconnected: false
-					});
-				} else if (message.state.type === 'disconnected') {
-					setWordBomb('players', (player) => player.uuid === message.uuid, 'disconnected', true);
+					if (state() != 'lobby') {
+						setConnection('clients', (client) => client.uuid == message.uuid, 'disconnected', true);
+					} else {
+						setConnection('clients', (clients) =>
+							clients.filter((client) => client.uuid !== message.uuid)
+						);
+					}
 				}
 			})
 			.with({ type: 'readyPlayers' }, (message) => {
@@ -178,6 +177,7 @@ const Game: Component = () => {
 						readyPlayers: [],
 						startingCountdown: null
 					});
+					setConnection('clients', (clients) => clients.filter((client) => !client.disconnected));
 					setAnagrams('guessError', ['']);
 				});
 			})

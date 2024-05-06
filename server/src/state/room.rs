@@ -169,13 +169,14 @@ impl AppState {
                         owner: *owner,
                         settings: settings.clone(),
                         clients: clients
-                            .connected()
+                            .iter()
                             .map(|(uuid, client)| ClientInfo {
                                 uuid: *uuid,
                                 username: client.username.clone(),
+                                disconnected: client.socket.is_none(),
                             })
                             .collect(),
-                        state: room_state_info(clients, state, uuid),
+                        state: room_state_info(state, uuid),
                     },
                 }
                 .into(),
@@ -286,7 +287,7 @@ impl AppState {
     }
 }
 
-fn room_state_info(clients: &HashMap<Uuid, Client>, state: &State, uuid: Uuid) -> RoomStateInfo {
+fn room_state_info(state: &State, uuid: Uuid) -> RoomStateInfo {
     match state {
         State::Lobby(lobby) => RoomStateInfo::Lobby {
             ready: lobby.ready.iter().copied().collect(),
@@ -301,10 +302,8 @@ fn room_state_info(clients: &HashMap<Uuid, Client>, state: &State, uuid: Uuid) -
                 .iter()
                 .map(|player| WordBombPlayerData {
                     uuid: player.uuid,
-                    username: clients[&player.uuid].username.clone(),
                     input: player.input.clone(),
                     lives: player.lives,
-                    disconnected: clients[&player.uuid].socket.is_none(),
                 })
                 .collect(),
             turn: game.current_turn,
@@ -321,8 +320,6 @@ fn room_state_info(clients: &HashMap<Uuid, Client>, state: &State, uuid: Uuid) -
                 .iter()
                 .map(|player| AnagramsPlayerData {
                     uuid: player.uuid,
-                    username: clients[&player.uuid].username.clone(),
-                    disconnected: clients[&player.uuid].socket.is_none(),
                     used_words: player.used_words.clone().into_iter().collect(),
                 })
                 .collect(),

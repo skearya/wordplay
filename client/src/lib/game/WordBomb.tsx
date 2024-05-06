@@ -44,7 +44,7 @@ const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props
 			<div class="flex gap-2">
 				<h1>turn</h1>
 				<h1 class="text-green-300">
-					{game.players.find((player) => player.uuid === game.currentTurn)!.username}
+					{connection.clients.find((player) => player.uuid === game.currentTurn)!.username}
 				</h1>
 			</div>
 			<h1 class="text-xl">{game.prompt}</h1>
@@ -52,10 +52,14 @@ const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props
 				<For each={game.players}>
 					{(player) => (
 						<div id={player.uuid} class="flex flex-col items-center">
-							<h1>{player.username}</h1>
+							<h1>{connection.clients.find((client) => player.uuid === client.uuid)!.username}</h1>
 							<h1>{player.input}</h1>
 							<h1 class="text-red-400">lives: {player.lives}</h1>
-							<Show when={player.disconnected}>
+							<Show
+								when={
+									connection.clients.find((client) => player.uuid === client.uuid)!.disconnected
+								}
+							>
 								<h1>i disconnected...</h1>
 							</Show>
 						</div>

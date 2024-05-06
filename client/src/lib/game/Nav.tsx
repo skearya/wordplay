@@ -12,7 +12,7 @@ const Nav: Component = () => {
 		<nav class="fixed top-0 flex w-full justify-between p-6">
 			<h1 class="text-xl">wordplay</h1>
 			<div class="flex items-center gap-4">
-				<ConnectedClients clients={connection.clients} />
+				<ConnectedClients clients={connection.clients.filter((client) => !client.disconnected)} />
 				<button onClick={async () => await navigator.clipboard.writeText(window.location.href)}>
 					<LinkIcon />
 				</button>

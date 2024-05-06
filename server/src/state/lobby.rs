@@ -240,7 +240,7 @@ fn start_game(
         clients.get_mut(uuid).unwrap().rejoin_token = Some(Uuid::new_v4());
     }
 
-    match settings.game {
+    let game = match settings.game {
         Games::WordBomb => {
             *state = lobby.start_word_bomb(|prompt, timer_len| {
                 Arc::new(
@@ -261,22 +261,17 @@ fn start_game(
                 .iter()
                 .map(|player| WordBombPlayerData {
                     uuid: player.uuid,
-                    username: clients[&player.uuid].username.clone(),
                     input: player.input.clone(),
                     lives: player.lives,
-                    disconnected: false,
                 })
                 .collect();
 
-            clients.send_each(|_uuid, client| ServerMessage::GameStarted {
-                rejoin_token: client.rejoin_token,
-                game: RoomStateInfo::WordBomb {
-                    prompt: game.prompt.clone(),
-                    turn: game.current_turn,
-                    players: players.clone(),
-                    used_letters: None,
-                },
-            });
+            RoomStateInfo::WordBomb {
+                turn: game.current_turn,
+                players: players.clone(),
+                prompt: game.prompt.clone(),
+                used_letters: None,
+            }
         }
         Games::Anagrams => {
             *state = lobby.start_anagrams(app_state, room);
@@ -288,21 +283,21 @@ fn start_game(
                 .iter()
                 .map(|player| AnagramsPlayerData {
                     uuid: player.uuid,
-                    username: clients[&player.uuid].username.clone(),
                     used_words: player.used_words.clone().into_iter().collect(),
-                    disconnected: false,
                 })
                 .collect();
 
-            clients.send_each(|_uuid, client| ServerMessage::GameStarted {
-                rejoin_token: client.rejoin_token,
-                game: RoomStateInfo::Anagrams {
-                    players: players.clone(),
-                    prompt: game.prompt.clone(),
-                },
-            });
+            RoomStateInfo::Anagrams {
+                players: players.clone(),
+                prompt: game.prompt.clone(),
+            }
         }
-    }
+    };
+
+    clients.send_each(|_uuid, client| ServerMessage::GameStarted {
+        rejoin_token: client.rejoin_token,
+        game: game.clone(),
+    });
 
     Ok(())
 }

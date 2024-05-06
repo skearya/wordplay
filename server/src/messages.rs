@@ -106,7 +106,7 @@ pub struct RoomInfo {
     pub state: RoomStateInfo,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -133,6 +133,7 @@ pub enum RoomStateInfo {
 pub struct ClientInfo {
     pub uuid: Uuid,
     pub username: String,
+    pub disconnected: bool,
 }
 
 #[derive(Serialize)]
@@ -161,8 +162,6 @@ pub enum CountdownState {
 #[derive(Serialize, Clone)]
 pub struct WordBombPlayerData {
     pub uuid: Uuid,
-    pub username: String,
-    pub disconnected: bool,
     pub input: String,
     pub lives: u8,
 }
@@ -171,8 +170,6 @@ pub struct WordBombPlayerData {
 #[serde(rename_all = "camelCase")]
 pub struct AnagramsPlayerData {
     pub uuid: Uuid,
-    pub username: String,
-    pub disconnected: bool,
     pub used_words: Vec<String>,
 }
 

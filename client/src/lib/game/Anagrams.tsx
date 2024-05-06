@@ -5,7 +5,7 @@ import { ClientMessage } from '../types/messages';
 const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
-	const { anagrams: game } = context[0];
+	const { connection, anagrams: game } = context[0];
 	const { setAnagrams } = context[1];
 
 	let gameInputRef!: HTMLInputElement;
@@ -42,13 +42,17 @@ const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props
 				<For each={game.players}>
 					{(player) => (
 						<div class="flex flex-col items-center">
-							<h1>{player.username}</h1>
+							<h1>{connection.clients.find((client) => player.uuid === client.uuid)!.username}</h1>
 							<div>
 								{player.usedWords.map((word) => (
 									<h1>{word}</h1>
 								))}
 							</div>
-							<Show when={player.disconnected}>
+							<Show
+								when={
+									connection.clients.find((client) => player.uuid === client.uuid)!.disconnected
+								}
+							>
 								<h1>i disconnected...</h1>
 							</Show>
 						</div>
