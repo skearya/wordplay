@@ -25,16 +25,13 @@ function makeContext(room = '') {
 		players: [],
 		currentTurn: '',
 		prompt: '',
-		guessError: ['', ''],
-		usedLetters: null,
-		input: ''
+		input: '',
+		usedLetters: null
 	});
 
 	const [anagrams, setAnagrams] = createStore<AnagramsData>({
 		players: [],
-		prompt: '',
-		guessError: [''],
-		input: ''
+		prompt: ''
 	});
 
 	return [

@@ -9,8 +9,8 @@ import { Connecting } from '../lib/game/Connecting';
 import { Errored } from '../lib/game/Errored';
 import { ChatMessages } from '../lib/game/ChatMessages';
 import { Lobby } from '../lib/game/Lobby';
-import { WordBomb } from '../lib/game/WordBomb';
-import { Anagrams } from '../lib/game/Anagrams';
+import { createWordBomb } from '../lib/game/WordBomb';
+import { createAnagrams } from '../lib/game/Anagrams';
 
 const Game: Component = () => {
 	const context = useContext(Context);
@@ -34,6 +34,9 @@ const Game: Component = () => {
 	);
 
 	const sender = (data: ClientMessage) => socket.send(JSON.stringify(data));
+
+	const { onWordBombGuess, WordBomb } = createWordBomb({ sender });
+	const { onAnagramsGuess, Anagrams } = createAnagrams({ sender });
 
 	socket.addEventListener('message', (event) => {
 		const message: ServerMessage = JSON.parse(event.data);
@@ -152,7 +155,6 @@ const Game: Component = () => {
 							players: message.game.players,
 							currentTurn: message.game.turn,
 							prompt: message.game.prompt,
-							guessError: ['', ''],
 							usedLetters: new Set(),
 							input: ''
 						});
@@ -178,18 +180,25 @@ const Game: Component = () => {
 						startingCountdown: null
 					});
 					setConnection('clients', (clients) => clients.filter((client) => !client.disconnected));
-					setAnagrams('guessError', ['']);
 				});
 			})
 			.with({ type: 'wordBombInput' }, (message) => {
 				setWordBomb('players', (player) => player.uuid === message.uuid, 'input', message.input);
 			})
 			.with({ type: 'wordBombInvalidGuess' }, (message) => {
-				setWordBomb('guessError', [message.uuid, message.reason.type]);
+				onWordBombGuess(message.uuid, {
+					type: 'invalid',
+					reason: message.reason.type
+				});
 			})
 			.with({ type: 'wordBombPrompt' }, (message) => {
 				setWordBomb(
 					produce((game) => {
+						onWordBombGuess(
+							game.currentTurn,
+							message.correctGuess ? { type: 'correct' } : { type: 'invalid', reason: 'timed out' }
+						);
+
 						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
 						turn.lives += message.lifeChange;
 
@@ -207,7 +216,7 @@ const Game: Component = () => {
 			})
 			.with({ type: 'anagramsCorrectGuess' }, (message) => {
 				if (message.uuid == connection.uuid) {
-					setAnagrams('input', '');
+					onAnagramsGuess({ type: 'correct' });
 				}
 
 				setAnagrams(
@@ -218,14 +227,14 @@ const Game: Component = () => {
 				);
 			})
 			.with({ type: 'anagramsInvalidGuess' }, (message) => {
-				let reason: string = message.reason.type;
+				const reason = match(message.reason.type)
+					.with('notLongEnough', () => 'not long enough')
+					.with('promptMismatch', () => 'prompt mismatch')
+					.with('notEnglish', () => 'not english')
+					.with('alreadyUsed', () => 'already used')
+					.exhaustive();
 
-				if (reason === 'notLongEnough') reason = 'not long enough';
-				if (reason === 'promptMismatch') reason = 'prompt mismatch';
-				if (reason === 'notEnglish') reason = 'not english';
-				if (reason === 'alreadyUsed') reason = 'already used';
-
-				setAnagrams('guessError', [reason]);
+				onAnagramsGuess({ type: 'invalid', reason });
 			})
 			.exhaustive();
 	});
@@ -257,10 +266,10 @@ const Game: Component = () => {
 							<Lobby sender={sender} />
 						</Match>
 						<Match when={state() === 'wordBomb'}>
-							<WordBomb sender={sender} />
+							<WordBomb />
 						</Match>
 						<Match when={state() === 'anagrams'}>
-							<Anagrams sender={sender} />
+							<Anagrams />
 						</Match>
 					</Switch>
 					<ChatMessages sender={sender} />

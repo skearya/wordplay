@@ -1,8 +1,8 @@
-import { type Component, useContext, For, Show, createEffect } from 'solid-js';
+import { type Component, useContext, For, Show, createEffect, createSignal } from 'solid-js';
 import { Context } from '../context';
-import { ClientMessage } from '../types/messages';
+import { ClientMessage, Uuid } from '../types/messages';
 
-const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
+const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, wordBomb: game } = context[0];
@@ -29,17 +29,20 @@ const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props
 		}
 	});
 
-	createEffect(() => {
-		const [uuid, _reason] = game.guessError;
-		if (uuid == '') return;
+	const onWordBombGuess = (
+		uuid: Uuid,
+		guess: { type: 'correct' } | { type: 'invalid'; reason: string }
+	) => {
 		const element = document.getElementById(uuid);
 
-		if (element) {
-			element.animate([{ color: '#FF0000' }, { color: '#FFF' }], 1000);
+		if (guess.type === 'correct') {
+			element?.animate([{ color: '#00FF44' }, { color: '#FFF' }], 1000);
+		} else {
+			element?.animate([{ color: '#FF0000' }, { color: '#FFF' }], 1000);
 		}
-	});
+	};
 
-	return (
+	const WordBomb = () => (
 		<section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
 			<div class="flex gap-2">
 				<h1>turn</h1>
@@ -91,6 +94,11 @@ const WordBomb: Component<{ sender: (message: ClientMessage) => void }> = (props
 			/>
 		</section>
 	);
+
+	return {
+		onWordBombGuess,
+		WordBomb
+	};
 };
 
-export { WordBomb };
+export { createWordBomb };

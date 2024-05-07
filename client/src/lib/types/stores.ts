@@ -29,14 +29,10 @@ export type WordBombData = {
 	currentTurn: Uuid;
 	prompt: string;
 	input: string;
-	guessError: [Uuid, string];
 	usedLetters: Set<string> | null;
 };
 
 export type AnagramsData = {
 	players: Array<AnagramsPlayerData>;
 	prompt: string;
-	// [string] to push reactive updates with the same content
-	guessError: [string];
-	input: string;
 };

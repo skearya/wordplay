@@ -1,25 +1,29 @@
-import { type Component, useContext, For, Show, createEffect } from 'solid-js';
+import { useContext, For, Show, createSignal } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
+const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, anagrams: game } = context[0];
-	const { setAnagrams } = context[1];
 
 	let gameInputRef!: HTMLInputElement;
 	let errorTextRef!: HTMLHeadingElement;
 
-	createEffect(() => {
-		let [reason] = game.guessError;
-		if (reason === '') return;
+	const [input, setInput] = createSignal('');
+	const [guessError, setGuessError] = createSignal('');
 
-		gameInputRef.animate([{ backgroundColor: '#FF0000' }, { backgroundColor: '#FFF' }], 1000);
-		errorTextRef.animate([{ opacity: 100 }, { opacity: 0 }], 1000);
-	});
+	const onAnagramsGuess = (guess: { type: 'correct' } | { type: 'invalid'; reason: string }) => {
+		if (guess.type === 'correct') {
+			setInput('');
+		} else {
+			setGuessError(guess.reason);
+			gameInputRef.animate([{ backgroundColor: '#FF0000' }, { backgroundColor: '#FFF' }], 1000);
+			errorTextRef.animate([{ opacity: 100 }, { opacity: 0 }], 1000);
+		}
+	};
 
-	return (
+	const Anagrams = () => (
 		<section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
 			<h1 class="text-xl">{game.prompt}</h1>
 			<input
@@ -27,8 +31,8 @@ const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props
 				class="border text-black"
 				type="text"
 				maxlength="6"
-				value={game.input}
-				onInput={(event) => setAnagrams('input', event.target.value.substring(0, 6))}
+				value={input()}
+				onInput={(event) => setInput(event.target.value.substring(0, 6))}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 6) {
 						props.sender({
@@ -60,10 +64,15 @@ const Anagrams: Component<{ sender: (message: ClientMessage) => void }> = (props
 				</For>
 			</div>
 			<h1 ref={errorTextRef} class="text-red-400 opacity-0">
-				{game.guessError[0]}
+				{guessError()}
 			</h1>
 		</section>
 	);
+
+	return {
+		onAnagramsGuess,
+		Anagrams
+	};
 };
 
-export { Anagrams };
+export { createAnagrams };
