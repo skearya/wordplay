@@ -1,5 +1,7 @@
 # current todo:
 
+-   fix game input not focusing
+
 -   clients may or may not be correctly reporting disconnections, look into this
 
 -   send previous winner to new clients joining?
