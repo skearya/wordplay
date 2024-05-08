@@ -16,16 +16,13 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 
 	createEffect(() => {
 		if (ourTurn()) {
-			props.sender({
-				type: 'wordBombInput',
-				input: game.input
-			});
-		}
-	});
-
-	createEffect(() => {
-		if (ourTurn()) {
 			gameInputRef.focus();
+			createEffect(() => {
+				props.sender({
+					type: 'wordBombInput',
+					input: game.input
+				});
+			});
 		}
 	});
 
