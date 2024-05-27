@@ -2,17 +2,5 @@
     "rust-analyzer.linkedProjects": [
         "./server/Cargo.toml",
         "./prompt_gen/Cargo.toml"
-    ],
-    "files.exclude": {
-        "**/.git": true,
-        "**/.github": true,
-        "**/.eslintignore": true,
-        "**/.npmrc": true,
-        "**/.prettierignore": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true,
-        "**/Thumbs.db": true
-    }
+    ]
 }

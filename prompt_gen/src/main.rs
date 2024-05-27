@@ -5,7 +5,9 @@ use std::{fs, str};
 const MIN_WPP: u32 = 500;
 
 fn main() {
-    let words: Vec<&str> = include_str!("./words_alpha.txt").lines().collect();
+    let words: Vec<&str> = include_str!("../../server/src/static/words_alpha.txt")
+        .lines()
+        .collect();
 
     let prompts: HashSet<&str> = words
         .iter()
@@ -27,7 +29,7 @@ fn main() {
         .collect();
 
     fs::write(
-        "./output/prompts.txt",
+        "../server/src/static/prompts.txt",
         prompt_counts
             .iter()
             .filter(|(_, &count)| count >= MIN_WPP)
