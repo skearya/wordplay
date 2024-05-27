@@ -19,18 +19,17 @@ use axum_extra::TypedHeader;
 use futures::{stream::StreamExt, SinkExt, TryFutureExt};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tower_http::cors::{self, CorsLayer};
+use tower_http::cors;
 use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
     GLOBAL.set(GlobalData::new()).unwrap();
-    console_subscriber::init();
 
     let app = Router::new()
         .route("/info", get(info))
         .route("/rooms/*room", get(ws_handler))
-        .layer(CorsLayer::new().allow_origin(cors::Any))
+        .layer(cors::CorsLayer::new().allow_origin(cors::Any))
         .with_state(AppState::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
