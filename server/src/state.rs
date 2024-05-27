@@ -79,28 +79,14 @@ impl AppState {
                 if word.len() > 35 {
                     Ok(())
                 } else {
-                    self.word_bomb_guess(
-                        sender,
-                        &word
-                            .to_ascii_lowercase()
-                            .chars()
-                            .filter(|char| char.is_alphabetic())
-                            .collect::<String>(),
-                    )
+                    self.word_bomb_guess(sender, &filter_string(word))
                 }
             }
             ClientMessage::AnagramsGuess { word } => {
                 if word.len() > 35 {
                     Ok(())
                 } else {
-                    self.anagrams_guess(
-                        sender,
-                        &word
-                            .to_ascii_lowercase()
-                            .chars()
-                            .filter(|char| char.is_alphabetic())
-                            .collect::<String>(),
-                    )
+                    self.anagrams_guess(sender, &filter_string(word))
                 }
             }
         };
@@ -120,4 +106,12 @@ impl AppStateInner {
     pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
         self.rooms.get_mut(room).context("Room not found")
     }
+}
+
+fn filter_string(input: String) -> String {
+    input
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|char| char.is_alphabetic())
+        .collect()
 }

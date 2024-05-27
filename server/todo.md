@@ -1,6 +1,6 @@
 # current todo:
 
--   fix game input not focusing
+-   add username length limit
 
 -   clients may or may not be correctly reporting disconnections, look into this
 

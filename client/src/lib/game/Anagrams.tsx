@@ -31,6 +31,7 @@ const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => 
 				class="border text-black"
 				type="text"
 				maxlength="6"
+				disabled={!game.players.some((player) => connection.uuid === player.uuid)}
 				value={input()}
 				onInput={(event) => setInput(event.target.value.substring(0, 6))}
 				onKeyDown={(event) => {

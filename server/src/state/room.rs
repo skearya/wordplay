@@ -4,10 +4,7 @@ use super::{
     AppState, SenderInfo,
 };
 use crate::{
-    messages::{
-        AnagramsPlayerData, ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo,
-        ServerMessage, WordBombPlayerData,
-    },
+    messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
     Params,
 };
 
@@ -211,6 +208,12 @@ impl AppState {
         client.socket = None;
 
         if clients.connected().count() == 0 {
+            match state {
+                State::WordBomb(game) => game.timer.task.abort(),
+                State::Anagrams(game) => game.timer.abort(),
+                _ => {}
+            }
+
             lock.rooms.remove(room);
             return Ok(());
         }
@@ -297,16 +300,8 @@ fn room_state_info(state: &State, uuid: Uuid) -> RoomStateInfo {
                 .map(|countdown| countdown.time_left),
         },
         State::WordBomb(game) => RoomStateInfo::WordBomb {
-            players: game
-                .players
-                .iter()
-                .map(|player| WordBombPlayerData {
-                    uuid: player.uuid,
-                    input: player.input.clone(),
-                    lives: player.lives,
-                })
-                .collect(),
-            turn: game.current_turn,
+            players: game.players.clone(),
+            turn: game.turn,
             prompt: game.prompt.clone(),
             used_letters: game
                 .players
@@ -315,14 +310,7 @@ fn room_state_info(state: &State, uuid: Uuid) -> RoomStateInfo {
                 .map(|player| player.used_letters.clone()),
         },
         State::Anagrams(game) => RoomStateInfo::Anagrams {
-            players: game
-                .players
-                .iter()
-                .map(|player| AnagramsPlayerData {
-                    uuid: player.uuid,
-                    used_words: player.used_words.clone().into_iter().collect(),
-                })
-                .collect(),
+            players: game.players.clone(),
             prompt: game.prompt.clone(),
         },
     }

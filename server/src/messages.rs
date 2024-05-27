@@ -118,13 +118,13 @@ pub enum RoomStateInfo {
         starting_countdown: Option<u8>,
     },
     WordBomb {
-        players: Vec<WordBombPlayerData>,
+        players: Vec<word_bomb::Player>,
         turn: Uuid,
         prompt: String,
         used_letters: Option<HashSet<char>>,
     },
     Anagrams {
-        players: Vec<AnagramsPlayerData>,
+        players: Vec<anagrams::Player>,
         prompt: String,
     },
 }
@@ -157,20 +157,6 @@ pub enum ConnectionUpdate {
 pub enum CountdownState {
     InProgress { time_left: u8 },
     Stopped,
-}
-
-#[derive(Serialize, Clone)]
-pub struct WordBombPlayerData {
-    pub uuid: Uuid,
-    pub input: String,
-    pub lives: u8,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct AnagramsPlayerData {
-    pub uuid: Uuid,
-    pub used_words: Vec<String>,
 }
 
 impl From<ServerMessage> for Message {

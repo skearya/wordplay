@@ -1,6 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Result};
 use serde::Serialize;
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, sync::Arc, time::Duration};
+use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
@@ -14,10 +15,13 @@ use crate::{
 };
 
 pub struct Anagrams {
+    pub timer: Arc<AbortHandle>,
     pub prompt: String,
     pub players: Vec<Player>,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Player {
     pub uuid: Uuid,
     pub used_words: HashSet<String>,
@@ -34,34 +38,35 @@ pub enum GuessInfo {
 }
 
 impl Anagrams {
-    pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> Option<GuessInfo> {
+    pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> GuessInfo {
         if guess.len() < 3 {
-            return Some(GuessInfo::NotLongEnough);
+            return GuessInfo::NotLongEnough;
         }
         if guess
             .chars()
             .any(|ch| guess.matches(ch).count() > self.prompt.matches(ch).count())
         {
-            return Some(GuessInfo::PromptMismatch);
+            return GuessInfo::PromptMismatch;
         }
         if !GLOBAL.get().unwrap().is_valid(guess) {
-            return Some(GuessInfo::NotEnglish);
+            return GuessInfo::NotEnglish;
         }
         if self
             .players
             .iter()
             .any(|player| player.used_words.contains(guess))
         {
-            return Some(GuessInfo::AlreadyUsed);
+            return GuessInfo::AlreadyUsed;
         }
 
         self.players
             .iter_mut()
-            .find(|player| uuid == player.uuid)?
+            .find(|player| uuid == player.uuid)
+            .unwrap()
             .used_words
             .insert(guess.to_string());
 
-        Some(GuessInfo::Valid)
+        GuessInfo::Valid
     }
 
     pub fn leaderboard(&self) -> Vec<(Uuid, u16)> {
@@ -99,7 +104,16 @@ impl AppState {
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_anagrams()?;
 
-        match game.check_guess(uuid, guess).context("Not a player")? {
+        if game
+            .players
+            .iter_mut()
+            .find(|player| uuid == player.uuid)
+            .is_none()
+        {
+            return Err(anyhow!("Not a player"));
+        }
+
+        match game.check_guess(uuid, guess) {
             GuessInfo::Valid => {
                 clients.broadcast(ServerMessage::AnagramsCorrectGuess {
                     uuid,

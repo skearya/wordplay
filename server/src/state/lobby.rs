@@ -8,9 +8,7 @@ use super::{
 };
 use crate::{
     global::GLOBAL,
-    messages::{
-        AnagramsPlayerData, CountdownState, Games, RoomStateInfo, ServerMessage, WordBombPlayerData,
-    },
+    messages::{CountdownState, Games, RoomStateInfo, ServerMessage},
 };
 
 use anyhow::{Context, Result};
@@ -44,9 +42,9 @@ impl Lobby {
 
     pub fn start_word_bomb(
         &self,
-        timeout_task_handle: impl FnOnce(String, u8) -> Arc<AbortHandle>,
+        timeout_task_handle: impl FnOnce(String, f32) -> Arc<AbortHandle>,
     ) -> State {
-        let timer_len = thread_rng().gen_range(10..=30);
+        let timer_len = thread_rng().gen_range(10.0..=30.0);
         let prompt = GLOBAL.get().unwrap().random_prompt().to_string();
         let mut players: Vec<word_bomb::Player> = self
             .ready
@@ -56,23 +54,30 @@ impl Lobby {
         players.shuffle(&mut thread_rng());
 
         State::WordBomb(WordBomb {
-            timeout_task: timeout_task_handle(prompt.clone(), timer_len),
-            timer_len,
-            starting_time: Instant::now(),
+            started_at: Instant::now(),
+            timer: word_bomb::Timer {
+                task: timeout_task_handle(prompt.clone(), timer_len),
+                start: Instant::now(),
+                length: timer_len,
+            },
             prompt,
             prompt_uses: 0,
-            used_words: HashSet::new(),
-            current_turn: players[0].uuid,
+            missed_prompts: Vec::new(),
+            turn: players[0].uuid,
             players,
         })
     }
 
     pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
-        tokio::spawn(async move {
-            app_state.anagrams_timer(room).await.ok();
-        });
+        let timer = Arc::new(
+            tokio::spawn(async move {
+                app_state.anagrams_timer(room).await.ok();
+            })
+            .abort_handle(),
+        );
 
         State::Anagrams(Anagrams {
+            timer,
             prompt: GLOBAL.get().unwrap().random_anagram(),
             players: self
                 .ready
@@ -256,19 +261,9 @@ fn start_game(
 
             let game = state.try_word_bomb()?;
 
-            let players: Vec<WordBombPlayerData> = game
-                .players
-                .iter()
-                .map(|player| WordBombPlayerData {
-                    uuid: player.uuid,
-                    input: player.input.clone(),
-                    lives: player.lives,
-                })
-                .collect();
-
             RoomStateInfo::WordBomb {
-                turn: game.current_turn,
-                players: players.clone(),
+                turn: game.turn,
+                players: game.players.clone(),
                 prompt: game.prompt.clone(),
                 used_letters: None,
             }
@@ -278,17 +273,8 @@ fn start_game(
 
             let game = state.try_anagrams()?;
 
-            let players: Vec<AnagramsPlayerData> = game
-                .players
-                .iter()
-                .map(|player| AnagramsPlayerData {
-                    uuid: player.uuid,
-                    used_words: player.used_words.clone().into_iter().collect(),
-                })
-                .collect();
-
             RoomStateInfo::Anagrams {
-                players: players.clone(),
+                players: game.players.clone(),
                 prompt: game.prompt.clone(),
             }
         }
