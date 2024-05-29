@@ -257,6 +257,10 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         content: String,
     ) -> Result<()> {
+        if content.len() > 250 {
+            return Err(anyhow!("message too long!"));
+        }
+
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
@@ -280,7 +284,7 @@ impl AppState {
             .tx
             .send(
                 ServerMessage::Error {
-                    content: format!("something went wrong: {message}"),
+                    content: format!("server error: {message}"),
                 }
                 .into(),
             )

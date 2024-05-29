@@ -55,39 +55,17 @@ impl AppState {
 
     pub fn handle(&self, sender: SenderInfo, message: ClientMessage) {
         let result = match message {
-            ClientMessage::RoomSettings(room_settings) => {
-                self.client_room_settings(sender, room_settings)
-            }
+            ClientMessage::RoomSettings(settings) => self.client_room_settings(sender, settings),
             ClientMessage::Ready => self.client_ready(sender),
             ClientMessage::StartEarly => self.client_start_early(sender),
             ClientMessage::Unready => self.client_unready(sender),
-            ClientMessage::ChatMessage { content } => {
-                if content.len() > 250 {
-                    Ok(())
-                } else {
-                    self.client_chat_message(sender, content)
-                }
-            }
-            ClientMessage::WordBombInput { input } => {
-                if input.len() > 35 {
-                    Ok(())
-                } else {
-                    self.word_bomb_input(sender, input)
-                }
-            }
+            ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
+            ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
             ClientMessage::WordBombGuess { word } => {
-                if word.len() > 35 {
-                    Ok(())
-                } else {
-                    self.word_bomb_guess(sender, &filter_string(word))
-                }
+                self.word_bomb_guess(sender, &filter_string(word))
             }
             ClientMessage::AnagramsGuess { word } => {
-                if word.len() > 35 {
-                    Ok(())
-                } else {
-                    self.anagrams_guess(sender, &filter_string(word))
-                }
+                self.anagrams_guess(sender, &filter_string(word))
             }
         };
 

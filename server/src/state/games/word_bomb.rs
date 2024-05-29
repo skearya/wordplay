@@ -5,7 +5,7 @@ use crate::{
     utils::Sorted,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use std::{
@@ -201,6 +201,10 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         new_input: String,
     ) -> Result<()> {
+        if new_input.len() > 35 {
+            return Err(anyhow!("input too long!"));
+        }
+
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;
@@ -225,6 +229,10 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         guess: &str,
     ) -> Result<()> {
+        if guess.len() > 35 {
+            return Err(anyhow!("guess too long!"));
+        }
+
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;

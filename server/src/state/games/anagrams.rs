@@ -105,6 +105,10 @@ impl Player {
 
 impl AppState {
     pub fn anagrams_guess(&self, SenderInfo { uuid, room }: SenderInfo, guess: &str) -> Result<()> {
+        if guess.len() > 6 {
+            return Err(anyhow!("guess too long!"));
+        }
+
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_anagrams()?;
