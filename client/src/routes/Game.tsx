@@ -86,12 +86,12 @@ const Game: Component = () => {
 				setConnection('settings', settings);
 			})
 			.with({ type: P.union('chatMessage', 'error') }, (message) => {
-				const messageContent =
+				const author =
 					message.type === 'error'
-						? `server: ${message.content}`
-						: `${connection.clients.find((client) => client.uuid === message.author)!.username}: ${message.content}`;
+						? `server`
+						: `${connection.clients.find((client) => client.uuid === message.author)!.username}`;
 
-				setConnection('chatMessages', connection.chatMessages.length, messageContent);
+				setConnection('chatMessages', connection.chatMessages.length, [author, message.content]);
 			})
 			.with({ type: 'connectionUpdate' }, (message) => {
 				const messageContent =
@@ -99,7 +99,7 @@ const Game: Component = () => {
 						? `${message.state.username} has joined`
 						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`;
 
-				setConnection('chatMessages', connection.chatMessages.length, messageContent);
+				setConnection('chatMessages', connection.chatMessages.length, ['server', messageContent]);
 
 				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
 					const newClient = {

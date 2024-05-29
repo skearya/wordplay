@@ -27,12 +27,22 @@ const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (p
 	);
 
 	return (
-		<section class="bg-primary-50/25 fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border">
+		<section class="fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border bg-primary-50/25">
 			<ul
 				ref={messagesContainer}
 				class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
 			>
-				<For each={connection.chatMessages}>{(message) => <li>{message}</li>}</For>
+				<For each={connection.chatMessages}>
+					{([author, content]) => (
+						<li
+							classList={{
+								'text-text-500': author === 'server'
+							}}
+						>
+							{author}: {content}
+						</li>
+					)}
+				</For>
 			</ul>
 			<input
 				ref={chatInput}

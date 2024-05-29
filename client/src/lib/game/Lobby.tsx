@@ -49,7 +49,7 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 						</div>
 					))}
 				</div>
-				<div class="h-[2px] w-full bg-primary"></div>
+				<div class="h-[2px] w-full bg-primary-300"></div>
 				<div>
 					{['word bomb', 'anagrams'].map((game) => (
 						<div class="space-x-2">

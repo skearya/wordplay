@@ -19,7 +19,7 @@ const Root: Component = () => {
 					<h1>something went wrong</h1>
 				</Match>
 				<Match when={data()}>
-					<code>{JSON.stringify(data())}</code>
+					<pre>{JSON.stringify(data(), null, 2)}</pre>
 				</Match>
 			</Switch>
 		</section>
