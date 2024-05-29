@@ -13,6 +13,7 @@ export type ClientMessage =
 	| { type: 'anagramsGuess'; word: string };
 
 export type ServerMessage =
+	// lobby / generic
 	| {
 			type: 'info';
 			uuid: Uuid;
@@ -51,9 +52,11 @@ export type ServerMessage =
 	  }
 	| {
 			type: 'gameEnded';
-			winner: Uuid;
 			newRoomOwner?: Uuid;
+			info: PostGameInfo;
 	  }
+
+	// word bomb
 	| {
 			type: 'wordBombInput';
 			uuid: Uuid;
@@ -71,6 +74,8 @@ export type ServerMessage =
 			prompt: string;
 			turn: Uuid;
 	  }
+
+	// anagrams
 	| {
 			type: 'anagramsInvalidGuess';
 			reason: AnagramsGuessInfo;
@@ -86,6 +91,11 @@ type RoomInfo = {
 	settings: RoomSettings;
 	clients: Array<ClientInfo>;
 	state: RoomStateInfo;
+};
+
+export type RoomSettings = {
+	public: boolean;
+	game: Games;
 };
 
 type RoomStateInfo =
@@ -104,13 +114,26 @@ type RoomStateInfo =
 	| {
 			type: 'anagrams';
 			players: Array<AnagramsPlayerData>;
-			prompt: string;
+			anagram: string;
 	  };
 
-export type RoomSettings = {
-	public: boolean;
-	game: Games;
-};
+export type PostGameInfo =
+	| {
+			type: 'wordBomb';
+			winner: Uuid;
+			minsElapsed: number;
+			wordsUsed: number;
+			lettersTyped: number;
+			fastestGuesses: Array<[Uuid, number, string]>;
+			longestWords: Array<[Uuid, string]>;
+			avgWpms: Array<[Uuid, number]>;
+			avgWordLengths: Array<[Uuid, number]>;
+	  }
+	| {
+			type: 'anagrams';
+			originalWord: string;
+			leaderboard: Array<[Uuid, number]>;
+	  };
 
 export type ClientInfo = {
 	uuid: Uuid;

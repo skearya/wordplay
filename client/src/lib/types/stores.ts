@@ -3,7 +3,8 @@ import type {
 	WordBombPlayerData,
 	Uuid,
 	RoomSettings,
-	AnagramsPlayerData
+	AnagramsPlayerData,
+	PostGameInfo
 } from './messages';
 
 export type State = 'connecting' | 'error' | 'lobby' | 'wordBomb' | 'anagrams';
@@ -20,8 +21,8 @@ export type ConnectionData = {
 
 export type LobbyData = {
 	readyPlayers: Array<Uuid>;
-	previousWinner: string | null;
 	startingCountdown: number | null;
+	postGame: PostGameInfo | null;
 };
 
 export type WordBombData = {
@@ -34,5 +35,5 @@ export type WordBombData = {
 
 export type AnagramsData = {
 	players: Array<AnagramsPlayerData>;
-	prompt: string;
+	anagram: string;
 };

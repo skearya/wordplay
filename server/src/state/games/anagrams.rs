@@ -6,17 +6,19 @@ use uuid::Uuid;
 
 use crate::{
     global::GLOBAL,
-    messages::ServerMessage,
+    messages::{self, ServerMessage},
     state::{
         lobby::end_game,
         room::{ClientUtils, Room},
         AppState, SenderInfo,
     },
+    utils::Sorted,
 };
 
 pub struct Anagrams {
     pub timer: Arc<AbortHandle>,
-    pub prompt: String,
+    pub anagram: String,
+    pub original: String,
     pub players: Vec<Player>,
 }
 
@@ -37,6 +39,13 @@ pub enum GuessInfo {
     Valid,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PostGameInfo {
+    original_word: String,
+    leaderboard: Vec<(Uuid, u32)>,
+}
+
 impl Anagrams {
     pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> GuessInfo {
         if guess.len() < 3 {
@@ -44,7 +53,7 @@ impl Anagrams {
         }
         if guess
             .chars()
-            .any(|ch| guess.matches(ch).count() > self.prompt.matches(ch).count())
+            .any(|ch| guess.matches(ch).count() > self.anagram.matches(ch).count())
         {
             return GuessInfo::PromptMismatch;
         }
@@ -69,9 +78,8 @@ impl Anagrams {
         GuessInfo::Valid
     }
 
-    pub fn leaderboard(&self) -> Vec<(Uuid, u16)> {
-        let mut leaderboard: Vec<(Uuid, u16)> = self
-            .players
+    pub fn leaderboard(&self) -> Vec<(Uuid, u32)> {
+        self.players
             .iter()
             .map(|player| {
                 (
@@ -79,13 +87,10 @@ impl Anagrams {
                     player
                         .used_words
                         .iter()
-                        .fold(0, |acc, word| acc + 50 * 2_u16.pow((word.len() - 2) as u32)),
+                        .fold(0, |acc, word| acc + 50 * 2_u32.pow((word.len() - 2) as u32)),
                 )
             })
-            .collect();
-
-        leaderboard.sort_by_key(|player| player.1);
-        leaderboard
+            .sorted_by_vec(|a, b| b.1.cmp(&a.1))
     }
 }
 
@@ -143,9 +148,12 @@ impl AppState {
         } = lock.room_mut(&room)?;
         let game = state.try_anagrams()?;
 
-        // TODO: send leaderboard instead of singular winner?
-        let leaderboard = game.leaderboard();
-        end_game(state, clients, owner, leaderboard.last().unwrap().0);
+        let game_info = messages::PostGameInfo::Anagrams(PostGameInfo {
+            original_word: game.original.clone(),
+            leaderboard: game.leaderboard(),
+        });
+
+        end_game(state, clients, owner, game_info);
 
         Ok(())
     }

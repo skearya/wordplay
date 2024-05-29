@@ -1,7 +1,8 @@
 use crate::{
     global::GLOBAL,
-    messages::ServerMessage,
+    messages::{self, ServerMessage},
     state::{lobby::end_game, room::ClientUtils, AppState, Room, SenderInfo},
+    utils::Sorted,
 };
 
 use anyhow::{Context, Result};
@@ -31,7 +32,7 @@ pub struct Timer {
     pub length: f32,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
     pub input: String,
@@ -53,6 +54,19 @@ pub enum GuessInfo {
     NotEnglish,
     AlreadyUsed,
     Valid { extra_life: bool },
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PostGameInfo {
+    winner: Uuid,
+    mins_elapsed: f32,
+    words_used: usize,
+    letters_typed: usize,
+    fastest_guesses: Vec<(Uuid, f32, String)>,
+    longest_words: Vec<(Uuid, String)>,
+    avg_wpms: Vec<(Uuid, f32)>,
+    avg_word_lengths: Vec<(Uuid, f32)>,
 }
 
 impl WordBomb {
@@ -262,8 +276,9 @@ impl AppState {
             game.player_timed_out();
 
             if game.alive_players().len() == 1 {
-                let winner = game.alive_players().first().unwrap().uuid;
-                end_game(state, clients, owner, winner);
+                let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
+
+                end_game(state, clients, owner, game_info);
             } else {
                 clients.broadcast(ServerMessage::WordBombPrompt {
                     correct_guess: None,
@@ -293,4 +308,86 @@ fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
         })
         .abort_handle(),
     );
+}
+
+fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
+    PostGameInfo {
+        winner: game.alive_players().first().unwrap().uuid,
+        mins_elapsed: Instant::now().duration_since(game.started_at).as_secs_f32() / 60.0,
+        words_used: game
+            .players
+            .iter()
+            .map(|player| player.used_words.len())
+            .sum(),
+        letters_typed: game
+            .players
+            .iter()
+            .map(|player| {
+                player
+                    .used_words
+                    .iter()
+                    .map(|(_, word)| word.len())
+                    .sum::<usize>()
+            })
+            .sum(),
+        fastest_guesses: game
+            .players
+            .iter()
+            .flat_map(|player| {
+                player
+                    .used_words
+                    .iter()
+                    .map(|(duration, word)| (duration.as_secs_f32(), word))
+                    .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                    .map(|(duration, word)| (player.uuid, duration, word.clone()))
+            })
+            .sorted_by_vec(|a, b| a.1.partial_cmp(&b.1).unwrap()),
+        longest_words: game
+            .players
+            .iter()
+            .flat_map(|player| {
+                player
+                    .used_words
+                    .iter()
+                    .max_by_key(|(_, word)| word.len())
+                    .map(|(_, word)| (player.uuid, word.clone()))
+            })
+            .sorted_by_vec(|a, b| b.1.len().cmp(&a.1.len())),
+        avg_wpms: game
+            .players
+            .iter()
+            .filter_map(|player| {
+                (player.used_words.len() != 0).then(|| {
+                    (
+                        player.uuid,
+                        player
+                            .used_words
+                            .iter()
+                            .map(|(duration, word)| {
+                                (word.len() as f32 / 5.0) / (duration.as_secs_f32() / 60.0)
+                            })
+                            .sum::<f32>()
+                            / player.used_words.len() as f32,
+                    )
+                })
+            })
+            .sorted_by_vec(|a, b| b.1.partial_cmp(&a.1).unwrap()),
+        avg_word_lengths: game
+            .players
+            .iter()
+            .filter_map(|player| {
+                (player.used_words.len() != 0).then(|| {
+                    (
+                        player.uuid,
+                        player
+                            .used_words
+                            .iter()
+                            .map(|(_, word)| word.len() as f32)
+                            .sum::<f32>()
+                            / player.used_words.len() as f32,
+                    )
+                })
+            })
+            .sorted_by_vec(|a, b| b.1.partial_cmp(&a.1).unwrap()),
+    }
 }

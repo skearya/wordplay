@@ -1,4 +1,4 @@
-import { type Component, useContext, For, Show, createEffect, createSignal } from 'solid-js';
+import { useContext, For, Show, createEffect } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage, Uuid } from '../types/messages';
 
@@ -10,12 +10,12 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 
 	let gameInputRef!: HTMLInputElement;
 
-	const ourTurn = () => game.currentTurn == connection.uuid;
+	const ourTurn = () => game.currentTurn === connection.uuid;
 	const unusedLetters = () =>
 		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
 
 	createEffect(() => {
-		if (ourTurn()) {
+		if (ourTurn() && gameInputRef) {
 			gameInputRef.focus();
 			createEffect(() => {
 				props.sender({

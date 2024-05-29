@@ -25,7 +25,7 @@ const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => 
 
 	const Anagrams = () => (
 		<section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
-			<h1 class="text-xl">{game.prompt}</h1>
+			<h1 class="text-xl">{game.anagram}</h1>
 			<input
 				ref={gameInputRef}
 				class="border text-black"

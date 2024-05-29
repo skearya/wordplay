@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     global::GLOBAL,
-    messages::{CountdownState, Games, RoomStateInfo, ServerMessage},
+    messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
 };
 
 use anyhow::{Context, Result};
@@ -76,9 +76,12 @@ impl Lobby {
             .abort_handle(),
         );
 
+        let (original, anagram) = GLOBAL.get().unwrap().random_anagram();
+
         State::Anagrams(Anagrams {
             timer,
-            prompt: GLOBAL.get().unwrap().random_anagram(),
+            anagram,
+            original: original.to_string(),
             players: self
                 .ready
                 .iter()
@@ -275,7 +278,7 @@ fn start_game(
 
             RoomStateInfo::Anagrams {
                 players: game.players.clone(),
-                prompt: game.prompt.clone(),
+                anagram: game.anagram.clone(),
             }
         }
     };
@@ -292,7 +295,7 @@ pub fn end_game(
     state: &mut State,
     clients: &mut HashMap<Uuid, Client>,
     owner: &mut Uuid,
-    winner: Uuid,
+    info: PostGameInfo,
 ) {
     clients.retain(|_uuid, client| client.socket.is_some());
 
@@ -303,8 +306,8 @@ pub fn end_game(
     let new_room_owner = check_for_new_room_owner(clients, owner);
 
     clients.broadcast(ServerMessage::GameEnded {
-        winner,
         new_room_owner,
+        info,
     });
 
     *state = State::Lobby(Lobby::new());

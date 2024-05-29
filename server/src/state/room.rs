@@ -311,7 +311,7 @@ fn room_state_info(state: &State, uuid: Uuid) -> RoomStateInfo {
         },
         State::Anagrams(game) => RoomStateInfo::Anagrams {
             players: game.players.clone(),
-            prompt: game.prompt.clone(),
+            anagram: game.anagram.clone(),
         },
     }
 }

@@ -1,6 +1,8 @@
 import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
 import { Context } from '../context';
-import { ClientMessage } from '../types/messages';
+import type { ClientMessage, PostGameInfo } from '../types/messages';
+import type { ConnectionData } from '../types/stores';
+import { s } from 'vite/dist/node/types.d-FdqQ54oU';
 
 const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
@@ -18,7 +20,7 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 	});
 
 	return (
-		<section class="flex min-h-screen w-full flex-col items-center justify-center gap-4">
+		<section class="flex min-h-screen w-full items-center justify-center gap-6">
 			<h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
 				{status()}
 			</h1>
@@ -73,17 +75,6 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 					))}
 				</div>
 			</div>
-			<Show when={lobby.previousWinner}>
-				<div class="flex items-center gap-2 rounded-xl border p-4">
-					<h1 class="pr-2">winner</h1>
-					<img
-						class="h-10 w-10 rounded-full"
-						src={`https://avatar.vercel.sh/${lobby.previousWinner}`}
-						alt="avatar"
-					/>
-					<h1>{lobby.previousWinner}</h1>
-				</div>
-			</Show>
 			<div class="flex flex-col items-center gap-4 rounded-xl border bg-secondary-100 p-4">
 				<div class="flex flex-col gap-3">
 					<h1 class="text-2xl">Ready Players</h1>
@@ -121,6 +112,11 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 					</Show>
 				</div>
 			</div>
+			<Show when={lobby.postGame}>
+				<pre class="max-h-96 overflow-y-scroll text-xs">
+					{postGameInfoString(lobby.postGame!, connection)}
+				</pre>
+			</Show>
 		</section>
 	);
 };
@@ -146,5 +142,26 @@ const Player: Component<{ username?: string }> = (props) => {
 		</div>
 	);
 };
+
+function postGameInfoString(data: PostGameInfo, connection: ConnectionData): string {
+	const uuidToUsername = (uuid: string) =>
+		connection.clients.find((client) => uuid === client.uuid)!.username;
+
+	return JSON.stringify(
+		Object.fromEntries(
+			Object.entries(data).map(([k, v]) => {
+				if (k === 'winner') {
+					return [k, uuidToUsername(v as string)];
+				}
+				if (Array.isArray(v)) {
+					return [k, v.map((item) => item.with(0, uuidToUsername(item[0])))];
+				}
+				return [k, v];
+			})
+		),
+		null,
+		2
+	);
+}
 
 export { Lobby };

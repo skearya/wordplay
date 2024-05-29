@@ -68,8 +68,8 @@ pub enum ServerMessage {
         game: RoomStateInfo,
     },
     GameEnded {
-        winner: Uuid,
         new_room_owner: Option<Uuid>,
+        info: PostGameInfo,
     },
 
     // word bomb
@@ -125,8 +125,15 @@ pub enum RoomStateInfo {
     },
     Anagrams {
         players: Vec<anagrams::Player>,
-        prompt: String,
+        anagram: String,
     },
+}
+
+#[derive(Serialize, Clone)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum PostGameInfo {
+    WordBomb(word_bomb::PostGameInfo),
+    Anagrams(anagrams::PostGameInfo),
 }
 
 #[derive(Serialize)]

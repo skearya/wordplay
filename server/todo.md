@@ -1,5 +1,9 @@
 # current todo:
 
+-   review all `.unwrap()`s
+
+-   probably just stop changing case of message info
+
 -   use tracing
 
 -   add username length limit

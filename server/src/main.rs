@@ -1,6 +1,7 @@
 mod global;
 mod messages;
 mod state;
+mod utils;
 
 use global::{GlobalData, GLOBAL};
 use messages::ClientMessage;

@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
 import { Switch, Match, onCleanup, batch, useContext, createSignal } from 'solid-js';
-import { produce, reconcile } from 'solid-js/store';
+import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
 import { Nav } from '../lib/game/Nav';
@@ -75,7 +75,7 @@ const Game: Component = () => {
 					} else {
 						setAnagrams({
 							players: room.state.players,
-							prompt: room.state.prompt
+							anagram: room.state.anagram
 						});
 					}
 				});
@@ -83,7 +83,7 @@ const Game: Component = () => {
 			.with({ type: 'roomSettings' }, (message) => {
 				const { type, ...settings } = message;
 
-				setConnection('settings', reconcile(settings));
+				setConnection('settings', settings);
 			})
 			.with({ type: P.union('chatMessage', 'error') }, (message) => {
 				const messageContent =
@@ -161,7 +161,7 @@ const Game: Component = () => {
 					} else {
 						setAnagrams({
 							players: message.game.players,
-							prompt: message.game.prompt
+							anagram: message.game.anagram
 						});
 					}
 				});
@@ -174,10 +174,9 @@ const Game: Component = () => {
 
 					setState('lobby');
 					setLobby({
-						previousWinner: connection.clients.find((player) => player.uuid === message.winner)!
-							.username,
 						readyPlayers: [],
-						startingCountdown: null
+						startingCountdown: null,
+						postGame: message.info
 					});
 					setConnection('clients', (clients) => clients.filter((client) => !client.disconnected));
 				});

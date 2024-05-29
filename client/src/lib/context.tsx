@@ -17,8 +17,8 @@ function makeContext(room = '') {
 
 	const [lobby, setLobby] = createStore<LobbyData>({
 		readyPlayers: [],
-		previousWinner: null,
-		startingCountdown: null
+		startingCountdown: null,
+		postGame: null
 	});
 
 	const [wordBomb, setWordBomb] = createStore<WordBombData>({
@@ -31,7 +31,7 @@ function makeContext(room = '') {
 
 	const [anagrams, setAnagrams] = createStore<AnagramsData>({
 		players: [],
-		prompt: ''
+		anagram: ''
 	});
 
 	return [

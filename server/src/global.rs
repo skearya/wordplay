@@ -21,7 +21,7 @@ impl GlobalData {
         self.prompts.choose(&mut thread_rng()).unwrap()
     }
 
-    pub fn random_anagram(&self) -> String {
+    pub fn random_anagram(&self) -> (&str, String) {
         loop {
             let anagram = *self.words.choose(&mut thread_rng()).unwrap();
 
@@ -29,7 +29,7 @@ impl GlobalData {
                 let mut chars: Vec<char> = anagram.chars().collect();
                 chars.shuffle(&mut thread_rng());
 
-                break chars.into_iter().collect();
+                break (anagram, chars.into_iter().collect());
             }
         }
     }
