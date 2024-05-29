@@ -1,4 +1,4 @@
-import { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/stores';
+import type { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/stores';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 

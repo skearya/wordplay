@@ -1,6 +1,6 @@
 import { For, type Component, useContext } from 'solid-js';
-import { LinkIcon, QuestionMarkIcon } from '../icons';
 import { Context } from '../context';
+import { LinkIcon, QuestionMarkIcon } from '../icons';
 import { ClientInfo } from '../types/messages';
 
 const Nav: Component = () => {

@@ -2,7 +2,6 @@ import { useContext, type Component, For, createSignal, createEffect, Show } fro
 import { Context } from '../context';
 import type { ClientMessage, PostGameInfo } from '../types/messages';
 import type { ConnectionData } from '../types/stores';
-import { s } from 'vite/dist/node/types.d-FdqQ54oU';
 
 const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
