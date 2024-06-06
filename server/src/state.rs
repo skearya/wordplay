@@ -3,7 +3,7 @@ mod lobby;
 pub mod room;
 
 use self::room::Room;
-use crate::{messages::ClientMessage, Info, RoomData};
+use crate::{messages::ClientMessage, utils::filter_string, Info, RoomData};
 
 use anyhow::{Context, Result};
 use std::{
@@ -12,11 +12,12 @@ use std::{
 };
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     inner: Arc<Mutex<AppStateInner>>,
 }
 
+#[derive(Debug)]
 pub struct AppStateInner {
     rooms: HashMap<String, Room>,
 }
@@ -84,12 +85,4 @@ impl AppStateInner {
     pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
         self.rooms.get_mut(room).context("Room not found")
     }
-}
-
-fn filter_string(input: String) -> String {
-    input
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|char| char.is_alphabetic())
-        .collect()
 }

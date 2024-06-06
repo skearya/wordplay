@@ -15,6 +15,7 @@ use crate::{
     utils::Sorted,
 };
 
+#[derive(Debug)]
 pub struct Anagrams {
     pub timer: Arc<AbortHandle>,
     pub anagram: String,
@@ -22,15 +23,14 @@ pub struct Anagrams {
     pub players: Vec<Player>,
 }
 
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, Debug, Clone)]
 pub struct Player {
     pub uuid: Uuid,
     pub used_words: HashSet<String>,
 }
 
 #[derive(Serialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type")]
 pub enum GuessInfo {
     NotLongEnough,
     PromptMismatch,
@@ -40,7 +40,6 @@ pub enum GuessInfo {
 }
 
 #[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct PostGameInfo {
     original_word: String,
     leaderboard: Vec<(Uuid, u32)>,

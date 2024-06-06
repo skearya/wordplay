@@ -3,13 +3,15 @@ mod messages;
 mod state;
 mod utils;
 
+use std::borrow::Cow;
+
 use global::{GlobalData, GLOBAL};
 use messages::ClientMessage;
 use state::{AppState, SenderInfo};
 
 use axum::{
     extract::{
-        ws::{Message, WebSocket},
+        ws::{close_code, CloseFrame, Message, WebSocket},
         Path, Query, State, WebSocketUpgrade,
     },
     response::Response,
@@ -39,14 +41,13 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, Debug)]
 pub struct Info {
     pub clients_connected: usize,
     pub public_rooms: Vec<RoomData>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct RoomData {
     pub name: String,
     pub players: usize,
@@ -56,8 +57,7 @@ async fn info(State(state): State<AppState>) -> Json<Info> {
     Json(state.info())
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Deserialize, Debug)]
 pub struct Params {
     username: String,
     rejoin_token: Option<Uuid>,
@@ -80,7 +80,17 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {
+async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, params: Params) {
+    if params.username.len() > 20 {
+        socket
+            .send(Message::Close(Some(CloseFrame {
+                code: close_code::ABNORMAL,
+                reason: Cow::from("Username too long (max 20 characters)"),
+            })))
+            .await
+            .ok();
+    }
+
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
@@ -99,17 +109,18 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
         }
     });
 
-    while let Some(msg) = reciever.next().await {
-        if let Ok(msg) = msg {
-            if let Message::Text(text) = msg {
-                if let Ok(msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    state.handle(info, msg);
-                } else {
-                    eprintln!("couldnt parse message: {text}");
-                }
+    while let Some(Ok(msg)) = reciever.next().await {
+        if let Message::Text(text) = msg {
+            if text.len() > 500 {
+                eprintln!("ignoring large message ({} bytes)", text.len());
+                continue;
             }
-        } else {
-            break;
+
+            if let Ok(msg) = serde_json::from_str::<ClientMessage>(&text) {
+                state.handle(info, msg);
+            } else {
+                eprintln!("couldnt parse message: {text}");
+            }
         }
     }
 

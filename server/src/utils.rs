@@ -14,3 +14,11 @@ pub trait Sorted: Iterator {
 }
 
 impl<I: Iterator> Sorted for I {}
+
+pub fn filter_string(input: String) -> String {
+    input
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|char| char.is_alphabetic())
+        .collect()
+}

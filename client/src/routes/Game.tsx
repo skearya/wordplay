@@ -1,5 +1,6 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
+import type { State } from '../lib/types/stores';
 import { Switch, Match, onCleanup, batch, useContext, createSignal } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
@@ -26,7 +27,7 @@ const Game: Component = () => {
 
 	const params = new URLSearchParams({
 		username: connection.username,
-		...(rejoinToken && { rejoinToken })
+		...(rejoinToken && { rejoin_token: rejoinToken })
 	});
 
 	const socket = new WebSocket(
@@ -42,7 +43,7 @@ const Game: Component = () => {
 		const message: ServerMessage = JSON.parse(event.data);
 
 		match(message)
-			.with({ type: 'info' }, (message) => {
+			.with({ type: 'Info' }, (message) => {
 				const { uuid, room } = message;
 
 				setConnection({
@@ -55,53 +56,58 @@ const Game: Component = () => {
 				batch(() => {
 					setState(room.state.type);
 
-					if (room.state.type === 'lobby') {
+					if (room.state.type === 'Lobby') {
+						const { ready, starting_countdown } = room.state;
+
 						setLobby({
-							readyPlayers: room.state.ready,
-							startingCountdown: room.state.startingCountdown
+							ready,
+							startingCountdown: starting_countdown
 						});
-					} else if (room.state.type === 'wordBomb') {
-						const usedLetters = room.state.usedLetters ? new Set(room.state.usedLetters) : null;
-						const input =
-							room.state.players.find((player) => player.uuid === connection.uuid)?.input ?? '';
+					} else if (room.state.type === 'WordBomb') {
+						const { players, turn, prompt, used_letters } = room.state;
+
+						const usedLetters = used_letters ? new Set(used_letters) : null;
+						const input = players.find((player) => player.uuid === connection.uuid)?.input ?? '';
 
 						setWordBomb({
-							players: room.state.players,
-							currentTurn: room.state.turn,
-							prompt: room.state.prompt,
+							players,
+							turn,
+							prompt,
 							usedLetters,
 							input
 						});
 					} else {
+						const { players, anagram } = room.state;
+
 						setAnagrams({
-							players: room.state.players,
-							anagram: room.state.anagram
+							players,
+							anagram
 						});
 					}
 				});
 			})
-			.with({ type: 'roomSettings' }, (message) => {
+			.with({ type: 'RoomSettings' }, (message) => {
 				const { type, ...settings } = message;
 
 				setConnection('settings', settings);
 			})
-			.with({ type: P.union('chatMessage', 'error') }, (message) => {
+			.with({ type: P.union('ChatMessage', 'Error') }, (message) => {
 				const author =
-					message.type === 'error'
+					message.type === 'Error'
 						? `server`
 						: `${connection.clients.find((client) => client.uuid === message.author)!.username}`;
 
 				setConnection('chatMessages', connection.chatMessages.length, [author, message.content]);
 			})
-			.with({ type: 'connectionUpdate' }, (message) => {
+			.with({ type: 'ConnectionUpdate' }, (message) => {
 				const messageContent =
-					message.state.type === 'connected' || message.state.type === 'reconnected'
+					message.state.type === 'Connected' || message.state.type === 'Reconnected'
 						? `${message.state.username} has joined`
 						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`;
 
 				setConnection('chatMessages', connection.chatMessages.length, ['server', messageContent]);
 
-				if (message.state.type === 'connected' || message.state.type === 'reconnected') {
+				if (message.state.type === 'Connected' || message.state.type === 'Reconnected') {
 					const newClient = {
 						uuid: message.uuid,
 						username: message.state.username,
@@ -113,11 +119,11 @@ const Game: Component = () => {
 						newClient
 					]);
 				} else {
-					if (message.state.newRoomOwner) {
-						setConnection('roomOwner', message.state.newRoomOwner);
+					if (message.state.new_room_owner) {
+						setConnection('roomOwner', message.state.new_room_owner);
 					}
 
-					if (state() != 'lobby') {
+					if (state() !== 'Lobby') {
 						setConnection('clients', (client) => client.uuid == message.uuid, 'disconnected', true);
 					} else {
 						setConnection('clients', (clients) =>
@@ -126,94 +132,98 @@ const Game: Component = () => {
 					}
 				}
 			})
-			.with({ type: 'readyPlayers' }, (message) => {
-				setLobby('readyPlayers', message.ready);
+			.with({ type: 'ReadyPlayers' }, (message) => {
+				setLobby('ready', message.ready);
 
-				if (message.countdownUpdate) {
-					if (message.countdownUpdate.type === 'inProgress') {
-						setLobby('startingCountdown', message.countdownUpdate.timeLeft);
+				if (message.countdown_update) {
+					if (message.countdown_update.type === 'InProgress') {
+						setLobby('startingCountdown', message.countdown_update.time_left);
 					} else {
 						setLobby('startingCountdown', null);
 					}
 				}
 			})
-			.with({ type: 'startingCountdown' }, (message) => {
-				setLobby('startingCountdown', message.timeLeft);
+			.with({ type: 'StartingCountdown' }, (message) => {
+				setLobby('startingCountdown', message.time_left);
 			})
-			.with({ type: 'gameStarted' }, (message) => {
-				if (message.rejoinToken) {
+			.with({ type: 'GameStarted' }, (message) => {
+				if (message.rejoin_token) {
 					let tokens = JSON.parse(localStorage.getItem('rejoinTokens') ?? '{}');
-					tokens[connection.room] = message.rejoinToken;
+					tokens[connection.room] = message.rejoin_token;
 					localStorage.setItem('rejoinTokens', JSON.stringify(tokens));
 				}
 
 				batch(() => {
 					setState(message.game.type);
 
-					if (message.game.type === 'wordBomb') {
+					if (message.game.type === 'WordBomb') {
+						const { players, turn, prompt } = message.game;
+
 						setWordBomb({
-							players: message.game.players,
-							currentTurn: message.game.turn,
-							prompt: message.game.prompt,
+							players,
+							turn,
+							prompt,
 							usedLetters: new Set(),
 							input: ''
 						});
 					} else {
+						const { players, anagram } = message.game;
+
 						setAnagrams({
-							players: message.game.players,
-							anagram: message.game.anagram
+							players,
+							anagram
 						});
 					}
 				});
 			})
-			.with({ type: 'gameEnded' }, (message) => {
+			.with({ type: 'GameEnded' }, (message) => {
 				batch(() => {
-					if (message.newRoomOwner) {
-						setConnection('roomOwner', message.newRoomOwner);
+					if (message.new_room_owner) {
+						setConnection('roomOwner', message.new_room_owner);
 					}
 
-					setState('lobby');
+					setState('Lobby');
 					setLobby({
-						readyPlayers: [],
+						ready: [],
 						startingCountdown: null,
 						postGame: message.info
 					});
 					setConnection('clients', (clients) => clients.filter((client) => !client.disconnected));
 				});
 			})
-			.with({ type: 'wordBombInput' }, (message) => {
+			.with({ type: 'WordBombInput' }, (message) => {
 				setWordBomb('players', (player) => player.uuid === message.uuid, 'input', message.input);
 			})
-			.with({ type: 'wordBombInvalidGuess' }, (message) => {
+			.with({ type: 'WordBombInvalidGuess' }, (message) => {
 				onWordBombGuess(message.uuid, {
 					type: 'invalid',
 					reason: message.reason.type
 				});
 			})
-			.with({ type: 'wordBombPrompt' }, (message) => {
+			.with({ type: 'WordBombPrompt' }, (message) => {
 				setWordBomb(
 					produce((game) => {
 						onWordBombGuess(
-							game.currentTurn,
-							message.correctGuess ? { type: 'correct' } : { type: 'invalid', reason: 'timed out' }
+							game.turn,
+							message.correct_guess ? { type: 'correct' } : { type: 'invalid', reason: 'timed out' }
 						);
 
-						let turn = game.players.find((player) => player.uuid === game.currentTurn)!;
-						turn.lives += message.lifeChange;
+						const turn = game.players.find((player) => player.uuid === game.turn)!;
+						turn.lives += message.life_change;
 
-						if (turn.uuid === connection.uuid && message.correctGuess) {
-							game.usedLetters = new Set([...game.usedLetters!, ...message.correctGuess]);
+						if (turn.uuid === connection.uuid && message.correct_guess) {
+							game.usedLetters = new Set([...game.usedLetters!, ...message.correct_guess]);
 						}
 						if (message.turn === connection.uuid) {
 							game.input = '';
 						}
 
 						game.prompt = message.prompt;
-						game.currentTurn = message.turn;
+						game.turn = message.turn;
 					})
 				);
 			})
-			.with({ type: 'anagramsCorrectGuess' }, (message) => {
+			.with({ type: 'AnagramsCorrectGuess' }, (message) => {
 				if (message.uuid == connection.uuid) {
 					onAnagramsGuess({ type: 'correct' });
 				}
@@ -221,16 +231,16 @@ const Game: Component = () => {
 				setAnagrams(
 					'players',
 					(player) => player.uuid === message.uuid,
-					'usedWords',
+					'used_words',
 					(words) => [...words, message.guess]
 				);
 			})
-			.with({ type: 'anagramsInvalidGuess' }, (message) => {
+			.with({ type: 'AnagramsInvalidGuess' }, (message) => {
 				const reason = match(message.reason.type)
-					.with('notLongEnough', () => 'not long enough')
-					.with('promptMismatch', () => 'prompt mismatch')
-					.with('notEnglish', () => 'not english')
-					.with('alreadyUsed', () => 'already used')
+					.with('NotLongEnough', () => 'not long enough')
+					.with('PromptMismatch', () => 'prompt mismatch')
+					.with('NotEnglish', () => 'not english')
+					.with('AlreadyUsed', () => 'already used')
 					.exhaustive();
 
 				onAnagramsGuess({ type: 'invalid', reason });
@@ -240,7 +250,7 @@ const Game: Component = () => {
 
 	socket.addEventListener('close', (event) => {
 		batch(() => {
-			setState('error');
+			setState('Error');
 			setConnectionError(event.reason);
 		});
 	});
@@ -253,21 +263,21 @@ const Game: Component = () => {
 		<>
 			<Nav />
 			<Switch>
-				<Match when={state() === 'connecting'}>
+				<Match when={state() === 'Connecting'}>
 					<Connecting />
 				</Match>
-				<Match when={state() === 'error'}>
+				<Match when={state() === 'Error'}>
 					<Errored errorMessage={connectionError} />
 				</Match>
-				<Match when={state() !== 'connecting' || state() !== 'error'}>
+				<Match when={state() !== 'Connecting' || state() !== 'Error'}>
 					<Switch>
-						<Match when={state() === 'lobby'}>
+						<Match when={state() === 'Lobby'}>
 							<Lobby sender={sender} />
 						</Match>
-						<Match when={state() === 'wordBomb'}>
+						<Match when={state() === 'WordBomb'}>
 							<WordBomb />
 						</Match>
-						<Match when={state() === 'anagrams'}>
+						<Match when={state() === 'Anagrams'}>
 							<Anagrams />
 						</Match>
 					</Switch>

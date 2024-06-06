@@ -2,7 +2,7 @@ import { useContext, For, Show, createSignal } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => {
+export const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, anagrams: game } = context[0];
@@ -37,7 +37,7 @@ const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => 
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 6) {
 						props.sender({
-							type: 'anagramsGuess',
+							type: 'AnagramsGuess',
 							word: event.currentTarget.value
 						});
 					}
@@ -49,7 +49,7 @@ const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => 
 						<div class="flex flex-col items-center">
 							<h1>{connection.clients.find((client) => player.uuid === client.uuid)!.username}</h1>
 							<div>
-								{player.usedWords.map((word) => (
+								{player.used_words.map((word) => (
 									<h1>{word}</h1>
 								))}
 							</div>
@@ -75,5 +75,3 @@ const createAnagrams = (props: { sender: (message: ClientMessage) => void }) => 
 		Anagrams
 	};
 };
-
-export { createAnagrams };

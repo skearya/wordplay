@@ -1,9 +1,9 @@
-import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
-import { Context } from '../context';
 import type { ClientMessage, PostGameInfo } from '../types/messages';
 import type { ConnectionData } from '../types/stores';
+import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
+import { Context } from '../context';
 
-const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
+export const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, lobby } = context[0];
@@ -37,7 +37,7 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 								onChange={(event) => {
 									if (event.target.checked) {
 										props.sender({
-											type: 'roomSettings',
+											type: 'RoomSettings',
 											...connection.settings,
 											public: visibility === 'public'
 										});
@@ -57,14 +57,14 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 								name={game}
 								disabled={connection.roomOwner !== connection.uuid}
 								checked={
-									connection.settings.game === (game === 'word bomb' ? 'wordBomb' : 'anagrams')
+									connection.settings.game === (game === 'word bomb' ? 'WordBomb' : 'Anagrams')
 								}
 								onChange={(event) => {
 									if (event.target.checked) {
 										props.sender({
-											type: 'roomSettings',
+											type: 'RoomSettings',
 											...connection.settings,
-											game: game === 'word bomb' ? 'wordBomb' : 'anagrams'
+											game: game === 'word bomb' ? 'WordBomb' : 'Anagrams'
 										});
 									}
 								}}
@@ -78,16 +78,14 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 				<div class="flex flex-col gap-3">
 					<h1 class="text-2xl">Ready Players</h1>
 					<div class="flex gap-4">
-						<For each={lobby.readyPlayers}>
+						<For each={lobby.ready}>
 							{(ready) => (
 								<Player
 									username={connection.clients.find((client) => client.uuid === ready)!.username}
 								/>
 							)}
 						</For>
-						<For each={new Array(Math.max(0, 2 - lobby.readyPlayers.length))}>
-							{() => <Player />}
-						</For>
+						<For each={new Array(Math.max(0, 2 - lobby.ready.length))}>{() => <Player />}</For>
 					</div>
 				</div>
 				<div class="flex gap-3">
@@ -95,16 +93,16 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 						class="rounded-lg border bg-secondary px-3 py-2"
 						onClick={() =>
 							props.sender({
-								type: lobby.readyPlayers.includes(connection.uuid) ? 'unready' : 'ready'
+								type: lobby.ready.includes(connection.uuid) ? 'Unready' : 'Ready'
 							})
 						}
 					>
-						{lobby.readyPlayers.includes(connection.uuid) ? 'Unready' : 'Ready'}
+						{lobby.ready.includes(connection.uuid) ? 'Unready' : 'Ready'}
 					</button>
-					<Show when={connection.uuid === connection.roomOwner && lobby.readyPlayers.length >= 2}>
+					<Show when={connection.uuid === connection.roomOwner && lobby.ready.length >= 2}>
 						<button
 							class="rounded-lg border bg-sky-700 px-3 py-2"
-							onClick={() => props.sender({ type: 'startEarly' })}
+							onClick={() => props.sender({ type: 'StartEarly' })}
 						>
 							Start Early
 						</button>
@@ -113,7 +111,7 @@ const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) =
 			</div>
 			<Show when={lobby.postGame}>
 				<pre class="max-h-96 overflow-y-scroll text-xs">
-					{postGameInfoString(lobby.postGame!, connection)}
+					{JSON.stringify(lobby.postGame!, null, 2)}
 				</pre>
 			</Show>
 		</section>
@@ -141,26 +139,3 @@ const Player: Component<{ username?: string }> = (props) => {
 		</div>
 	);
 };
-
-function postGameInfoString(data: PostGameInfo, connection: ConnectionData): string {
-	const uuidToUsername = (uuid: string) =>
-		connection.clients.find((client) => uuid === client.uuid)!.username;
-
-	return JSON.stringify(
-		Object.fromEntries(
-			Object.entries(data).map(([k, v]) => {
-				if (k === 'winner') {
-					return [k, uuidToUsername(v as string)];
-				}
-				if (Array.isArray(v)) {
-					return [k, v.map((item) => item.with(0, uuidToUsername(item[0])))];
-				}
-				return [k, v];
-			})
-		),
-		null,
-		2
-	);
-}
-
-export { Lobby };

@@ -1,12 +1,10 @@
 # current todo:
 
+-   client and server version checking
+
 -   review all `.unwrap()`s
 
--   probably just stop changing case of message info
-
 -   use tracing
-
--   add username length limit
 
 -   store and display previous winners of session
 

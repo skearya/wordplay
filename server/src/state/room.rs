@@ -16,7 +16,7 @@ use std::{borrow::Cow, collections::HashMap};
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Room {
     pub owner: Uuid,
     pub settings: RoomSettings,
@@ -24,7 +24,7 @@ pub struct Room {
     pub state: State,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoomSettings {
     pub public: bool,
     pub game: Games,
@@ -39,6 +39,7 @@ impl Default for RoomSettings {
     }
 }
 
+#[derive(Debug)]
 pub struct Client {
     pub socket: Option<Uuid>,
     pub tx: UnboundedSender<Message>,
@@ -46,6 +47,7 @@ pub struct Client {
     pub rejoin_token: Option<Uuid>,
 }
 
+#[derive(Debug)]
 pub enum State {
     Lobby(Lobby),
     WordBomb(WordBomb),

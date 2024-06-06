@@ -3,12 +3,12 @@ import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 function makeContext(room = '') {
-	const [state, setState] = createSignal<State>('connecting');
+	const [state, setState] = createSignal<State>('Connecting');
 
 	const [connection, setConnection] = createStore<ConnectionData>({
 		room,
 		uuid: '',
-		settings: { game: 'wordBomb', public: false },
+		settings: { game: 'WordBomb', public: false },
 		username: prompt('username', 'username')!,
 		roomOwner: '',
 		clients: [],
@@ -16,14 +16,14 @@ function makeContext(room = '') {
 	});
 
 	const [lobby, setLobby] = createStore<LobbyData>({
-		readyPlayers: [],
+		ready: [],
 		startingCountdown: null,
 		postGame: null
 	});
 
 	const [wordBomb, setWordBomb] = createStore<WordBombData>({
 		players: [],
-		currentTurn: '',
+		turn: '',
 		prompt: '',
 		input: '',
 		usedLetters: null
@@ -40,10 +40,8 @@ function makeContext(room = '') {
 	] as const;
 }
 
-const Context = createContext<ReturnType<typeof makeContext>>();
+export const Context = createContext<ReturnType<typeof makeContext>>();
 
-const ContextProvider: ParentComponent<{ room: string }> = (props) => {
+export const ContextProvider: ParentComponent<{ room: string }> = (props) => {
 	return <Context.Provider value={makeContext(props.room)}>{props.children}</Context.Provider>;
 };
-
-export { Context, ContextProvider };

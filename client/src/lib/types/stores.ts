@@ -4,10 +4,11 @@ import type {
 	Uuid,
 	RoomSettings,
 	AnagramsPlayerData,
-	PostGameInfo
+	PostGameInfo,
+	Games
 } from './messages';
 
-export type State = 'connecting' | 'error' | 'lobby' | 'wordBomb' | 'anagrams';
+export type State = 'Connecting' | 'Error' | 'Lobby' | Games;
 
 export type ConnectionData = {
 	room: string;
@@ -20,14 +21,14 @@ export type ConnectionData = {
 };
 
 export type LobbyData = {
-	readyPlayers: Array<Uuid>;
+	ready: Array<Uuid>;
 	startingCountdown: number | null;
 	postGame: PostGameInfo | null;
 };
 
 export type WordBombData = {
 	players: Array<WordBombPlayerData>;
-	currentTurn: Uuid;
+	turn: Uuid;
 	prompt: string;
 	input: string;
 	usedLetters: Set<string> | null;

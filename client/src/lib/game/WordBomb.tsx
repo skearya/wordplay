@@ -2,7 +2,7 @@ import { useContext, For, Show, createEffect } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage, Uuid } from '../types/messages';
 
-const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => {
+export const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, wordBomb: game } = context[0];
@@ -10,7 +10,7 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 
 	let gameInputRef!: HTMLInputElement;
 
-	const ourTurn = () => game.currentTurn === connection.uuid;
+	const ourTurn = () => game.turn === connection.uuid;
 	const unusedLetters = () =>
 		[...'abcdefghijklmnopqrstuvwy'].filter((letter) => !game.usedLetters?.has(letter));
 
@@ -19,7 +19,7 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 			gameInputRef.focus();
 			createEffect(() => {
 				props.sender({
-					type: 'wordBombInput',
+					type: 'WordBombInput',
 					input: game.input
 				});
 			});
@@ -44,7 +44,7 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 			<div class="flex gap-2">
 				<h1>turn</h1>
 				<h1 class="text-green-300">
-					{connection.clients.find((player) => player.uuid === game.currentTurn)!.username}
+					{connection.clients.find((player) => player.uuid === game.turn)!.username}
 				</h1>
 			</div>
 			<h1 class="text-xl">{game.prompt}</h1>
@@ -77,13 +77,13 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 				class="border text-black"
 				type="text"
 				maxlength="35"
-				disabled={game.currentTurn !== connection.uuid}
+				disabled={game.turn !== connection.uuid}
 				value={game.input}
 				onInput={(event) => setWordBomb('input', event.target.value.substring(0, 35))}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' && event.currentTarget.value.length <= 35) {
 						props.sender({
-							type: 'wordBombGuess',
+							type: 'WordBombGuess',
 							word: event.currentTarget.value
 						});
 					}
@@ -97,5 +97,3 @@ const createWordBomb = (props: { sender: (message: ClientMessage) => void }) => 
 		WordBomb
 	};
 };
-
-export { createWordBomb };

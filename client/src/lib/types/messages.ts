@@ -1,87 +1,87 @@
 export type Uuid = string;
 
-type Games = 'wordBomb' | 'anagrams';
+export type Games = 'WordBomb' | 'Anagrams';
 
 export type ClientMessage =
-	| { type: 'ready' }
-	| { type: 'startEarly' }
-	| { type: 'unready' }
-	| ({ type: 'roomSettings' } & RoomSettings)
-	| { type: 'chatMessage'; content: string }
-	| { type: 'wordBombInput'; input: string }
-	| { type: 'wordBombGuess'; word: string }
-	| { type: 'anagramsGuess'; word: string };
+	| { type: 'Ready' }
+	| { type: 'StartEarly' }
+	| { type: 'Unready' }
+	| ({ type: 'RoomSettings' } & RoomSettings)
+	| { type: 'ChatMessage'; content: string }
+	| { type: 'WordBombInput'; input: string }
+	| { type: 'WordBombGuess'; word: string }
+	| { type: 'AnagramsGuess'; word: string };
 
 export type ServerMessage =
 	// lobby / generic
 	| {
-			type: 'info';
+			type: 'Info';
 			uuid: Uuid;
 			room: RoomInfo;
 	  }
 	| {
-			type: 'error';
+			type: 'Error';
 			content: string;
 	  }
 	| ({
-			type: 'roomSettings';
+			type: 'RoomSettings';
 	  } & RoomSettings)
 	| {
-			type: 'chatMessage';
+			type: 'ChatMessage';
 			author: Uuid;
 			content: string;
 	  }
 	| {
-			type: 'connectionUpdate';
+			type: 'ConnectionUpdate';
 			uuid: Uuid;
 			state: ConnectionUpdate;
 	  }
 	| {
-			type: 'readyPlayers';
+			type: 'ReadyPlayers';
 			ready: Array<Uuid>;
-			countdownUpdate?: CountdownState;
+			countdown_update?: CountdownState;
 	  }
 	| {
-			type: 'startingCountdown';
-			timeLeft: number;
+			type: 'StartingCountdown';
+			time_left: number;
 	  }
 	| {
-			type: 'gameStarted';
-			rejoinToken?: string;
-			game: Exclude<RoomStateInfo, { type: 'lobby' }>;
+			type: 'GameStarted';
+			rejoin_token?: string;
+			game: Exclude<RoomStateInfo, { type: 'Lobby' }>;
 	  }
 	| {
-			type: 'gameEnded';
-			newRoomOwner?: Uuid;
+			type: 'GameEnded';
+			new_room_owner?: Uuid;
 			info: PostGameInfo;
 	  }
 
 	// word bomb
 	| {
-			type: 'wordBombInput';
+			type: 'WordBombInput';
 			uuid: Uuid;
 			input: string;
 	  }
 	| {
-			type: 'wordBombInvalidGuess';
+			type: 'WordBombInvalidGuess';
 			uuid: Uuid;
 			reason: WordBombGuessInfo;
 	  }
 	| {
-			type: 'wordBombPrompt';
-			correctGuess?: string;
-			lifeChange: number;
+			type: 'WordBombPrompt';
+			correct_guess?: string;
+			life_change: number;
 			prompt: string;
 			turn: Uuid;
 	  }
 
 	// anagrams
 	| {
-			type: 'anagramsInvalidGuess';
+			type: 'AnagramsInvalidGuess';
 			reason: AnagramsGuessInfo;
 	  }
 	| {
-			type: 'anagramsCorrectGuess';
+			type: 'AnagramsCorrectGuess';
 			uuid: Uuid;
 			guess: string;
 	  };
@@ -100,38 +100,38 @@ export type RoomSettings = {
 
 type RoomStateInfo =
 	| {
-			type: 'lobby';
+			type: 'Lobby';
 			ready: Array<Uuid>;
-			startingCountdown?: number;
+			starting_countdown?: number;
 	  }
 	| {
-			type: 'wordBomb';
+			type: 'WordBomb';
 			players: Array<WordBombPlayerData>;
 			turn: Uuid;
 			prompt: string;
-			usedLetters?: Array<string>;
+			used_letters?: Array<string>;
 	  }
 	| {
-			type: 'anagrams';
+			type: 'Anagrams';
 			players: Array<AnagramsPlayerData>;
 			anagram: string;
 	  };
 
 export type PostGameInfo =
 	| {
-			type: 'wordBomb';
+			type: 'WordBomb';
 			winner: Uuid;
-			minsElapsed: number;
-			wordsUsed: number;
-			lettersTyped: number;
-			fastestGuesses: Array<[Uuid, number, string]>;
-			longestWords: Array<[Uuid, string]>;
-			avgWpms: Array<[Uuid, number]>;
-			avgWordLengths: Array<[Uuid, number]>;
+			mins_elapsed: number;
+			words_used: number;
+			letters_typed: number;
+			fastest_guesses: Array<[Uuid, number, string]>;
+			longest_words: Array<[Uuid, string]>;
+			avg_wpms: Array<[Uuid, number]>;
+			avg_word_lengths: Array<[Uuid, number]>;
 	  }
 	| {
-			type: 'anagrams';
-			originalWord: string;
+			type: 'Anagrams';
+			original_word: string;
 			leaderboard: Array<[Uuid, number]>;
 	  };
 
@@ -141,61 +141,61 @@ export type ClientInfo = {
 	disconnected: boolean;
 };
 
+type ConnectionUpdate =
+	| {
+			type: 'Connected';
+			username: string;
+	  }
+	| {
+			type: 'Reconnected';
+			username: string;
+	  }
+	| {
+			type: 'Disconnected';
+			new_room_owner?: Uuid;
+	  };
+
+type CountdownState =
+	| {
+			type: 'InProgress';
+			time_left: number;
+	  }
+	| {
+			type: 'stopped';
+	  };
+
 export type WordBombPlayerData = {
 	uuid: Uuid;
 	input: string;
 	lives: number;
 };
 
-export type AnagramsPlayerData = {
-	uuid: Uuid;
-	usedWords: Array<string>;
-};
-
-type ConnectionUpdate =
-	| {
-			type: 'connected';
-			username: string;
-	  }
-	| {
-			type: 'reconnected';
-			username: string;
-	  }
-	| {
-			type: 'disconnected';
-			newRoomOwner?: Uuid;
-	  };
-
-type CountdownState =
-	| {
-			type: 'inProgress';
-			timeLeft: number;
-	  }
-	| {
-			type: 'stopped';
-	  };
-
 type WordBombGuessInfo =
 	| {
-			type: 'promptNotIn';
+			type: 'PromptNotIn';
 	  }
 	| {
-			type: 'notEnglish';
+			type: 'NotEnglish';
 	  }
 	| {
-			type: 'alreadyUsed';
+			type: 'AlreadyUsed';
 	  };
+
+export type AnagramsPlayerData = {
+	uuid: Uuid;
+	used_words: Array<string>;
+};
 
 type AnagramsGuessInfo =
 	| {
-			type: 'notLongEnough';
+			type: 'NotLongEnough';
 	  }
 	| {
-			type: 'promptMismatch';
+			type: 'PromptMismatch';
 	  }
 	| {
-			type: 'notEnglish';
+			type: 'NotEnglish';
 	  }
 	| {
-			type: 'alreadyUsed';
+			type: 'AlreadyUsed';
 	  };

@@ -8,19 +8,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Games {
     WordBomb,
     Anagrams,
 }
 
 #[derive(Deserialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum ClientMessage {
     Ready,
     StartEarly,
@@ -33,11 +28,7 @@ pub enum ClientMessage {
 }
 
 #[derive(Serialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum ServerMessage {
     // lobby / generic
     Info {
@@ -107,11 +98,7 @@ pub struct RoomInfo {
 }
 
 #[derive(Serialize, Clone)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum RoomStateInfo {
     Lobby {
         ready: Vec<Uuid>,
@@ -130,7 +117,7 @@ pub enum RoomStateInfo {
 }
 
 #[derive(Serialize, Clone)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type")]
 pub enum PostGameInfo {
     WordBomb(word_bomb::PostGameInfo),
     Anagrams(anagrams::PostGameInfo),
@@ -144,11 +131,7 @@ pub struct ClientInfo {
 }
 
 #[derive(Serialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum ConnectionUpdate {
     Connected { username: String },
     Reconnected { username: String },
@@ -156,11 +139,7 @@ pub enum ConnectionUpdate {
 }
 
 #[derive(Serialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum CountdownState {
     InProgress { time_left: u8 },
     Stopped,

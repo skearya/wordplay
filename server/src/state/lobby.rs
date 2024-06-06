@@ -22,11 +22,13 @@ use std::{
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct Lobby {
     pub ready: HashSet<Uuid>,
     pub countdown: Option<Countdown>,
 }
 
+#[derive(Debug)]
 pub struct Countdown {
     pub time_left: u8,
     pub timer_handle: Arc<AbortHandle>,

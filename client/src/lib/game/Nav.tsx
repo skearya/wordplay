@@ -3,7 +3,7 @@ import { Context } from '../context';
 import { LinkIcon, QuestionMarkIcon } from '../icons';
 import { ClientInfo } from '../types/messages';
 
-const Nav: Component = () => {
+export const Nav: Component = () => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection } = context[0];
@@ -46,6 +46,7 @@ const ConnectedClients: Component<{ clients: ClientInfo[] }> = (props) => {
 									class="h-8 w-8 rounded-full"
 									src={`https://avatar.vercel.sh/${client.username}`}
 									alt="avatar"
+									title={client.uuid}
 								/>
 							</div>
 						)}
@@ -55,5 +56,3 @@ const ConnectedClients: Component<{ clients: ClientInfo[] }> = (props) => {
 		</div>
 	);
 };
-
-export { Nav };

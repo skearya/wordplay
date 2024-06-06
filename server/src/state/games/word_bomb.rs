@@ -16,6 +16,7 @@ use std::{
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct WordBomb {
     pub started_at: Instant,
     pub timer: Timer,
@@ -26,6 +27,7 @@ pub struct WordBomb {
     pub turn: Uuid,
 }
 
+#[derive(Debug)]
 pub struct Timer {
     pub task: Arc<AbortHandle>,
     pub start: Instant,
@@ -44,11 +46,7 @@ pub struct Player {
 }
 
 #[derive(Serialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[serde(tag = "type")]
 pub enum GuessInfo {
     PromptNotIn,
     NotEnglish,
@@ -57,7 +55,6 @@ pub enum GuessInfo {
 }
 
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct PostGameInfo {
     winner: Uuid,
     mins_elapsed: f32,

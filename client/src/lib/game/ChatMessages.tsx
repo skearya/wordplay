@@ -2,7 +2,7 @@ import { type Component, For, useContext, createEffect, on } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 
-const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
+export const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection } = context[0];
@@ -27,7 +27,7 @@ const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (p
 	);
 
 	return (
-		<section class="fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border bg-primary-50/25">
+		<section class="fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-xl border-r border-t bg-primary-50/25">
 			<ul
 				ref={messagesContainer}
 				class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
@@ -53,7 +53,7 @@ const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (p
 				onKeyDown={(event) => {
 					if (event.key === 'Enter') {
 						props.sender({
-							type: 'chatMessage',
+							type: 'ChatMessage',
 							content: event.currentTarget.value
 						});
 
@@ -64,5 +64,3 @@ const ChatMessages: Component<{ sender: (message: ClientMessage) => void }> = (p
 		</section>
 	);
 };
-
-export { ChatMessages };

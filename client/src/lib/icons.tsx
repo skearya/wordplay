@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js';
 
-const LinkIcon: Component = () => {
+export const LinkIcon: Component = () => {
 	return (
 		<svg width="35" height="35" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<rect x="1" y="0.5" width="40" height="41" />
@@ -20,7 +20,7 @@ const LinkIcon: Component = () => {
 	);
 };
 
-const QuestionMarkIcon: Component = () => {
+export const QuestionMarkIcon: Component = () => {
 	return (
 		<svg width="35" height="35" viewBox="0 0 37 38" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
@@ -32,5 +32,3 @@ const QuestionMarkIcon: Component = () => {
 		</svg>
 	);
 };
-
-export { LinkIcon, QuestionMarkIcon };
