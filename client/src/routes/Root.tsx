@@ -15,6 +15,9 @@ const Root: Component = () => {
 		<section>
 			<h1>wordplay</h1>
 			<Switch>
+				<Match when={data.loading}>
+					<h1>loading data</h1>
+				</Match>
 				<Match when={data.error}>
 					<h1>something went wrong</h1>
 				</Match>

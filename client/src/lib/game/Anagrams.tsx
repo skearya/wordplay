@@ -49,9 +49,7 @@ export const createAnagrams = (props: { sender: (message: ClientMessage) => void
 						<div class="flex flex-col items-center">
 							<h1>{connection.clients.find((client) => player.uuid === client.uuid)!.username}</h1>
 							<div>
-								{player.used_words.map((word) => (
-									<h1>{word}</h1>
-								))}
+								<For each={player.used_words}>{(word) => <h1>{word}</h1>}</For>
 							</div>
 							<Show
 								when={

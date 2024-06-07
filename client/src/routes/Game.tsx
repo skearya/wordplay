@@ -1,7 +1,6 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
-import type { State } from '../lib/types/stores';
-import { Switch, Match, onCleanup, batch, useContext, createSignal } from 'solid-js';
+import { Switch, Match, onCleanup, batch, useContext, createSignal, Show } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
@@ -269,21 +268,19 @@ const Game: Component = () => {
 				<Match when={state() === 'Error'}>
 					<Errored errorMessage={connectionError} />
 				</Match>
-				<Match when={state() !== 'Connecting' || state() !== 'Error'}>
-					<Switch>
-						<Match when={state() === 'Lobby'}>
-							<Lobby sender={sender} />
-						</Match>
-						<Match when={state() === 'WordBomb'}>
-							<WordBomb />
-						</Match>
-						<Match when={state() === 'Anagrams'}>
-							<Anagrams />
-						</Match>
-					</Switch>
-					<ChatMessages sender={sender} />
+				<Match when={state() === 'Lobby'}>
+					<Lobby sender={sender} />
+				</Match>
+				<Match when={state() === 'WordBomb'}>
+					<WordBomb />
+				</Match>
+				<Match when={state() === 'Anagrams'}>
+					<Anagrams />
 				</Match>
 			</Switch>
+			<Show when={state() !== 'Connecting' || state() !== 'Error'}>
+				<ChatMessages sender={sender} />
+			</Show>
 		</>
 	);
 };
