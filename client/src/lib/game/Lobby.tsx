@@ -28,7 +28,7 @@ export const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (p
 						<div class="space-x-2">
 							<input
 								type="radio"
-								name={visibility}
+								id={visibility}
 								disabled={connection.roomOwner !== connection.uuid}
 								checked={
 									connection.settings.public ? visibility === 'public' : visibility === 'private'
@@ -53,7 +53,7 @@ export const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (p
 						<div class="space-x-2">
 							<input
 								type="radio"
-								name={game}
+								id={game}
 								disabled={connection.roomOwner !== connection.uuid}
 								checked={
 									connection.settings.game === (game === 'word bomb' ? 'WordBomb' : 'Anagrams')
