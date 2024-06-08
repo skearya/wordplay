@@ -1,16 +1,25 @@
-import type { Component } from 'solid-js';
-import type { ClientMessage, ServerMessage } from '../lib/types/messages';
-import { Switch, Match, onCleanup, batch, useContext, createSignal, Show, onMount } from 'solid-js';
+import {
+	Match,
+	Show,
+	Switch,
+	batch,
+	createSignal,
+	onCleanup,
+	onMount,
+	useContext,
+	type Component
+} from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
-import { Nav } from '../lib/game/Nav';
+import { createAnagrams } from '../lib/game/Anagrams';
+import { ChatMessages } from '../lib/game/ChatMessages';
 import { Connecting } from '../lib/game/Connecting';
 import { Errored } from '../lib/game/Errored';
-import { ChatMessages } from '../lib/game/ChatMessages';
 import { Lobby } from '../lib/game/Lobby';
+import { Nav } from '../lib/game/Nav';
 import { createWordBomb } from '../lib/game/WordBomb';
-import { createAnagrams } from '../lib/game/Anagrams';
+import type { ClientMessage, ServerMessage } from '../lib/types/messages';
 
 const JoinGame: Component = () => {
 	let usernameInputRef!: HTMLInputElement;

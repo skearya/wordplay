@@ -1,4 +1,4 @@
-import { useContext, For, Show, createEffect } from 'solid-js';
+import { For, Show, createEffect, useContext } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage, Uuid } from '../types/messages';
 

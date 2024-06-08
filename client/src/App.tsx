@@ -1,5 +1,5 @@
-import { lazy, type Component } from 'solid-js';
 import { Route, Router, useParams } from '@solidjs/router';
+import { lazy, type Component } from 'solid-js';
 import { ContextProvider } from './lib/context';
 
 const Root = lazy(() => import('./routes/Root'));

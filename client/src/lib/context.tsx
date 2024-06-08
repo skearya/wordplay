@@ -1,6 +1,6 @@
-import type { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/context';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import type { AnagramsData, ConnectionData, LobbyData, State, WordBombData } from './types/context';
 
 function makeContext(room = '') {
 	const [state, setState] = createSignal<State>('Connecting');

@@ -1,11 +1,11 @@
 import type {
-	ClientInfo,
-	WordBombPlayerData,
-	Uuid,
-	RoomSettings,
 	AnagramsPlayerData,
+	ClientInfo,
+	Games,
 	PostGameInfo,
-	Games
+	RoomSettings,
+	Uuid,
+	WordBombPlayerData
 } from './messages';
 
 export type State = 'Connecting' | 'Error' | 'Lobby' | Games;

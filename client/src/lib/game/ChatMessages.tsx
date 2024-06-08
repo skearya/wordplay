@@ -1,4 +1,4 @@
-import { type Component, For, useContext, createEffect, on } from 'solid-js';
+import { For, createEffect, on, useContext, type Component } from 'solid-js';
 import { Context } from '../context';
 import { ClientMessage } from '../types/messages';
 

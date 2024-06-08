@@ -1,6 +1,6 @@
-import type { ClientMessage, PostGameInfo } from '../types/messages';
-import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
+import { For, Show, createEffect, createSignal, useContext, type Component } from 'solid-js';
 import { Context } from '../context';
+import type { ClientMessage } from '../types/messages';
 
 export const Lobby: Component<{ sender: (message: ClientMessage) => void }> = (props) => {
 	const context = useContext(Context);

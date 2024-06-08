@@ -1,4 +1,4 @@
-import { For, type Component, useContext } from 'solid-js';
+import { For, useContext, type Component } from 'solid-js';
 import { Context } from '../context';
 import { LinkIcon, QuestionMarkIcon } from '../icons';
 import { ClientInfo } from '../types/messages';
@@ -10,7 +10,9 @@ export const Nav: Component = () => {
 
 	return (
 		<nav class="fixed top-0 flex w-full justify-between p-6">
-			<h1 class="text-xl">wordplay</h1>
+			<a href="/" class="text-xl">
+				wordplay
+			</a>
 			<div class="flex items-center gap-4">
 				<ConnectedClients clients={connection.clients.filter((client) => !client.disconnected)} />
 				<button onClick={async () => await navigator.clipboard.writeText(window.location.href)}>
