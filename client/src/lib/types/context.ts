@@ -14,10 +14,9 @@ export type ConnectionData = {
 	room: string;
 	settings: RoomSettings;
 	uuid: Uuid;
-	username: string;
 	roomOwner: Uuid;
 	clients: Array<ClientInfo>;
-	chatMessages: Array<[string, string]>;
+	chatMessages: Array<[string, string] | string>;
 };
 
 export type LobbyData = {

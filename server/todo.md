@@ -1,7 +1,5 @@
 # current todo:
 
--   better username chooser + save username in localstorage
-
 -   client and server version checking
 
 -   review all `.unwrap()`s

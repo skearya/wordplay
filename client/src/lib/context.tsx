@@ -1,4 +1,4 @@
-import type { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/stores';
+import type { ConnectionData, State, LobbyData, WordBombData, AnagramsData } from './types/context';
 import { ParentComponent, createContext, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
@@ -9,7 +9,6 @@ function makeContext(room = '') {
 		room,
 		uuid: '',
 		settings: { game: 'WordBomb', public: false },
-		username: prompt('username', 'username')!,
 		roomOwner: '',
 		clients: [],
 		chatMessages: []

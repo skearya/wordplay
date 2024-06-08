@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js';
 import type { ClientMessage, ServerMessage } from '../lib/types/messages';
-import { Switch, Match, onCleanup, batch, useContext, createSignal, Show } from 'solid-js';
+import { Switch, Match, onCleanup, batch, useContext, createSignal, Show, onMount } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
 import { Context } from '../lib/context';
@@ -12,7 +12,63 @@ import { Lobby } from '../lib/game/Lobby';
 import { createWordBomb } from '../lib/game/WordBomb';
 import { createAnagrams } from '../lib/game/Anagrams';
 
-const Game: Component = () => {
+const JoinGame: Component = () => {
+	let usernameInputRef!: HTMLInputElement;
+
+	const [username, setUsername] = createSignal(localStorage.getItem('username') ?? '');
+	const [ready, setReady] = createSignal(false);
+	const canJoin = () => username().length <= 20 && username() !== '';
+
+	function join() {
+		localStorage.setItem('username', username());
+		setReady(true);
+	}
+
+	onMount(() => {
+		usernameInputRef.focus();
+	});
+
+	return (
+		<>
+			<Nav />
+			<Show
+				when={ready()}
+				fallback={
+					<section class="flex min-h-screen flex-col items-center justify-center gap-3">
+						<h1>choose a username</h1>
+						<div class="flex gap-3">
+							<input
+								ref={usernameInputRef}
+								type="text"
+								class="rounded-md border bg-background px-3 py-2 text-sm"
+								maxlength="20"
+								placeholder="name"
+								value={username()}
+								onInput={(event) => setUsername(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key === 'Enter' && canJoin()) {
+										join();
+									}
+								}}
+							/>
+							<button
+								class="rounded-md border bg-secondary px-3 transition-opacity disabled:opacity-50"
+								disabled={!canJoin()}
+								onClick={join}
+							>
+								join
+							</button>
+						</div>
+					</section>
+				}
+			>
+				<Game username={username()} />
+			</Show>
+		</>
+	);
+};
+
+const Game: Component<{ username: string }> = (props) => {
 	const context = useContext(Context);
 	if (!context) throw new Error('Not called inside context provider?');
 	const { connection, state } = context[0];
@@ -25,7 +81,7 @@ const Game: Component = () => {
 	];
 
 	const params = new URLSearchParams({
-		username: connection.username,
+		username: props.username,
 		...(rejoinToken && { rejoin_token: rejoinToken })
 	});
 
@@ -91,12 +147,14 @@ const Game: Component = () => {
 				setConnection('settings', settings);
 			})
 			.with({ type: P.union('ChatMessage', 'Error') }, (message) => {
-				const author =
-					message.type === 'Error'
-						? `server`
-						: `${connection.clients.find((client) => client.uuid === message.author)!.username}`;
-
-				setConnection('chatMessages', connection.chatMessages.length, [author, message.content]);
+				if (message.type === 'Error') {
+					setConnection('chatMessages', connection.chatMessages.length, message.content);
+				} else {
+					setConnection('chatMessages', connection.chatMessages.length, [
+						connection.clients.find((client) => client.uuid === message.author)!.username,
+						message.content
+					]);
+				}
 			})
 			.with({ type: 'ConnectionUpdate' }, (message) => {
 				const messageContent =
@@ -104,7 +162,7 @@ const Game: Component = () => {
 						? `${message.state.username} has joined`
 						: `${connection.clients.find((client) => client.uuid === message.uuid)!.username} has left`;
 
-				setConnection('chatMessages', connection.chatMessages.length, ['server', messageContent]);
+				setConnection('chatMessages', connection.chatMessages.length, messageContent);
 
 				if (message.state.type === 'Connected' || message.state.type === 'Reconnected') {
 					const newClient = {
@@ -260,13 +318,12 @@ const Game: Component = () => {
 
 	return (
 		<>
-			<Nav />
 			<Switch>
 				<Match when={state() === 'Connecting'}>
 					<Connecting />
 				</Match>
 				<Match when={state() === 'Error'}>
-					<Errored errorMessage={connectionError} />
+					<Errored errorMessage={connectionError()} />
 				</Match>
 				<Match when={state() === 'Lobby'}>
 					<Lobby sender={sender} />
@@ -285,4 +342,4 @@ const Game: Component = () => {
 	);
 };
 
-export default Game;
+export default JoinGame;

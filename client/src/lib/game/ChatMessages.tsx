@@ -33,15 +33,19 @@ export const ChatMessages: Component<{ sender: (message: ClientMessage) => void 
 				class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
 			>
 				<For each={connection.chatMessages}>
-					{([author, content]) => (
-						<li
-							classList={{
-								'text-text-500': author === 'server'
-							}}
-						>
-							{author}: {content}
-						</li>
-					)}
+					{(message) => {
+						if (Array.isArray(message)) {
+							const [author, content] = message;
+
+							return (
+								<li>
+									{author}: {content}
+								</li>
+							);
+						} else {
+							return <li class="text-text-500">server: {message}</li>;
+						}
+					}}
 				</For>
 			</ul>
 			<input

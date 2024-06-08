@@ -1,5 +1,4 @@
 import type { ClientMessage, PostGameInfo } from '../types/messages';
-import type { ConnectionData } from '../types/stores';
 import { useContext, type Component, For, createSignal, createEffect, Show } from 'solid-js';
 import { Context } from '../context';
 
