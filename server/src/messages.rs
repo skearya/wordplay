@@ -2,7 +2,6 @@ use crate::state::{
     games::{anagrams, word_bomb},
     room::RoomSettings,
 };
-
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

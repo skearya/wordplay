@@ -1,13 +1,12 @@
-use super::{
-    games::{anagrams::Anagrams, word_bomb::WordBomb},
-    lobby::{check_for_countdown_update, Lobby},
-    AppState, SenderInfo,
-};
 use crate::{
     messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
-    Params,
+    routes::game::Params,
+    state::{
+        games::{anagrams::Anagrams, word_bomb::WordBomb},
+        lobby::{check_for_countdown_update, Lobby},
+        AppState, SenderInfo,
+    },
 };
-
 use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};

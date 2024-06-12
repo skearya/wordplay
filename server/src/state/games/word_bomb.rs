@@ -4,7 +4,6 @@ use crate::{
     state::{lobby::end_game, room::ClientUtils, AppState, Room, SenderInfo},
     utils::Sorted,
 };
-
 use anyhow::{anyhow, Context, Result};
 use rand::{thread_rng, Rng};
 use serde::Serialize;

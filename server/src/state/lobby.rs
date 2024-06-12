@@ -1,16 +1,15 @@
-use super::{
-    games::{
-        anagrams::{self, Anagrams},
-        word_bomb::{self, WordBomb},
-    },
-    room::{check_for_new_room_owner, Client, ClientUtils, RoomSettings, State},
-    AppState, Room, SenderInfo,
-};
 use crate::{
     global::GLOBAL,
     messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
+    state::{
+        games::{
+            anagrams::{self, Anagrams},
+            word_bomb::{self, WordBomb},
+        },
+        room::{check_for_new_room_owner, Client, ClientUtils, RoomSettings, State},
+        AppState, Room, SenderInfo,
+    },
 };
-
 use anyhow::{Context, Result};
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};

@@ -1,9 +1,3 @@
-use anyhow::{anyhow, Result};
-use serde::Serialize;
-use std::{collections::HashSet, sync::Arc, time::Duration};
-use tokio::task::AbortHandle;
-use uuid::Uuid;
-
 use crate::{
     global::GLOBAL,
     messages::{self, ServerMessage},
@@ -14,6 +8,11 @@ use crate::{
     },
     utils::Sorted,
 };
+use anyhow::{anyhow, Result};
+use serde::Serialize;
+use std::{collections::HashSet, sync::Arc, time::Duration};
+use tokio::task::AbortHandle;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Anagrams {

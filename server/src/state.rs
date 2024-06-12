@@ -1,11 +1,11 @@
 pub mod games;
-mod lobby;
+pub mod lobby;
 pub mod room;
 
 use self::room::Room;
-use crate::{messages::ClientMessage, utils::filter_string, Info, RoomData};
-
+use crate::{messages::ClientMessage, utils::filter_string};
 use anyhow::{Context, Result};
+use serde::Serialize;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -20,6 +20,18 @@ pub struct AppState {
 #[derive(Debug)]
 pub struct AppStateInner {
     rooms: HashMap<String, Room>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ServerInfo {
+    pub clients_connected: usize,
+    pub public_rooms: Vec<RoomData>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct RoomData {
+    pub name: String,
+    pub players: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -37,10 +49,10 @@ impl AppState {
         }
     }
 
-    pub fn info(&self) -> Info {
+    pub fn info(&self) -> ServerInfo {
         let lock = self.inner.lock().unwrap();
 
-        Info {
+        ServerInfo {
             clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
             public_rooms: lock
                 .rooms
