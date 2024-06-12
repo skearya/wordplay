@@ -1,3 +1,4 @@
+import { useParams } from '@solidjs/router';
 import {
 	Match,
 	Show,
@@ -11,7 +12,7 @@ import {
 } from 'solid-js';
 import { produce } from 'solid-js/store';
 import { P, match } from 'ts-pattern';
-import { Context } from '../lib/context';
+import { Context, ContextProvider } from '../lib/context';
 import { createAnagrams } from '../lib/game/Anagrams';
 import { ChatMessages } from '../lib/game/ChatMessages';
 import { Connecting } from '../lib/game/Connecting';
@@ -43,35 +44,37 @@ const JoinGame: Component = () => {
 			<Show
 				when={ready()}
 				fallback={
-					<section class="flex min-h-screen flex-col items-center justify-center gap-3">
-						<h1>choose a username</h1>
-						<div class="flex gap-3">
-							<input
-								ref={usernameInputRef}
-								type="text"
-								class="rounded-md border bg-background px-3 py-2 text-sm"
-								maxlength="20"
-								placeholder="name"
-								value={username()}
-								onInput={(event) => setUsername(event.target.value)}
-								onKeyDown={(event) => {
-									if (event.key === 'Enter' && canJoin()) {
-										join();
-									}
-								}}
-							/>
-							<button
-								class="rounded-md border bg-secondary px-3 transition-opacity disabled:opacity-50"
-								disabled={!canJoin()}
-								onClick={join}
-							>
-								join
-							</button>
-						</div>
-					</section>
+					<ContextProvider room={useParams().room}>
+						<Game username={username()} />
+					</ContextProvider>
 				}
 			>
-				<Game username={username()} />
+				<section class="flex min-h-screen flex-col items-center justify-center gap-3">
+					<h1>choose a username</h1>
+					<div class="flex gap-3">
+						<input
+							ref={usernameInputRef}
+							type="text"
+							class="rounded-md border bg-background px-3 py-2 text-sm"
+							maxlength="20"
+							placeholder="name"
+							value={username()}
+							onInput={(event) => setUsername(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === 'Enter' && canJoin()) {
+									join();
+								}
+							}}
+						/>
+						<button
+							class="rounded-md border bg-secondary px-3 transition-opacity disabled:opacity-50"
+							disabled={!canJoin()}
+							onClick={join}
+						>
+							join
+						</button>
+					</div>
+				</section>
 			</Show>
 		</>
 	);
