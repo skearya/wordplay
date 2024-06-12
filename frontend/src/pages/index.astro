@@ -1,0 +1,13 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/info`);
+const data = await res.json();
+---
+
+<Layout title="Welcome to Astro.">
+  <main>
+    <h1>wordplay</h1>
+    <pre>{JSON.stringify(data, null, 2)}</pre>
+  </main>
+</Layout>

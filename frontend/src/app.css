@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --text: 110 14% 91%;
+    --text-50: 105 15% 5%;
+    --text-100: 111 14% 10%;
+    --text-200: 111 14% 20%;
+    --text-300: 111 14% 30%;
+    --text-400: 111 14% 40%;
+    --text-500: 110 14% 50%;
+    --text-600: 111 14% 60%;
+    --text-700: 111 14% 70%;
+    --text-800: 111 14% 80%;
+    --text-900: 111 14% 90%;
+    --text-950: 105 15% 95%;
+
+    --background: 120 17% 2%;
+    --background-50: 120 15% 5%;
+    --background-100: 120 18% 10%;
+    --background-200: 120 18% 20%;
+    --background-300: 120 18% 30%;
+    --background-400: 120 17% 40%;
+    --background-500: 120 17% 50%;
+    --background-600: 120 17% 60%;
+    --background-700: 120 18% 70%;
+    --background-800: 120 18% 80%;
+    --background-900: 120 18% 90%;
+    --background-950: 120 15% 95%;
+
+    --primary: 111 13% 72%;
+    --primary-50: 100 12% 5%;
+    --primary-100: 111 14% 10%;
+    --primary-200: 111 14% 20%;
+    --primary-300: 111 12% 30%;
+    --primary-400: 111 13% 40%;
+    --primary-500: 111 13% 50%;
+    --primary-600: 111 13% 60%;
+    --primary-700: 111 12% 70%;
+    --primary-800: 111 14% 80%;
+    --primary-900: 111 14% 90%;
+    --primary-950: 120 12% 95%;
+
+    --secondary: 145 13% 32%;
+    --secondary-50: 140 12% 5%;
+    --secondary-100: 146 14% 10%;
+    --secondary-200: 146 14% 20%;
+    --secondary-300: 145 12% 30%;
+    --secondary-400: 145 13% 40%;
+    --secondary-500: 145 13% 50%;
+    --secondary-600: 145 13% 60%;
+    --secondary-700: 145 12% 70%;
+    --secondary-800: 146 14% 80%;
+    --secondary-900: 146 14% 90%;
+    --secondary-950: 140 12% 95%;
+
+    --accent: 149 13% 60%;
+    --accent-50: 160 12% 5%;
+    --accent-100: 146 14% 10%;
+    --accent-200: 150 14% 20%;
+    --accent-300: 148 12% 30%;
+    --accent-400: 150 13% 40%;
+    --accent-500: 149 13% 50%;
+    --accent-600: 150 13% 60%;
+    --accent-700: 148 12% 70%;
+    --accent-800: 150 14% 80%;
+    --accent-900: 146 14% 90%;
+    --accent-950: 140 12% 95%;
+  }
+
+  html {
+    @apply bg-background text-text;
+  }
+
+  * {
+    @apply border-white/10;
+  }
+
+  .text-outline {
+    text-shadow:
+      -1px -1px 0 #475d50,
+      0 -1px 0 #475d50,
+      1px -1px 0 #475d50,
+      1px 0 0 #475d50,
+      1px 1px 0 #475d50,
+      0 1px 0 #475d50,
+      -1px 1px 0 #475d50,
+      -1px 0 0 #475d50;
+  }
+}

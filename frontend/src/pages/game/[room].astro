@@ -1,0 +1,10 @@
+---
+import Game from "~/components/game/Game";
+import Layout from "~/layouts/Layout.astro";
+
+const { room } = Astro.params;
+---
+
+<Layout title="wordplay">
+  <Game client:load room={room!} />
+</Layout>
