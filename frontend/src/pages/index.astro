@@ -1,13 +1,26 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
+type Info = {
+  clients_connected: number;
+  public_rooms: Array<{ name: string; players: number }>;
+};
+
 const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/info`);
-const data = await res.json();
+const { clients_connected, public_rooms } = (await res.json()) as Info;
 ---
 
-<Layout title="Welcome to Astro.">
+<Layout title="wordplay">
   <main>
     <h1>wordplay</h1>
-    <pre>{JSON.stringify(data, null, 2)}</pre>
+    <h1>{clients_connected} people playing</h1>
+    {
+      public_rooms.map((room) => (
+        <a href={`/game/${room.name}`}>
+          <h1>{room.name}</h1>
+          <h1>{room.players} players</h1>
+        </a>
+      ))
+    }
   </main>
 </Layout>
