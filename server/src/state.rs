@@ -3,9 +3,10 @@ pub mod lobby;
 pub mod room;
 
 use self::room::Room;
-use crate::{messages::ClientMessage, utils::filter_string};
+use crate::{messages::ClientMessage, utils::filter_str};
 use anyhow::{Context, Result};
 use serde::Serialize;
+use sqlx::SqlitePool;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -14,6 +15,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
+    pub db: SqlitePool,
     inner: Arc<Mutex<AppStateInner>>,
 }
 
@@ -41,8 +43,9 @@ pub struct SenderInfo<'a> {
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(db: SqlitePool) -> Self {
         Self {
+            db,
             inner: Arc::new(Mutex::new(AppStateInner {
                 rooms: HashMap::new(),
             })),
@@ -75,11 +78,9 @@ impl AppState {
             ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
             ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
             ClientMessage::WordBombGuess { word } => {
-                self.word_bomb_guess(sender, &filter_string(word))
+                self.word_bomb_guess(sender, filter_str(&word))
             }
-            ClientMessage::AnagramsGuess { word } => {
-                self.anagrams_guess(sender, &filter_string(word))
-            }
+            ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, filter_str(&word)),
         };
 
         if let Err(e) = result {

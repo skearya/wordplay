@@ -1,12 +1,12 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import Layout from "~/layouts/Layout.astro";
 
 type Info = {
   clients_connected: number;
   public_rooms: Array<{ name: string; players: number }>;
 };
 
-const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/info`);
+const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/api/info`);
 const { clients_connected, public_rooms } = (await res.json()) as Info;
 ---
 

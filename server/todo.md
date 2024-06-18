@@ -1,5 +1,11 @@
 # current todo:
 
+-   stop using anyhow
+
+-   actual auth error messages
+
+-   delete expired sessions on app start
+
 -   client and server version checking
 
 -   review all `.unwrap()`s

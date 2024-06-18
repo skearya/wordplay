@@ -1,12 +1,8 @@
 use crate::{
     global::GLOBAL,
     messages::{self, ServerMessage},
-    state::{
-        lobby::end_game,
-        room::{ClientUtils, Room},
-        AppState, SenderInfo,
-    },
-    utils::Sorted,
+    state::{lobby::end_game, room::Room, AppState, SenderInfo},
+    utils::{ClientUtils, Sorted},
 };
 use anyhow::{anyhow, Result};
 use serde::Serialize;
@@ -102,36 +98,29 @@ impl Player {
 }
 
 impl AppState {
-    pub fn anagrams_guess(&self, SenderInfo { uuid, room }: SenderInfo, guess: &str) -> Result<()> {
+    pub fn anagrams_guess(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        guess: String,
+    ) -> Result<()> {
         if guess.len() > 6 {
-            return Err(anyhow!("guess too long!"));
+            return Err(anyhow!("guess too long"));
         }
 
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_anagrams()?;
 
-        if game
-            .players
-            .iter_mut()
-            .find(|player| uuid == player.uuid)
-            .is_none()
-        {
-            return Err(anyhow!("Not a player"));
+        if !game.players.iter().any(|player| uuid == player.uuid) {
+            return Err(anyhow!("not a player"));
         }
 
-        match game.check_guess(uuid, guess) {
+        match game.check_guess(uuid, &guess) {
             GuessInfo::Valid => {
-                clients.broadcast(ServerMessage::AnagramsCorrectGuess {
-                    uuid,
-                    guess: guess.to_string(),
-                });
+                clients.broadcast(ServerMessage::AnagramsCorrectGuess { uuid, guess });
             }
             guess_info => {
-                clients[&uuid]
-                    .tx
-                    .send(ServerMessage::AnagramsInvalidGuess { reason: guess_info }.into())
-                    .ok();
+                clients[&uuid].send(ServerMessage::AnagramsInvalidGuess { reason: guess_info });
             }
         }
 

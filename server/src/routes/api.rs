@@ -1,6 +1,10 @@
 use crate::state::{AppState, ServerInfo};
-use axum::{extract::State, Json};
+use axum::{extract::State, routing::get, Json, Router};
 
-pub async fn info(State(state): State<AppState>) -> Json<ServerInfo> {
+pub fn make_router() -> Router<AppState> {
+    Router::new().route("/info", get(info))
+}
+
+async fn info(State(state): State<AppState>) -> Json<ServerInfo> {
     Json(state.info())
 }

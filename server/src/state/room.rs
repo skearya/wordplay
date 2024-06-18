@@ -6,6 +6,7 @@ use crate::{
         lobby::{check_for_countdown_update, Lobby},
         AppState, SenderInfo,
     },
+    utils::ClientUtils,
 };
 use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
@@ -46,6 +47,16 @@ pub struct Client {
     pub rejoin_token: Option<Uuid>,
 }
 
+impl Client {
+    pub fn send(&self, message: ServerMessage) {
+        self.tx.send(message.into()).ok();
+    }
+
+    pub fn close(&self, close_frame: Option<CloseFrame<'static>>) {
+        self.tx.send(Message::Close(close_frame)).ok();
+    }
+}
+
 #[derive(Debug)]
 pub enum State {
     Lobby(Lobby),
@@ -63,21 +74,21 @@ impl State {
     pub fn try_lobby(&mut self) -> Result<&mut Lobby> {
         match self {
             State::Lobby(lobby) => Ok(lobby),
-            _ => Err(anyhow!("Not in lobby")),
+            _ => Err(anyhow!("not in lobby")),
         }
     }
 
     pub fn try_word_bomb(&mut self) -> Result<&mut WordBomb> {
         match self {
             State::WordBomb(game) => Ok(game),
-            _ => Err(anyhow!("Not in word bomb")),
+            _ => Err(anyhow!("not in word bomb")),
         }
     }
 
     pub fn try_anagrams(&mut self) -> Result<&mut Anagrams> {
         match self {
             State::Anagrams(game) => Ok(game),
-            _ => Err(anyhow!("Not in anagrams")),
+            _ => Err(anyhow!("not in anagrams")),
         }
     }
 }
@@ -108,18 +119,15 @@ impl AppState {
 
         let uuid = if let Some((prev_uuid, client)) = prev_client {
             if client.socket.is_some() {
-                client
-                    .tx
-                    .send(Message::Close(Some(CloseFrame {
-                        code: close_code::ABNORMAL,
-                        reason: Cow::from("Connected on another client?"),
-                    })))
-                    .ok();
+                client.close(Some(CloseFrame {
+                    code: close_code::ABNORMAL,
+                    reason: Cow::from("connected on another client?"),
+                }));
             }
 
             client.socket = Some(socket_uuid);
             client.tx = tx;
-            client.username = params.username.clone();
+            client.username.clone_from(&params.username);
 
             let uuid = *prev_uuid;
 
@@ -158,28 +166,22 @@ impl AppState {
             uuid
         };
 
-        clients[&uuid]
-            .tx
-            .send(
-                ServerMessage::Info {
-                    uuid,
-                    room: RoomInfo {
-                        owner: *owner,
-                        settings: settings.clone(),
-                        clients: clients
-                            .iter()
-                            .map(|(uuid, client)| ClientInfo {
-                                uuid: *uuid,
-                                username: client.username.clone(),
-                                disconnected: client.socket.is_none(),
-                            })
-                            .collect(),
-                        state: room_state_info(state, uuid),
-                    },
-                }
-                .into(),
-            )
-            .ok();
+        clients[&uuid].send(ServerMessage::Info {
+            uuid,
+            room: RoomInfo {
+                owner: *owner,
+                settings: settings.clone(),
+                clients: clients
+                    .iter()
+                    .map(|(uuid, client)| ClientInfo {
+                        uuid: *uuid,
+                        username: client.username.clone(),
+                        disconnected: client.socket.is_none(),
+                    })
+                    .collect(),
+                state: room_state_info(state, uuid),
+            },
+        });
 
         uuid
     }
@@ -204,7 +206,7 @@ impl AppState {
                     .socket
                     .is_some_and(|client_socket| client_socket == socket_uuid)
             })
-            .context("Couldn't remove client")?;
+            .context("couldn't remove client")?;
 
         client.socket = None;
 
@@ -212,7 +214,7 @@ impl AppState {
             match state {
                 State::WordBomb(game) => game.timer.task.abort(),
                 State::Anagrams(game) => game.timer.abort(),
-                _ => {}
+                State::Lobby(_) => {}
             }
 
             lock.rooms.remove(room);
@@ -259,7 +261,7 @@ impl AppState {
         content: String,
     ) -> Result<()> {
         if content.len() > 250 {
-            return Err(anyhow!("message too long!"));
+            return Err(anyhow!("message too long"));
         }
 
         let lock = self.inner.lock().unwrap();
@@ -281,15 +283,9 @@ impl AppState {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
-        clients[&uuid]
-            .tx
-            .send(
-                ServerMessage::Error {
-                    content: format!("server error: {message}"),
-                }
-                .into(),
-            )
-            .ok();
+        clients[&uuid].send(ServerMessage::Error {
+            content: format!("server error: {message}"),
+        });
 
         Ok(())
     }
@@ -327,31 +323,5 @@ pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uui
     } else {
         *owner = *clients.keys().choose(&mut thread_rng()).unwrap();
         Some(*owner)
-    }
-}
-
-pub trait ClientUtils {
-    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)>;
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
-    fn broadcast(&self, message: ServerMessage);
-}
-
-impl ClientUtils for HashMap<Uuid, Client> {
-    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
-        self.iter().filter(|client| client.1.socket.is_some())
-    }
-
-    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
-        for (uuid, client) in self.connected() {
-            client.tx.send(f(uuid, client).into()).ok();
-        }
-    }
-
-    fn broadcast(&self, message: ServerMessage) {
-        let serialized: Message = message.into();
-
-        for (_uuid, client) in self.connected() {
-            client.tx.send(serialized.clone()).ok();
-        }
     }
 }

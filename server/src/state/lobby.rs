@@ -6,9 +6,10 @@ use crate::{
             anagrams::{self, Anagrams},
             word_bomb::{self, WordBomb},
         },
-        room::{check_for_new_room_owner, Client, ClientUtils, RoomSettings, State},
+        room::{check_for_new_room_owner, Client, RoomSettings, State},
         AppState, Room, SenderInfo,
     },
+    utils::ClientUtils,
 };
 use anyhow::{Context, Result};
 use rand::prelude::SliceRandom;

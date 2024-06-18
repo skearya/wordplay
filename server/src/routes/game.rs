@@ -1,5 +1,8 @@
-use crate::messages::ClientMessage;
-use crate::state::{AppState, SenderInfo};
+use crate::{
+    db,
+    messages::ClientMessage,
+    state::{AppState, SenderInfo},
+};
 use axum::{
     extract::{
         ws::{close_code, CloseFrame, Message, WebSocket},
@@ -7,7 +10,7 @@ use axum::{
     },
     response::Response,
 };
-use axum_extra::TypedHeader;
+use axum_extra::extract::CookieJar;
 use futures::{stream::StreamExt, SinkExt, TryFutureExt};
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -22,16 +25,19 @@ pub struct Params {
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
+    jar: CookieJar,
+    State(state): State<AppState>,
     Path(room): Path<String>,
     Query(params): Query<Params>,
-    State(state): State<AppState>,
-    user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> Response {
-    let user_agent = user_agent.map_or("unknown user agent".into(), |header| header.to_string());
+    let user = match jar.get("session") {
+        Some(id) => db::get_user_from_session(&state.db, id.value()).await.ok(),
+        None => None,
+    };
 
     println!(
-        "`{user_agent}` connected at {room}, {} total connections",
-        state.info().clients_connected + 1
+        "'{}' trying to connect to '{room}' | user: {user:?}",
+        params.username,
     );
 
     ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
@@ -42,7 +48,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, par
         socket
             .send(Message::Close(Some(CloseFrame {
                 code: close_code::ABNORMAL,
-                reason: Cow::from("Username too long (max 20 characters)"),
+                reason: Cow::from("username too long (max 20 characters)"),
             })))
             .await
             .ok();
