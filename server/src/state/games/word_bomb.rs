@@ -2,7 +2,7 @@ use crate::{
     global::GLOBAL,
     messages::{self, ServerMessage},
     state::{
-        error::{GameError, WordBombError},
+        error::{GameError, Result, WordBombError},
         lobby::end_game,
         AppState, Room, SenderInfo,
     },
@@ -120,7 +120,7 @@ impl WordBomb {
         Ok(guess_info)
     }
 
-    pub fn player_timed_out(&mut self) -> Result<(), GameError> {
+    pub fn player_timed_out(&mut self) -> Result<()> {
         self.timer.length = thread_rng().gen_range(10.0..=30.0);
 
         self.missed_prompts.push(self.prompt.clone());
@@ -161,7 +161,7 @@ impl WordBomb {
         };
     }
 
-    fn update_turn(&mut self) -> Result<(), GameError> {
+    fn update_turn(&mut self) -> Result<()> {
         if self.alive_players().len() <= 1 {
             return Err(WordBombError::NoPlayersAlive)?;
         }
@@ -203,7 +203,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         new_input: String,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         if new_input.len() > 35 {
             return Err(WordBombError::InputTooLong)?;
         }
@@ -232,7 +232,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         guess: String,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         if guess.len() > 35 {
             return Err(WordBombError::GuessTooLong)?;
         }
@@ -271,7 +271,7 @@ impl AppState {
         room: String,
         timer_len: f32,
         original_prompt: String,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         tokio::time::sleep(Duration::from_secs_f32(timer_len)).await;
 
         let mut lock = self.inner.lock().unwrap();

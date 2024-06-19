@@ -16,7 +16,6 @@ use axum_extra::extract::CookieJar;
 use cookie::{Cookie, SameSite};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
-use serde_json::Value;
 use std::time::{Duration, SystemTime};
 
 pub fn make_router(state: AppState) -> Router<AppState> {
@@ -69,14 +68,26 @@ pub struct DiscordCallbackParams {
     state: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct DiscordTokenRes {
+    access_token: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DiscordUserInfoRes {
+    avatar: String,
+    id: String,
+    username: String,
+}
+
 async fn discord_callback(
     jar: CookieJar,
     State(state): State<AppState>,
     Query(params): Query<DiscordCallbackParams>,
 ) -> Result<Response, AppError> {
-    let stored_state = jar.get("state");
+    let stored_state = jar.get("state").map(Cookie::value);
 
-    if !stored_state.is_some_and(|stored| stored.value() == params.state) {
+    if !stored_state.is_some_and(|stored| stored == params.state) {
         return Err(anyhow!("bad request"))?;
     }
 
@@ -99,35 +110,33 @@ async fn discord_callback(
         ),
     ];
 
-    let res: Value = client
+    let DiscordTokenRes { access_token } = client
         .post("https://discord.com/api/oauth2/token")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .form(&form)
         .send()
         .await?
-        .json()
+        .json::<DiscordTokenRes>()
         .await?;
 
-    let access_token = res["access_token"]
-        .as_str()
-        .context("failed to authenticate")?;
-
-    let res: Value = client
+    let DiscordUserInfoRes {
+        avatar,
+        id,
+        username,
+    } = client
         .get("https://discord.com/api/users/@me")
         .header(AUTHORIZATION, format!("Bearer {access_token}"))
         .send()
         .await?
-        .json()
+        .json::<DiscordUserInfoRes>()
         .await?;
 
-    let discord_id = res["id"].as_str().context("something went wrong")?;
-
-    if db::get_user(&state.db, discord_id).await.is_ok() {
+    if db::get_user(&state.db, &id).await.is_ok() {
         let session_id = random_string(24);
         let expires =
             (SystemTime::now() + Duration::from_secs(60 * 60 * 24 * 60)).to_unix_timestamp();
 
-        db::insert_session(&state.db, &session_id, expires, discord_id).await?;
+        db::insert_session(&state.db, &session_id, expires, &id).await?;
 
         Ok(jar
             .add(
@@ -139,20 +148,10 @@ async fn discord_callback(
             )
             .into_response())
     } else {
-        let username = res["username"].as_str().context("something went wrong")?;
-        let avatar_hash = res["avatar"].as_str().context("something went wrong")?;
-
         let signup_session_id = random_string(24);
         let expires = (SystemTime::now() + Duration::from_secs(60 * 60)).to_unix_timestamp();
 
-        db::insert_signup_session(
-            &state.db,
-            &signup_session_id,
-            expires,
-            discord_id,
-            avatar_hash,
-        )
-        .await?;
+        db::insert_signup_session(&state.db, &signup_session_id, expires, &id, &avatar).await?;
 
         Ok((
             jar.add(

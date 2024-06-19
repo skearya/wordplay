@@ -2,7 +2,7 @@ use crate::{
     messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
     routes::game::Params,
     state::{
-        error::{GameError, RoomError},
+        error::{GameError, Result, RoomError},
         games::{anagrams::Anagrams, word_bomb::WordBomb},
         lobby::{check_for_countdown_update, Lobby},
         AppState, SenderInfo,
@@ -190,7 +190,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         socket_id: Uuid,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -258,7 +258,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         content: String,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         if content.len() > 250 {
             return Err(RoomError::ChatMessageTooLong)?;
         }
@@ -278,7 +278,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         message: &str,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 

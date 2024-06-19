@@ -2,7 +2,7 @@ use crate::{
     global::GLOBAL,
     messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
     state::{
-        error::GameError,
+        error::Result,
         games::{
             anagrams::{self, Anagrams},
             word_bomb::{self, WordBomb},
@@ -94,7 +94,7 @@ impl Lobby {
 }
 
 impl AppState {
-    pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<(), GameError> {
+    pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -112,10 +112,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_start_early(
-        &self,
-        SenderInfo { uuid, room }: SenderInfo,
-    ) -> Result<(), GameError> {
+    pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -136,7 +133,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<(), GameError> {
+    pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -154,7 +151,7 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn start_when_ready(&self, room: String) -> Result<(), GameError> {
+    pub async fn start_when_ready(&self, room: String) -> Result<()> {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
@@ -191,7 +188,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -244,7 +241,7 @@ fn start_game(
     state: &mut State,
     clients: &mut HashMap<Uuid, Client>,
     settings: &RoomSettings,
-) -> Result<(), GameError> {
+) -> Result<()> {
     let lobby = state.try_lobby()?;
 
     for uuid in &lobby.ready {

@@ -2,7 +2,7 @@ use crate::{
     global::GLOBAL,
     messages::{self, ServerMessage},
     state::{
-        error::{AnagramsError, GameError},
+        error::{AnagramsError, GameError, Result},
         lobby::end_game,
         room::Room,
         AppState, SenderInfo,
@@ -105,7 +105,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         guess: String,
-    ) -> Result<(), GameError> {
+    ) -> Result<()> {
         if guess.len() > 6 {
             return Err(AnagramsError::GuessTooLong)?;
         }
@@ -118,14 +118,16 @@ impl AppState {
             Ok(GuessInfo::Valid) => {
                 clients.broadcast(ServerMessage::AnagramsCorrectGuess { uuid, guess });
             }
-            Ok(reason) => clients[&uuid].send(ServerMessage::AnagramsInvalidGuess { reason }),
+            Ok(reason) => {
+                clients[&uuid].send(ServerMessage::AnagramsInvalidGuess { reason });
+            }
             Err(error) => return Err(error),
         }
 
         Ok(())
     }
 
-    pub async fn anagrams_timer(&self, room: String) -> Result<(), GameError> {
+    pub async fn anagrams_timer(&self, room: String) -> Result<()> {
         tokio::time::sleep(Duration::from_secs(30)).await;
 
         let mut lock = self.inner.lock().unwrap();

@@ -64,9 +64,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, par
     let sending_task = tokio::spawn(async move {
         while let Some(msg) = inbox.recv().await {
             sender
-                .send(msg.clone())
+                .send(msg)
                 .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {e}, msg: {msg:#?}");
+                    eprintln!("ws send error for {}: {e}", info.uuid);
                 })
                 .await;
         }

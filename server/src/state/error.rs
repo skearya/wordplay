@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+pub type Result<T, E = GameError> = core::result::Result<T, E>;
+
 #[derive(Error, Debug)]
 pub enum GameError {
     #[error("room `{room}` not found")]
