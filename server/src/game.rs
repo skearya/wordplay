@@ -1,10 +1,12 @@
 pub mod error;
 pub mod games;
 pub mod lobby;
+pub mod messages;
 pub mod room;
 
-use crate::{messages::ClientMessage, utils::filter_str};
+use crate::{utils::filter_str, AppState};
 use error::GameError;
+use messages::ClientMessage;
 use room::Room;
 use serde::Serialize;
 use sqlx::SqlitePool;
@@ -14,14 +16,8 @@ use std::{
 };
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
-pub struct AppState {
-    pub db: SqlitePool,
-    inner: Arc<Mutex<AppStateInner>>,
-}
-
 #[derive(Debug)]
-pub struct AppStateInner {
+pub struct GameState {
     rooms: HashMap<String, Room>,
 }
 
@@ -30,6 +26,7 @@ pub struct SenderInfo<'a> {
     pub uuid: Uuid,
     pub room: &'a str,
 }
+
 #[derive(Serialize, Debug)]
 pub struct ServerInfo {
     pub clients_connected: usize,
@@ -46,14 +43,14 @@ impl AppState {
     pub fn new(db: SqlitePool) -> Self {
         Self {
             db,
-            inner: Arc::new(Mutex::new(AppStateInner {
+            game: Arc::new(Mutex::new(GameState {
                 rooms: HashMap::new(),
             })),
         }
     }
 
     pub fn info(&self) -> ServerInfo {
-        let lock = self.inner.lock().unwrap();
+        let lock = self.game.lock().unwrap();
 
         ServerInfo {
             clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
@@ -90,7 +87,7 @@ impl AppState {
     }
 }
 
-impl AppStateInner {
+impl GameState {
     pub fn room(&self, room: &str) -> Result<&Room, GameError> {
         self.rooms.get(room).ok_or(GameError::RoomNotFound {
             room: room.to_string(),

@@ -1,7 +1,7 @@
 use crate::{
     db,
-    messages::ClientMessage,
-    state::{AppState, SenderInfo},
+    game::{messages::ClientMessage, SenderInfo},
+    AppState,
 };
 use axum::{
     extract::{

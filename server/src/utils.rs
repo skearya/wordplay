@@ -1,4 +1,4 @@
-use crate::{messages::ServerMessage, state::room::Client};
+use crate::game::{messages::ServerMessage, room::Client};
 use axum::{
     extract::ws::Message,
     http::StatusCode,

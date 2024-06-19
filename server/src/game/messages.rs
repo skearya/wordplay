@@ -1,4 +1,4 @@
-use crate::state::{
+use crate::game::{
     games::{anagrams, word_bomb},
     room::RoomSettings,
 };

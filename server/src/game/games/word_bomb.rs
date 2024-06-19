@@ -1,12 +1,13 @@
 use crate::{
-    global::GLOBAL,
-    messages::{self, ServerMessage},
-    state::{
+    game::{
         error::{GameError, Result, WordBombError},
         lobby::end_game,
-        AppState, Room, SenderInfo,
+        messages::{self, ServerMessage},
+        Room, SenderInfo,
     },
+    global::GLOBAL,
     utils::{ClientUtils, Sorted},
+    AppState,
 };
 use rand::{thread_rng, Rng};
 use serde::Serialize;
@@ -208,7 +209,7 @@ impl AppState {
             return Err(WordBombError::InputTooLong)?;
         }
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;
 
@@ -237,7 +238,7 @@ impl AppState {
             return Err(WordBombError::GuessTooLong)?;
         }
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_word_bomb()?;
 
@@ -274,7 +275,7 @@ impl AppState {
     ) -> Result<()> {
         tokio::time::sleep(Duration::from_secs_f32(timer_len)).await;
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,
@@ -315,7 +316,6 @@ fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
             app_state
                 .word_bomb_timer(room, timer_len, current_prompt)
                 .await
-                .ok();
         })
         .abort_handle(),
     );

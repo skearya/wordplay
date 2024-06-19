@@ -1,13 +1,14 @@
 use crate::{
-    global::GLOBAL,
-    messages::{self, ServerMessage},
-    state::{
+    game::{
         error::{AnagramsError, GameError, Result},
         lobby::end_game,
+        messages::{self, ServerMessage},
         room::Room,
-        AppState, SenderInfo,
+        SenderInfo,
     },
+    global::GLOBAL,
     utils::{ClientUtils, Sorted},
+    AppState,
 };
 use serde::Serialize;
 use std::{collections::HashSet, sync::Arc, time::Duration};
@@ -110,7 +111,7 @@ impl AppState {
             return Err(AnagramsError::GuessTooLong)?;
         }
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_anagrams()?;
 
@@ -130,7 +131,7 @@ impl AppState {
     pub async fn anagrams_timer(&self, room: String) -> Result<()> {
         tokio::time::sleep(Duration::from_secs(30)).await;
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,

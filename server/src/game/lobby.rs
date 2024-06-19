@@ -1,16 +1,17 @@
 use crate::{
-    global::GLOBAL,
-    messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
-    state::{
+    game::{
         error::Result,
         games::{
             anagrams::{self, Anagrams},
             word_bomb::{self, WordBomb},
         },
+        messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
         room::{check_for_new_room_owner, Client, RoomSettings, State},
-        AppState, Room, SenderInfo,
+        Room, SenderInfo,
     },
+    global::GLOBAL,
     utils::ClientUtils,
+    AppState,
 };
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
@@ -72,10 +73,7 @@ impl Lobby {
 
     pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
         let timer = Arc::new(
-            tokio::spawn(async move {
-                app_state.anagrams_timer(room).await.ok();
-            })
-            .abort_handle(),
+            tokio::spawn(async move { app_state.anagrams_timer(room).await }).abort_handle(),
         );
 
         let (original, anagram) = GLOBAL.get().unwrap().random_anagram();
@@ -95,7 +93,7 @@ impl Lobby {
 
 impl AppState {
     pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
         if !lobby.ready.insert(uuid) {
@@ -113,7 +111,7 @@ impl AppState {
     }
 
     pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,
@@ -134,7 +132,7 @@ impl AppState {
     }
 
     pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
         if !lobby.ready.remove(&uuid) {
@@ -155,7 +153,7 @@ impl AppState {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let mut lock = self.inner.lock().unwrap();
+            let mut lock = self.game.lock().unwrap();
             let Room {
                 clients,
                 state,
@@ -189,7 +187,7 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
     ) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,
@@ -221,10 +219,8 @@ pub fn check_for_countdown_update(
         None if lobby.ready.len() >= 2 => {
             lobby.countdown = Some(Countdown {
                 timer_handle: Arc::new(
-                    tokio::spawn(async move {
-                        app_state.start_when_ready(room).await.ok();
-                    })
-                    .abort_handle(),
+                    tokio::spawn(async move { app_state.start_when_ready(room).await })
+                        .abort_handle(),
                 ),
                 time_left: 10,
             });
@@ -253,10 +249,7 @@ fn start_game(
             *state = lobby.start_word_bomb(|prompt, timer_len| {
                 Arc::new(
                     tokio::spawn(async move {
-                        app_state
-                            .word_bomb_timer(room, timer_len, prompt)
-                            .await
-                            .ok();
+                        app_state.word_bomb_timer(room, timer_len, prompt).await
                     })
                     .abort_handle(),
                 )

@@ -1,13 +1,14 @@
 use crate::{
-    messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
-    routes::game::Params,
-    state::{
+    game::{
         error::{GameError, Result, RoomError},
         games::{anagrams::Anagrams, word_bomb::WordBomb},
         lobby::{check_for_countdown_update, Lobby},
-        AppState, SenderInfo,
+        messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
+        SenderInfo,
     },
+    routes::game::Params,
     utils::ClientUtils,
+    AppState,
 };
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
@@ -101,7 +102,7 @@ impl AppState {
         socket_uuid: Uuid,
         tx: UnboundedSender<Message>,
     ) -> Uuid {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,
@@ -191,7 +192,7 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         socket_id: Uuid,
     ) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.game.lock().unwrap();
         let Room {
             clients,
             state,
@@ -263,7 +264,7 @@ impl AppState {
             return Err(RoomError::ChatMessageTooLong)?;
         }
 
-        let lock = self.inner.lock().unwrap();
+        let lock = self.game.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
         clients.broadcast(ServerMessage::ChatMessage {
@@ -279,7 +280,7 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         message: &str,
     ) -> Result<()> {
-        let lock = self.inner.lock().unwrap();
+        let lock = self.game.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 
         clients[&uuid].send(ServerMessage::Error {
