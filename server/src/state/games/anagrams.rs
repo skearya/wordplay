@@ -1,10 +1,14 @@
 use crate::{
     global::GLOBAL,
     messages::{self, ServerMessage},
-    state::{lobby::end_game, room::Room, AppState, SenderInfo},
+    state::{
+        error::{AnagramsError, GameError},
+        lobby::end_game,
+        room::Room,
+        AppState, SenderInfo,
+    },
     utils::{ClientUtils, Sorted},
 };
-use anyhow::{anyhow, Result};
 use serde::Serialize;
 use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::task::AbortHandle;
@@ -41,35 +45,34 @@ pub struct PostGameInfo {
 }
 
 impl Anagrams {
-    pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> GuessInfo {
-        if guess.len() < 3 {
-            return GuessInfo::NotLongEnough;
-        }
-        if guess
+    pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> Result<GuessInfo, GameError> {
+        let guess_info = if guess.len() < 3 {
+            GuessInfo::NotLongEnough
+        } else if guess
             .chars()
             .any(|ch| guess.matches(ch).count() > self.anagram.matches(ch).count())
         {
-            return GuessInfo::PromptMismatch;
-        }
-        if !GLOBAL.get().unwrap().is_valid(guess) {
-            return GuessInfo::NotEnglish;
-        }
-        if self
+            GuessInfo::PromptMismatch
+        } else if !GLOBAL.get().unwrap().is_valid(guess) {
+            GuessInfo::NotEnglish
+        } else if self
             .players
             .iter()
             .any(|player| player.used_words.contains(guess))
         {
-            return GuessInfo::AlreadyUsed;
-        }
+            GuessInfo::AlreadyUsed
+        } else {
+            self.players
+                .iter_mut()
+                .find(|player| uuid == player.uuid)
+                .ok_or(AnagramsError::PlayerNotFound)?
+                .used_words
+                .insert(guess.to_string());
 
-        self.players
-            .iter_mut()
-            .find(|player| uuid == player.uuid)
-            .unwrap()
-            .used_words
-            .insert(guess.to_string());
+            GuessInfo::Valid
+        };
 
-        GuessInfo::Valid
+        Ok(guess_info)
     }
 
     pub fn leaderboard(&self) -> Vec<(Uuid, u32)> {
@@ -102,32 +105,27 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         guess: String,
-    ) -> Result<()> {
+    ) -> Result<(), GameError> {
         if guess.len() > 6 {
-            return Err(anyhow!("guess too long"));
+            return Err(AnagramsError::GuessTooLong)?;
         }
 
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let game = state.try_anagrams()?;
 
-        if !game.players.iter().any(|player| uuid == player.uuid) {
-            return Err(anyhow!("not a player"));
-        }
-
         match game.check_guess(uuid, &guess) {
-            GuessInfo::Valid => {
+            Ok(GuessInfo::Valid) => {
                 clients.broadcast(ServerMessage::AnagramsCorrectGuess { uuid, guess });
             }
-            guess_info => {
-                clients[&uuid].send(ServerMessage::AnagramsInvalidGuess { reason: guess_info });
-            }
+            Ok(reason) => clients[&uuid].send(ServerMessage::AnagramsInvalidGuess { reason }),
+            Err(error) => return Err(error),
         }
 
         Ok(())
     }
 
-    pub async fn anagrams_timer(&self, room: String) -> Result<()> {
+    pub async fn anagrams_timer(&self, room: String) -> Result<(), GameError> {
         tokio::time::sleep(Duration::from_secs(30)).await;
 
         let mut lock = self.inner.lock().unwrap();

@@ -1,10 +1,11 @@
+pub mod error;
 pub mod games;
 pub mod lobby;
 pub mod room;
 
-use self::room::Room;
 use crate::{messages::ClientMessage, utils::filter_str};
-use anyhow::{Context, Result};
+use error::GameError;
+use room::Room;
 use serde::Serialize;
 use sqlx::SqlitePool;
 use std::{
@@ -24,6 +25,11 @@ pub struct AppStateInner {
     rooms: HashMap<String, Room>,
 }
 
+#[derive(Clone, Copy)]
+pub struct SenderInfo<'a> {
+    pub uuid: Uuid,
+    pub room: &'a str,
+}
 #[derive(Serialize, Debug)]
 pub struct ServerInfo {
     pub clients_connected: usize,
@@ -34,12 +40,6 @@ pub struct ServerInfo {
 pub struct RoomData {
     pub name: String,
     pub players: usize,
-}
-
-#[derive(Clone, Copy)]
-pub struct SenderInfo<'a> {
-    pub uuid: Uuid,
-    pub room: &'a str,
 }
 
 impl AppState {
@@ -83,19 +83,23 @@ impl AppState {
             ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, filter_str(&word)),
         };
 
-        if let Err(e) = result {
-            eprintln!("error handling msg: {e}");
-            self.send_error_msg(sender, &e.to_string()).ok();
+        if let Err(error) = result {
+            eprintln!("error: {} caused {:#?}", sender.uuid, error);
+            self.send_error_msg(sender, &error.to_string()).ok();
         }
     }
 }
 
 impl AppStateInner {
-    pub fn room(&self, room: &str) -> Result<&Room> {
-        self.rooms.get(room).context("Room not found")
+    pub fn room(&self, room: &str) -> Result<&Room, GameError> {
+        self.rooms.get(room).ok_or(GameError::RoomNotFound {
+            room: room.to_string(),
+        })
     }
 
-    pub fn room_mut(&mut self, room: &str) -> Result<&mut Room> {
-        self.rooms.get_mut(room).context("Room not found")
+    pub fn room_mut(&mut self, room: &str) -> Result<&mut Room, GameError> {
+        self.rooms.get_mut(room).ok_or(GameError::RoomNotFound {
+            room: room.to_string(),
+        })
     }
 }

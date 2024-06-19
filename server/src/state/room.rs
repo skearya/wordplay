@@ -2,13 +2,13 @@ use crate::{
     messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
     routes::game::Params,
     state::{
+        error::{GameError, RoomError},
         games::{anagrams::Anagrams, word_bomb::WordBomb},
         lobby::{check_for_countdown_update, Lobby},
         AppState, SenderInfo,
     },
     utils::ClientUtils,
 };
-use anyhow::{anyhow, Context, Result};
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
 use serde::{Deserialize, Serialize};
@@ -71,24 +71,24 @@ impl Default for State {
 }
 
 impl State {
-    pub fn try_lobby(&mut self) -> Result<&mut Lobby> {
+    pub fn try_lobby(&mut self) -> Result<&mut Lobby, GameError> {
         match self {
             State::Lobby(lobby) => Ok(lobby),
-            _ => Err(anyhow!("not in lobby")),
+            _ => Err(GameError::InvalidState { state: "lobby" }),
         }
     }
 
-    pub fn try_word_bomb(&mut self) -> Result<&mut WordBomb> {
+    pub fn try_word_bomb(&mut self) -> Result<&mut WordBomb, GameError> {
         match self {
             State::WordBomb(game) => Ok(game),
-            _ => Err(anyhow!("not in word bomb")),
+            _ => Err(GameError::InvalidState { state: "word bomb" }),
         }
     }
 
-    pub fn try_anagrams(&mut self) -> Result<&mut Anagrams> {
+    pub fn try_anagrams(&mut self) -> Result<&mut Anagrams, GameError> {
         match self {
             State::Anagrams(game) => Ok(game),
-            _ => Err(anyhow!("not in anagrams")),
+            _ => Err(GameError::InvalidState { state: "anagrams" }),
         }
     }
 }
@@ -189,8 +189,8 @@ impl AppState {
     pub fn remove_client(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
-        socket_uuid: Uuid,
-    ) -> Result<()> {
+        socket_id: Uuid,
+    ) -> Result<(), GameError> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -201,12 +201,14 @@ impl AppState {
 
         let client = clients
             .get_mut(&uuid)
-            .filter(|client| {
-                client
-                    .socket
-                    .is_some_and(|client_socket| client_socket == socket_uuid)
-            })
-            .context("couldn't remove client")?;
+            .ok_or(RoomError::CouldntFindClientToRemove)?;
+
+        if !client
+            .socket
+            .is_some_and(|client_socket_id| client_socket_id == socket_id)
+        {
+            return Err(RoomError::SocketUuidMismatchWhileRemoving)?;
+        }
 
         client.socket = None;
 
@@ -221,35 +223,32 @@ impl AppState {
             return Ok(());
         }
 
-        match state {
-            State::Lobby(lobby) => {
-                clients.remove(&uuid);
+        if let State::Lobby(lobby) = state {
+            clients.remove(&uuid);
 
-                if lobby.ready.remove(&uuid) {
-                    let countdown_update =
-                        check_for_countdown_update(self.clone(), room.to_string(), lobby);
+            if lobby.ready.remove(&uuid) {
+                let countdown_update =
+                    check_for_countdown_update(self.clone(), room.to_string(), lobby);
 
-                    clients.broadcast(ServerMessage::ReadyPlayers {
-                        ready: lobby.ready.iter().copied().collect(),
-                        countdown_update,
-                    });
-                }
-
-                let new_room_owner = check_for_new_room_owner(clients, owner);
-
-                clients.broadcast(ServerMessage::ConnectionUpdate {
-                    uuid,
-                    state: ConnectionUpdate::Disconnected { new_room_owner },
+                clients.broadcast(ServerMessage::ReadyPlayers {
+                    ready: lobby.ready.iter().copied().collect(),
+                    countdown_update,
                 });
             }
-            _ => {
-                clients.broadcast(ServerMessage::ConnectionUpdate {
-                    uuid,
-                    state: ConnectionUpdate::Disconnected {
-                        new_room_owner: None,
-                    },
-                });
-            }
+
+            let new_room_owner = check_for_new_room_owner(clients, owner);
+
+            clients.broadcast(ServerMessage::ConnectionUpdate {
+                uuid,
+                state: ConnectionUpdate::Disconnected { new_room_owner },
+            });
+        } else {
+            clients.broadcast(ServerMessage::ConnectionUpdate {
+                uuid,
+                state: ConnectionUpdate::Disconnected {
+                    new_room_owner: None,
+                },
+            });
         }
 
         Ok(())
@@ -259,9 +258,9 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         content: String,
-    ) -> Result<()> {
+    ) -> Result<(), GameError> {
         if content.len() > 250 {
-            return Err(anyhow!("message too long"));
+            return Err(RoomError::ChatMessageTooLong)?;
         }
 
         let lock = self.inner.lock().unwrap();
@@ -279,7 +278,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         message: &str,
-    ) -> Result<()> {
+    ) -> Result<(), GameError> {
         let lock = self.inner.lock().unwrap();
         let Room { clients, .. } = lock.room(room)?;
 

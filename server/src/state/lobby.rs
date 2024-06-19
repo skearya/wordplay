@@ -2,6 +2,7 @@ use crate::{
     global::GLOBAL,
     messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
     state::{
+        error::GameError,
         games::{
             anagrams::{self, Anagrams},
             word_bomb::{self, WordBomb},
@@ -11,7 +12,6 @@ use crate::{
     },
     utils::ClientUtils,
 };
-use anyhow::{Context, Result};
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::{
@@ -94,7 +94,7 @@ impl Lobby {
 }
 
 impl AppState {
-    pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
+    pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<(), GameError> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -112,7 +112,10 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
+    pub fn client_start_early(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+    ) -> Result<(), GameError> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -123,7 +126,7 @@ impl AppState {
         let lobby = state.try_lobby()?;
 
         if uuid == *owner && lobby.ready.len() >= 2 {
-            if let Some(countdown) = &lobby.countdown {
+            if let Some(countdown) = lobby.countdown.as_ref() {
                 countdown.timer_handle.abort();
             }
 
@@ -133,7 +136,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
+    pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<(), GameError> {
         let mut lock = self.inner.lock().unwrap();
         let Room { clients, state, .. } = lock.room_mut(room)?;
         let lobby = state.try_lobby()?;
@@ -151,7 +154,7 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn start_when_ready(&self, room: String) -> Result<()> {
+    pub async fn start_when_ready(&self, room: String) -> Result<(), GameError> {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
@@ -163,23 +166,21 @@ impl AppState {
                 ..
             } = lock.room_mut(&room)?;
             let lobby = state.try_lobby()?;
-            let countdown = lobby
-                .countdown
-                .as_mut()
-                .context("Somehow not counting down")?;
 
-            countdown.time_left -= 1;
+            if let Some(countdown) = lobby.countdown.as_mut() {
+                countdown.time_left -= 1;
 
-            if countdown.time_left == 0 {
-                if lobby.ready.len() < 2 {
-                    return Ok(());
+                if countdown.time_left == 0 {
+                    if lobby.ready.len() < 2 {
+                        return Ok(());
+                    }
+
+                    start_game(self.clone(), room.clone(), state, clients, settings)?;
+                } else {
+                    clients.broadcast(ServerMessage::StartingCountdown {
+                        time_left: countdown.time_left,
+                    });
                 }
-
-                start_game(self.clone(), room.clone(), state, clients, settings)?;
-            } else {
-                clients.broadcast(ServerMessage::StartingCountdown {
-                    time_left: countdown.time_left,
-                });
             }
         }
 
@@ -190,7 +191,7 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
-    ) -> Result<()> {
+    ) -> Result<(), GameError> {
         let mut lock = self.inner.lock().unwrap();
         let Room {
             clients,
@@ -199,8 +200,8 @@ impl AppState {
             settings,
         } = lock.room_mut(room)?;
 
-        if state.try_lobby().is_ok() && uuid == *owner {
-            *settings = settings_update.clone();
+        if state.try_lobby().is_ok() && *owner == uuid {
+            settings.clone_from(&settings_update);
             clients.broadcast(ServerMessage::RoomSettings(settings_update));
         }
 
@@ -243,7 +244,7 @@ fn start_game(
     state: &mut State,
     clients: &mut HashMap<Uuid, Client>,
     settings: &RoomSettings,
-) -> Result<()> {
+) -> Result<(), GameError> {
     let lobby = state.try_lobby()?;
 
     for uuid in &lobby.ready {
@@ -312,5 +313,5 @@ pub fn end_game(
         info,
     });
 
-    *state = State::Lobby(Lobby::new());
+    *state = State::default();
 }

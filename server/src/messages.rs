@@ -13,7 +13,7 @@ pub enum Games {
     Anagrams,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
     Ready,
