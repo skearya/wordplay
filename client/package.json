@@ -1,0 +1,30 @@
+{
+  "name": "example-basic",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev --port 4321",
+    "build": "vinxi build",
+    "serve": "cd .output/public && vinxi serve --port 4321",
+    "version": "vinxi version"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.0.18",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.13.6",
+    "@solidjs/start": "^1.0.2",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "solid-js": "^1.8.17",
+    "tailwindcss": "^3.4.4",
+    "ts-pattern": "^5.2.0",
+    "vinxi": "^0.3.12"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.2",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "prettier-plugin-tailwindcss": "^0.6.5"
+  }
+}

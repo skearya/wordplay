@@ -11,7 +11,7 @@ import { Match, Show, Switch, batch, createSignal, onCleanup, onMount, useContex
 import { produce } from "solid-js/store";
 import { P, match } from "ts-pattern";
 
-function JoinGame(props: { room: string }) {
+export function JoinGame(props: { room: string }) {
   let usernameInputRef!: HTMLInputElement;
 
   const [username, setUsername] = createSignal("");
@@ -343,5 +343,3 @@ function Game(props: { username: string }) {
     </>
   );
 }
-
-export default JoinGame;

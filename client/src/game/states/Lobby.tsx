@@ -18,7 +18,7 @@ export function Lobby(props: { sender: Sender }) {
   });
 
   return (
-    <section class="flex min-h-screen w-full items-center justify-center gap-6">
+    <main class="flex min-h-screen w-full items-center justify-center gap-6">
       <h1 class="text-outline fixed bottom-0 right-4 skew-x-6 text-[6vw] font-semibold italic text-background">
         {status()}
       </h1>
@@ -113,7 +113,7 @@ export function Lobby(props: { sender: Sender }) {
           {JSON.stringify(lobby.postGame!, null, 2)}
         </pre>
       </Show>
-    </section>
+    </main>
   );
 }
 

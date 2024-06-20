@@ -40,7 +40,7 @@ export function createWordBomb(props: { sender: Sender }) {
   };
 
   const WordBomb = () => (
-    <section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
+    <main class="flex min-h-screen flex-col items-center justify-center gap-y-3">
       <div class="flex gap-2">
         <h1>turn</h1>
         <h1 class="text-green-300">
@@ -89,7 +89,7 @@ export function createWordBomb(props: { sender: Sender }) {
           }
         }}
       />
-    </section>
+    </main>
   );
 
   return {

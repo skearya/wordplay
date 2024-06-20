@@ -24,7 +24,7 @@ export function createAnagrams(props: { sender: Sender }) {
   };
 
   const Anagrams = () => (
-    <section class="flex min-h-screen flex-col items-center justify-center gap-y-3">
+    <main class="flex min-h-screen flex-col items-center justify-center gap-y-3">
       <h1 class="text-xl">{game.anagram}</h1>
       <input
         ref={gameInputRef}
@@ -65,7 +65,7 @@ export function createAnagrams(props: { sender: Sender }) {
       <h1 ref={errorTextRef} class="text-red-400 opacity-0">
         {guessError()}
       </h1>
-    </section>
+    </main>
   );
 
   return {
