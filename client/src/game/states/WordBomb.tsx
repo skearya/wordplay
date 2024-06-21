@@ -2,7 +2,7 @@ import { Context } from "@game/context";
 import type { Sender } from "@game/types/messages";
 import { For, Show, createEffect, useContext } from "solid-js";
 
-export function createWordBomb(props: { sender: Sender }) {
+export function WordBomb(props: { sender: Sender }) {
   const context = useContext(Context);
   if (!context) throw new Error("Not called inside context provider?");
   const { connection, wordBomb: game } = context[0];
@@ -26,10 +26,7 @@ export function createWordBomb(props: { sender: Sender }) {
     }
   });
 
-  const onWordBombGuess = (
-    uuid: string,
-    guess: { type: "correct" } | { type: "invalid"; reason: string },
-  ) => {
+  connection.events.on("wordBombGuess", ({ uuid, guess }) => {
     const element = document.getElementById(uuid);
 
     if (guess.type === "correct") {
@@ -37,9 +34,9 @@ export function createWordBomb(props: { sender: Sender }) {
     } else {
       element?.animate([{ color: "#FF0000" }, { color: "#FFF" }], 1000);
     }
-  };
+  });
 
-  const WordBomb = () => (
+  return (
     <main class="flex min-h-screen flex-col items-center justify-center gap-y-3">
       <div class="flex gap-2">
         <h1>turn</h1>
@@ -91,9 +88,4 @@ export function createWordBomb(props: { sender: Sender }) {
       />
     </main>
   );
-
-  return {
-    onWordBombGuess,
-    WordBomb,
-  };
 }

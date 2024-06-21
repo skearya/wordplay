@@ -5,6 +5,7 @@ import type {
   State,
   WordBombData,
 } from "@game/types/context";
+import { createEmitter } from "@solid-primitives/event-bus";
 import { createContext, createSignal, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
 
@@ -18,6 +19,7 @@ function makeContext(room = "") {
     roomOwner: "",
     clients: [],
     chatMessages: [],
+    events: createEmitter(),
   });
 
   const [lobby, setLobby] = createStore<LobbyData>({

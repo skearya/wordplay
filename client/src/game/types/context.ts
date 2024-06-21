@@ -7,6 +7,7 @@ import type {
   Uuid,
   WordBombPlayerData,
 } from "@game/types/messages";
+import type { Emitter } from "@solid-primitives/event-bus";
 
 export type State = "Connecting" | "Error" | "Lobby" | Games;
 
@@ -17,6 +18,13 @@ export type ConnectionData = {
   roomOwner: Uuid;
   clients: Array<ClientInfo>;
   chatMessages: Array<[string, string] | string>;
+  events: Emitter<{
+    wordBombGuess: {
+      uuid: string;
+      guess: { type: "correct" } | { type: "invalid"; reason: string };
+    };
+    anagramsGuess: { type: "correct" } | { type: "invalid"; reason: string };
+  }>;
 };
 
 export type LobbyData = {

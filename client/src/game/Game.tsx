@@ -1,11 +1,11 @@
 import { ChatMessages } from "@game/components/ChatMessages";
 import { Nav } from "@game/components/Nav";
 import { Context, ContextProvider } from "@game/context";
-import { createAnagrams } from "@game/states/Anagrams";
+import { Anagrams } from "@game/states/Anagrams";
 import { Connecting } from "@game/states/Connecting";
 import { Errored } from "@game/states/Errored";
 import { Lobby } from "@game/states/Lobby";
-import { createWordBomb } from "@game/states/WordBomb";
+import { WordBomb } from "@game/states/WordBomb";
 import type { ClientMessage, ServerMessage } from "@game/types/messages";
 import { Match, Show, Switch, batch, createSignal, onCleanup, onMount, useContext } from "solid-js";
 import { produce } from "solid-js/store";
@@ -88,9 +88,6 @@ function Game(props: { username: string }) {
   );
 
   const sender = (data: ClientMessage) => socket.send(JSON.stringify(data));
-
-  const { onWordBombGuess, WordBomb } = createWordBomb({ sender });
-  const { onAnagramsGuess, Anagrams } = createAnagrams({ sender });
 
   socket.addEventListener("message", (event) => {
     const message: ServerMessage = JSON.parse(event.data);
@@ -252,20 +249,20 @@ function Game(props: { username: string }) {
         setWordBomb("players", (player) => player.uuid === message.uuid, "input", message.input);
       })
       .with({ type: "WordBombInvalidGuess" }, (message) => {
-        onWordBombGuess(message.uuid, {
-          type: "invalid",
-          reason: message.reason.type,
+        connection.events.emit("wordBombGuess", {
+          uuid: message.uuid,
+          guess: { type: "invalid", reason: message.reason.type },
         });
       })
       .with({ type: "WordBombPrompt" }, (message) => {
         setWordBomb(
           produce((game) => {
-            onWordBombGuess(
-              game.turn,
-              message.correct_guess
+            connection.events.emit("wordBombGuess", {
+              uuid: game.turn,
+              guess: message.correct_guess
                 ? { type: "correct" }
                 : { type: "invalid", reason: "timed out" },
-            );
+            });
 
             const turn = game.players.find((player) => player.uuid === game.turn)!;
             turn.lives += message.life_change;
@@ -284,7 +281,7 @@ function Game(props: { username: string }) {
       })
       .with({ type: "AnagramsCorrectGuess" }, (message) => {
         if (message.uuid == connection.uuid) {
-          onAnagramsGuess({ type: "correct" });
+          connection.events.emit("anagramsGuess", { type: "correct" });
         }
 
         setAnagrams(
@@ -302,7 +299,7 @@ function Game(props: { username: string }) {
           .with("AlreadyUsed", () => "already used")
           .exhaustive();
 
-        onAnagramsGuess({ type: "invalid", reason });
+        connection.events.emit("anagramsGuess", { type: "invalid", reason });
       })
       .exhaustive();
   });
@@ -331,10 +328,10 @@ function Game(props: { username: string }) {
           <Lobby sender={sender} />
         </Match>
         <Match when={state() === "WordBomb"}>
-          <WordBomb />
+          <WordBomb sender={sender} />
         </Match>
         <Match when={state() === "Anagrams"}>
-          <Anagrams />
+          <Anagrams sender={sender} />
         </Match>
       </Switch>
       <Show when={state() !== "Connecting" || state() !== "Error"}>

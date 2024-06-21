@@ -2,7 +2,7 @@ import { Context } from "@game/context";
 import type { Sender } from "@game/types/messages";
 import { For, Show, createSignal, useContext } from "solid-js";
 
-export function createAnagrams(props: { sender: Sender }) {
+export function Anagrams(props: { sender: Sender }) {
   const context = useContext(Context);
   if (!context) throw new Error("Not called inside context provider?");
   const { connection, anagrams: game } = context[0];
@@ -13,7 +13,7 @@ export function createAnagrams(props: { sender: Sender }) {
   const [input, setInput] = createSignal("");
   const [guessError, setGuessError] = createSignal("");
 
-  const onAnagramsGuess = (guess: { type: "correct" } | { type: "invalid"; reason: string }) => {
+  connection.events.on("anagramsGuess", (guess) => {
     if (guess.type === "correct") {
       setInput("");
     } else {
@@ -21,9 +21,9 @@ export function createAnagrams(props: { sender: Sender }) {
       gameInputRef.animate([{ backgroundColor: "#FF0000" }, { backgroundColor: "#FFF" }], 1000);
       errorTextRef.animate([{ opacity: 100 }, { opacity: 0 }], 1000);
     }
-  };
+  });
 
-  const Anagrams = () => (
+  return (
     <main class="flex min-h-screen flex-col items-center justify-center gap-y-3">
       <h1 class="text-xl">{game.anagram}</h1>
       <input
@@ -67,9 +67,4 @@ export function createAnagrams(props: { sender: Sender }) {
       </h1>
     </main>
   );
-
-  return {
-    onAnagramsGuess,
-    Anagrams,
-  };
 }
