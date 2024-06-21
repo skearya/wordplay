@@ -1,4 +1,3 @@
-import { Title } from "@solidjs/meta";
 import { Match, Switch, createResource } from "solid-js";
 
 type HomepageData = {

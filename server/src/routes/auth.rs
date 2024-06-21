@@ -1,22 +1,22 @@
 use crate::{
     db,
-    utils::{random_string, AppError, UnixTime},
+    utils::{random_string, UnixTime},
     AppState,
 };
-use anyhow::{anyhow, Context};
 use axum::{
     extract::{Query, Request, State},
     http::StatusCode,
     middleware::{from_fn_with_state, Next},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
-    Form, Router,
+    Form, Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use cookie::{Cookie, SameSite};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
+use thiserror::Error;
 
 pub fn make_router(state: AppState) -> Router<AppState> {
     Router::new()
@@ -84,11 +84,11 @@ async fn discord_callback(
     jar: CookieJar,
     State(state): State<AppState>,
     Query(params): Query<DiscordCallbackParams>,
-) -> Result<Response, AppError> {
+) -> Result<Response, AuthError> {
     let stored_state = jar.get("state").map(Cookie::value);
 
     if !stored_state.is_some_and(|stored| stored == params.state) {
-        return Err(anyhow!("bad request"))?;
+        return Err(AuthError::BadRequest)?;
     }
 
     let client = reqwest::Client::new();
@@ -131,42 +131,52 @@ async fn discord_callback(
         .json::<DiscordUserInfoRes>()
         .await?;
 
-    if db::get_user(&state.db, &id).await.is_ok() {
-        let session_id = random_string(24);
-        let expires =
-            (SystemTime::now() + Duration::from_secs(60 * 60 * 24 * 60)).to_unix_timestamp();
+    match db::get_user(&state.db, &id).await {
+        Ok(user) => {
+            let session_id = random_string(24);
+            let expires =
+                (SystemTime::now() + Duration::from_secs(60 * 60 * 24 * 60)).to_unix_timestamp();
 
-        db::insert_session(&state.db, &session_id, expires, &id).await?;
+            db::insert_session(&state.db, &session_id, expires, &id).await?;
 
-        Ok(jar
-            .add(
-                Cookie::build(("session", session_id))
-                    .path("/")
-                    .http_only(true)
-                    .same_site(SameSite::Lax)
-                    .max_age(cookie::time::Duration::days(60)),
+            Ok((
+                StatusCode::CREATED,
+                jar.add(
+                    Cookie::build(("session", session_id))
+                        .path("/")
+                        .http_only(true)
+                        .same_site(SameSite::Lax)
+                        .max_age(cookie::time::Duration::days(60)),
+                ),
+                Json(AuthResponse {
+                    r#type: "success",
+                    message: format!("session created, logged in as {}", user.username),
+                }),
             )
-            .into_response())
-    } else {
-        let signup_session_id = random_string(24);
-        let expires = (SystemTime::now() + Duration::from_secs(60 * 60)).to_unix_timestamp();
+                .into_response())
+        }
+        Err(sqlx::Error::RowNotFound) => {
+            let signup_session_id = random_string(24);
+            let expires = (SystemTime::now() + Duration::from_secs(60 * 60)).to_unix_timestamp();
 
-        db::insert_signup_session(&state.db, &signup_session_id, expires, &id, &avatar).await?;
+            db::insert_signup_session(&state.db, &signup_session_id, expires, &id, &avatar).await?;
 
-        Ok((
-            jar.add(
-                Cookie::build(("signup_session", signup_session_id))
-                    .path("/")
-                    .http_only(true)
-                    .same_site(SameSite::Lax)
-                    .max_age(cookie::time::Duration::hours(1)),
-            ),
-            Redirect::to(&format!(
-                "{}/choose-username?suggested={username}",
-                dotenvy::var("PUBLIC_FRONTEND").unwrap()
-            )),
-        )
-            .into_response())
+            Ok((
+                jar.add(
+                    Cookie::build(("signup_session", signup_session_id))
+                        .path("/")
+                        .http_only(true)
+                        .same_site(SameSite::Lax)
+                        .max_age(cookie::time::Duration::hours(1)),
+                ),
+                Redirect::to(&format!(
+                    "{}/choose-username?suggested={username}",
+                    dotenvy::var("PUBLIC_FRONTEND").unwrap()
+                )),
+            )
+                .into_response())
+        }
+        Err(error) => Err(error)?,
     }
 }
 
@@ -179,22 +189,35 @@ async fn choose_username(
     jar: CookieJar,
     State(state): State<AppState>,
     Form(input): Form<UsernameForm>,
-) -> Result<impl IntoResponse, AppError> {
-    let signup_session_id = jar.get("signup_session").context("bad request")?.value();
+) -> Result<impl IntoResponse, AuthError> {
+    let signup_session_id = jar
+        .get("signup_session")
+        .ok_or(AuthError::BadRequest)?
+        .value();
+
     let signup_session = db::get_signup_session(&state.db, signup_session_id).await?;
 
     if signup_session.expires < SystemTime::now().to_unix_timestamp().into() {
-        return Err(anyhow!("session expired"))?;
+        return Err(AuthError::BadRequest)?;
     }
 
-    // TODO: check if someone else has that username!!!
     db::insert_user(
         &state.db,
         &signup_session.discord_id,
         &input.username,
         &signup_session.avatar_hash,
     )
-    .await?;
+    .await
+    .map_err(|error| {
+        if error
+            .as_database_error()
+            .is_some_and(sqlx::error::DatabaseError::is_unique_violation)
+        {
+            AuthError::UsernameTaken
+        } else {
+            AuthError::DbError(error)
+        }
+    })?;
 
     db::delete_signup_session(&state.db, signup_session_id).await?;
 
@@ -204,6 +227,7 @@ async fn choose_username(
     db::insert_session(&state.db, &session_id, expires, &signup_session.discord_id).await?;
 
     Ok((
+        StatusCode::CREATED,
         jar.add(
             Cookie::build(("session", session_id))
                 .path("/")
@@ -211,6 +235,48 @@ async fn choose_username(
                 .same_site(SameSite::Lax)
                 .max_age(cookie::time::Duration::days(60)),
         ),
-        StatusCode::CREATED,
+        Json(AuthResponse {
+            r#type: "success",
+            message: format!("account created, signed in as {}", input.username),
+        }),
     ))
+}
+
+#[derive(Serialize)]
+struct AuthResponse {
+    r#type: &'static str,
+    message: String,
+}
+
+#[derive(Error, Debug)]
+#[error("{self:#?}")]
+pub enum AuthError {
+    BadRequest,
+    UsernameTaken,
+    DiscordApiError(#[from] reqwest::Error),
+    DbError(#[from] sqlx::Error),
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        let (status, message) = match self {
+            AuthError::BadRequest => (StatusCode::BAD_REQUEST, "state expired/missing, try again"),
+            AuthError::UsernameTaken => (
+                StatusCode::CONFLICT,
+                "that username has already been taken, try another one",
+            ),
+            AuthError::DiscordApiError(_) => (
+                StatusCode::UNAUTHORIZED,
+                "failed to verify account with discord",
+            ),
+            AuthError::DbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "something went wrong"),
+        };
+
+        let response = AuthResponse {
+            r#type: "error",
+            message: message.into(),
+        };
+
+        (status, Json(response)).into_response()
+    }
 }

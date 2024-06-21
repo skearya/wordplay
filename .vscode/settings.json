@@ -3,5 +3,4 @@
         "./server/Cargo.toml",
         "./prompt_gen/Cargo.toml"
     ],
-    "prettier.configPath": "./frontend/.prettierrc"
 }

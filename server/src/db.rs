@@ -5,8 +5,8 @@ use sqlx::{
 };
 use std::str::FromStr;
 
-pub async fn create_pool() -> anyhow::Result<Pool<Sqlite>> {
-    let options = SqliteConnectOptions::from_str(&dotenvy::var("DATABASE_URL")?)?
+pub async fn create_pool() -> Result<Pool<Sqlite>> {
+    let options = SqliteConnectOptions::from_str(&dotenvy::var("DATABASE_URL").unwrap())?
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal);
 
@@ -19,9 +19,9 @@ pub async fn create_pool() -> anyhow::Result<Pool<Sqlite>> {
 
 #[derive(Debug)]
 pub struct User {
-    discord_id: String,
-    username: String,
-    avatar_hash: String,
+    pub discord_id: String,
+    pub username: String,
+    pub avatar_hash: String,
 }
 
 #[derive(Debug)]

@@ -1,9 +1,5 @@
 use crate::game::{messages::ServerMessage, room::Client};
-use axum::{
-    extract::ws::Message,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::extract::ws::Message;
 use rand::{
     distributions::{Alphanumeric, DistString},
     thread_rng,
@@ -14,23 +10,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use uuid::Uuid;
-
-pub struct AppError;
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong").into_response()
-    }
-}
-
-impl<E> From<E> for AppError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(_err: E) -> Self {
-        Self
-    }
-}
 
 pub trait ClientUtils {
     fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)>;
