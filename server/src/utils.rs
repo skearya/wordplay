@@ -64,12 +64,9 @@ pub trait Sorted: Iterator {
 
 impl<I: Iterator> Sorted for I {}
 
-pub fn filter_str(input: &str) -> String {
-    input
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|char| char.is_alphabetic())
-        .collect()
+pub fn filter_string(input: &mut String) {
+    input.make_ascii_lowercase();
+    input.retain(|c| c.is_alphabetic());
 }
 
 pub fn random_string(len: usize) -> String {

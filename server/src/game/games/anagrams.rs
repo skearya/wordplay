@@ -7,7 +7,7 @@ use crate::{
         SenderInfo,
     },
     global::GLOBAL,
-    utils::{ClientUtils, Sorted},
+    utils::{filter_string, ClientUtils, Sorted},
     AppState,
 };
 use serde::Serialize;
@@ -105,8 +105,10 @@ impl AppState {
     pub fn anagrams_guess(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
-        guess: String,
+        mut guess: String,
     ) -> Result<()> {
+        filter_string(&mut guess);
+
         if guess.len() > 6 {
             return Err(AnagramsError::GuessTooLong)?;
         }

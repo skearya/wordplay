@@ -6,7 +6,7 @@ use crate::{
         Room, SenderInfo,
     },
     global::GLOBAL,
-    utils::{ClientUtils, Sorted},
+    utils::{filter_string, ClientUtils, Sorted},
     AppState,
 };
 use rand::{thread_rng, Rng};
@@ -232,8 +232,10 @@ impl AppState {
     pub fn word_bomb_guess(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
-        guess: String,
+        mut guess: String,
     ) -> Result<()> {
+        filter_string(&mut guess);
+
         if guess.len() > 35 {
             return Err(WordBombError::GuessTooLong)?;
         }

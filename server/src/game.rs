@@ -4,7 +4,7 @@ pub mod lobby;
 pub mod messages;
 pub mod room;
 
-use crate::{utils::filter_str, AppState};
+use crate::AppState;
 use error::GameError;
 use messages::ClientMessage;
 use room::Room;
@@ -74,10 +74,8 @@ impl AppState {
             ClientMessage::Unready => self.client_unready(sender),
             ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
             ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
-            ClientMessage::WordBombGuess { word } => {
-                self.word_bomb_guess(sender, filter_str(&word))
-            }
-            ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, filter_str(&word)),
+            ClientMessage::WordBombGuess { word } => self.word_bomb_guess(sender, word),
+            ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, word),
         };
 
         if let Err(error) = result {
