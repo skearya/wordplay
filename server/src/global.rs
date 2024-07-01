@@ -35,6 +35,6 @@ impl GlobalData {
     }
 
     pub fn is_valid(&self, word: &str) -> bool {
-        self.words.contains(&word)
+        self.words.binary_search(&word).is_ok()
     }
 }
