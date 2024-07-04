@@ -1,24 +1,16 @@
 mod db;
-mod game;
 mod global;
 mod routes;
+mod state;
 mod utils;
 
 use axum::http::HeaderValue;
 use axum::{routing::get, Router};
-use game::GameState;
 use global::{GlobalData, GLOBAL};
 use routes::{api, auth, game::ws_handler};
-use sqlx::SqlitePool;
+use state::AppState;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use tower_http::cors::CorsLayer;
-
-#[derive(Debug, Clone)]
-pub struct AppState {
-    pub db: SqlitePool,
-    game: Arc<Mutex<GameState>>,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

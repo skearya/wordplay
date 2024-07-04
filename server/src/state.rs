@@ -4,7 +4,6 @@ pub mod lobby;
 pub mod messages;
 pub mod room;
 
-use crate::AppState;
 use error::GameError;
 use messages::ClientMessage;
 use room::Room;
@@ -15,6 +14,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 use uuid::Uuid;
+
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub db: SqlitePool,
+    game: Arc<Mutex<GameState>>,
+}
 
 #[derive(Debug)]
 pub struct GameState {

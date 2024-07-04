@@ -1,19 +1,19 @@
 use crate::{
     db,
-    game::{messages::ClientMessage, SenderInfo},
+    state::{messages::ClientMessage, SenderInfo},
     AppState,
 };
 use axum::{
     extract::{
-        ws::{close_code, CloseFrame, Message, WebSocket},
+        ws::{Message, WebSocket},
         Path, Query, State, WebSocketUpgrade,
     },
-    response::Response,
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
 use futures::{stream::StreamExt, SinkExt, TryFutureExt};
 use serde::Deserialize;
-use std::borrow::Cow;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -40,20 +40,24 @@ pub async fn ws_handler(
         params.username,
     );
 
-    ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
+    let err_msg = if params.username.len() > 20 {
+        Some("username too long (max 20 characters)")
+    } else if room.len() > 6 {
+        Some("invalid room name, must be less than 6 characters")
+    } else if !room.chars().all(|c| c.is_ascii_alphanumeric()) {
+        Some("invalid room name, must be alphanumeric")
+    } else {
+        None
+    };
+
+    if let Some(msg) = err_msg {
+        (StatusCode::BAD_REQUEST, msg).into_response()
+    } else {
+        ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
+    }
 }
 
-async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, params: Params) {
-    if params.username.len() > 20 {
-        socket
-            .send(Message::Close(Some(CloseFrame {
-                code: close_code::ABNORMAL,
-                reason: Cow::from("username too long (max 20 characters)"),
-            })))
-            .await
-            .ok();
-    }
-
+async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 

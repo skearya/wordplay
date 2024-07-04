@@ -1,5 +1,6 @@
 use crate::{
-    game::{
+    global::GLOBAL,
+    state::{
         error::Result,
         games::{
             anagrams::{self, Anagrams},
@@ -9,7 +10,6 @@ use crate::{
         room::{check_for_new_room_owner, Client, RoomSettings, State},
         Room, SenderInfo,
     },
-    global::GLOBAL,
     utils::ClientUtils,
     AppState,
 };

@@ -1,12 +1,12 @@
 use crate::{
-    game::{
+    routes::game::Params,
+    state::{
         error::{GameError, Result, RoomError},
         games::{anagrams::Anagrams, word_bomb::WordBomb},
         lobby::{check_for_countdown_update, Lobby},
         messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
         SenderInfo,
     },
-    routes::game::Params,
     utils::ClientUtils,
     AppState,
 };

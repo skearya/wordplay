@@ -1,4 +1,4 @@
-use crate::{game::ServerInfo, AppState};
+use crate::{state::ServerInfo, AppState};
 use axum::{extract::State, routing::get, Json, Router};
 
 pub fn make_router() -> Router<AppState> {
