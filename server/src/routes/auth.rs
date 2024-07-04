@@ -88,7 +88,7 @@ async fn discord_callback(
     let stored_state = jar.get("state").map(Cookie::value);
 
     if !stored_state.is_some_and(|stored| stored == params.state) {
-        return Err(AuthError::BadRequest)?;
+        return Err(AuthError::BadRequest);
     }
 
     let client = reqwest::Client::new();
@@ -198,7 +198,15 @@ async fn choose_username(
     let signup_session = db::get_signup_session(&state.db, signup_session_id).await?;
 
     if signup_session.expires < SystemTime::now().to_unix_timestamp().into() {
-        return Err(AuthError::BadRequest)?;
+        return Err(AuthError::BadRequest);
+    }
+
+    if input.username.len() > 12 {
+        return Err(AuthError::UsernameTooLong);
+    }
+
+    if !input.username.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(AuthError::UsernameNotAlphanumeric);
     }
 
     db::insert_user(
@@ -252,6 +260,8 @@ struct AuthResponse {
 #[error("{self:#?}")]
 pub enum AuthError {
     BadRequest,
+    UsernameTooLong,
+    UsernameNotAlphanumeric,
     UsernameTaken,
     DiscordApiError(#[from] reqwest::Error),
     DbError(#[from] sqlx::Error),
@@ -261,10 +271,19 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             AuthError::BadRequest => (StatusCode::BAD_REQUEST, "state expired/missing, try again"),
+            AuthError::UsernameTooLong => (
+                StatusCode::BAD_REQUEST,
+                "username too long (max 12 characters)",
+            ),
+            AuthError::UsernameNotAlphanumeric => (
+                StatusCode::BAD_REQUEST,
+                "username contains non-alphanumeric characters",
+            ),
             AuthError::UsernameTaken => (
                 StatusCode::CONFLICT,
                 "that username has already been taken, try another one",
             ),
+
             AuthError::DiscordApiError(_) => (
                 StatusCode::UNAUTHORIZED,
                 "failed to verify account with discord",

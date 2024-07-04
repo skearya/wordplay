@@ -1,5 +1,5 @@
 use crate::{
-    game::{
+    state::{
         error::{AnagramsError, GameError, Result},
         lobby::end_game,
         messages::{self, ServerMessage},

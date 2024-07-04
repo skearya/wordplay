@@ -1,11 +1,11 @@
 use crate::{
-    game::{
+    global::GLOBAL,
+    state::{
         error::{GameError, Result, WordBombError},
         lobby::end_game,
         messages::{self, ServerMessage},
         Room, SenderInfo,
     },
-    global::GLOBAL,
     utils::{filter_string, ClientUtils, Sorted},
     AppState,
 };
@@ -95,11 +95,11 @@ impl WordBomb {
 
             current_player
                 .used_letters
-                .extend(guess.chars().filter(|char| char.is_alphabetic()));
+                .extend(guess.chars().filter(|c| c.is_alphabetic()));
 
             let extra_life = ('a'..='z')
-                .filter(|char| !['x', 'z'].contains(char))
-                .all(|char| current_player.used_letters.contains(&char));
+                .filter(|c| !['x', 'z'].contains(c))
+                .all(|c| current_player.used_letters.contains(&c));
 
             if extra_life {
                 current_player.lives += 1;

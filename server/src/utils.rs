@@ -1,4 +1,4 @@
-use crate::game::{messages::ServerMessage, room::Client};
+use crate::state::{messages::ServerMessage, room::Client};
 use axum::extract::ws::Message;
 use rand::{
     distributions::{Alphanumeric, DistString},
