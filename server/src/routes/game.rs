@@ -54,6 +54,18 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, par
             .ok();
     }
 
+    if room.len() > 6 || !room.chars().all(|c| c.is_ascii_alphanumeric()) {
+        socket
+            .send(Message::Close(Some(CloseFrame {
+                code: close_code::ABNORMAL,
+                reason: Cow::from(
+                    "invalid room name (has to be less than 6 letters and alphanumeric)",
+                ),
+            })))
+            .await
+            .ok();
+    }
+
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
