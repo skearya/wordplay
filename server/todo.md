@@ -1,24 +1,18 @@
 # current todo:
 
--   stop using anyhow
+- delete expired sessions on app start
 
--   actual auth error messages
+- client and server version checking
 
--   delete expired sessions on app start
+- review all `.unwrap()`s
 
--   client and server version checking
+- use tracing
 
--   review all `.unwrap()`s
+- store and display previous winners of session
 
--   use tracing
+- probably look into using dashmap instead of std hashmap for global game data for concurrent references
 
--   store and display previous winners of session
+- probably use parking_lot because panics with a mutex lock DONT poison i think
 
--   dont use `.allow_origin(cors::Any)`
-
--   probably look into using dashmap instead of std hashmap for global game data for concurrent references
-
--   probably use parking_lot because panics with a mutex lock DONT poison i think
-
--   future word games:
-    -   greentea
+- future word games:
+  - greentea

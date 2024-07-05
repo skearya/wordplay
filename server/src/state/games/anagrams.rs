@@ -1,4 +1,5 @@
 use crate::{
+    global::GLOBAL,
     state::{
         error::{AnagramsError, GameError, Result},
         lobby::end_game,
@@ -6,7 +7,6 @@ use crate::{
         room::Room,
         SenderInfo,
     },
-    global::GLOBAL,
     utils::{filter_string, ClientUtils, Sorted},
     AppState,
 };
