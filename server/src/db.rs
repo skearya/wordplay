@@ -14,6 +14,8 @@ pub async fn create_pool() -> Result<Pool<Sqlite>> {
 
     sqlx::migrate!().run(&pool).await?;
 
+    delete_expired_sessions(&pool).await?;
+
     Ok(pool)
 }
 
@@ -161,6 +163,19 @@ pub async fn delete_signup_session(
     let query = sqlx::query!(
         "delete from signup_sessions where signup_session_id is ?",
         signup_session_id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(query)
+}
+
+pub async fn delete_expired_sessions(pool: &SqlitePool) -> Result<SqliteQueryResult> {
+    let query = sqlx::query!(
+        "
+            delete from sessions where expires < unixepoch();
+            delete from signup_sessions where expires < unixepoch();
+        ",
     )
     .execute(pool)
     .await?;

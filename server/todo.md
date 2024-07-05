@@ -1,7 +1,5 @@
 # current todo:
 
-- delete expired sessions on app start
-
 - client and server version checking
 
 - review all `.unwrap()`s
