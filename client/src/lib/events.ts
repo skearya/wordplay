@@ -24,9 +24,8 @@ const listeners: {
   AnagramsCorrectGuess: [],
 };
 
-export function callEventListeners<EventT extends ServerMessageTypes>(
-  event: ServerMessageData<EventT>,
-) {
+export function callEventListeners(event: ServerMessage) {
+  // @ts-expect-error
   listeners[event.type].forEach((listener) => listener(event));
 }
 
