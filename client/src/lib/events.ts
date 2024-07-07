@@ -25,8 +25,9 @@ const listeners: {
 };
 
 export function callEventListeners(event: ServerMessage) {
-  // @ts-expect-error
-  listeners[event.type].forEach((listener) => listener(event));
+  (listeners[event.type] as Array<(data: ServerMessage) => void>).forEach((listener) =>
+    listener(event),
+  );
 }
 
 export function useEvent<EventT extends ServerMessageTypes>(
