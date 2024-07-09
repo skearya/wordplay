@@ -41,7 +41,7 @@ pub struct ServerInfo {
 #[derive(Serialize, Debug)]
 pub struct RoomData {
     pub name: String,
-    pub players: usize,
+    pub players: Vec<String>,
 }
 
 impl AppState {
@@ -65,7 +65,11 @@ impl AppState {
                 .filter(|(_, room)| room.settings.public)
                 .map(|(name, data)| RoomData {
                     name: name.clone(),
-                    players: data.clients.len(),
+                    players: data
+                        .clients
+                        .values()
+                        .map(|client| client.username.clone())
+                        .collect(),
                 })
                 .collect(),
         }
