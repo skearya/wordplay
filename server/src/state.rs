@@ -7,7 +7,6 @@ pub mod room;
 use error::GameError;
 use messages::ClientMessage;
 use room::Room;
-use serde::Serialize;
 use sqlx::SqlitePool;
 use std::{
     collections::HashMap,
@@ -18,30 +17,18 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub db: SqlitePool,
-    game: Arc<Mutex<GameState>>,
+    pub game: Arc<Mutex<GameState>>,
 }
 
 #[derive(Debug)]
 pub struct GameState {
-    rooms: HashMap<String, Room>,
+    pub rooms: HashMap<String, Room>,
 }
 
 #[derive(Clone, Copy)]
 pub struct SenderInfo<'a> {
     pub uuid: Uuid,
     pub room: &'a str,
-}
-
-#[derive(Serialize, Debug)]
-pub struct ServerInfo {
-    pub clients_connected: usize,
-    pub public_rooms: Vec<RoomData>,
-}
-
-#[derive(Serialize, Debug)]
-pub struct RoomData {
-    pub name: String,
-    pub players: Vec<String>,
 }
 
 impl AppState {
@@ -51,27 +38,6 @@ impl AppState {
             game: Arc::new(Mutex::new(GameState {
                 rooms: HashMap::new(),
             })),
-        }
-    }
-
-    pub fn info(&self) -> ServerInfo {
-        let lock = self.game.lock().unwrap();
-
-        ServerInfo {
-            clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
-            public_rooms: lock
-                .rooms
-                .iter()
-                .filter(|(_, room)| room.settings.public)
-                .map(|(name, data)| RoomData {
-                    name: name.clone(),
-                    players: data
-                        .clients
-                        .values()
-                        .map(|client| client.username.clone())
-                        .collect(),
-                })
-                .collect(),
         }
     }
 
