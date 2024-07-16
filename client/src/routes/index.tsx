@@ -160,6 +160,8 @@ function CreateOrJoinRoom() {
         return;
       }
 
+      setRoomErrorMessage("name already in use");
+
       roomInputElement.disabled = false;
     }
 
