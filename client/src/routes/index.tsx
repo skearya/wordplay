@@ -17,10 +17,9 @@ export default function Home() {
   });
 
   return (
-    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border bg-[#0C0D0A] p-5">
+    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-[#0C0D0A] p-5">
       <h1 class="text-3xl">wordplay</h1>
       <div class="min-h-[1px] w-full bg-[#475D50]/50"></div>
-      <CreateOrJoinRoom />
       <Switch>
         <Match when={data.loading}>
           <h1 class="text-center text-gray-400">loading...</h1>
@@ -31,12 +30,13 @@ export default function Home() {
         <Match when={data()}>
           {(data) => (
             <>
+              <CreateOrJoinRoom />
               <div class="h-full space-y-3 overflow-y-scroll">
                 {data().public_rooms.map((room) => (
                   <Room {...room} />
                 ))}
                 {data().public_rooms.length === 0 && (
-                  <h1 class="text-center text-gray-400">there aren't any public rooms!</h1>
+                  <h1 class="text-center text-gray-400">there aren't any public rooms yet!</h1>
                 )}
               </div>
               <div class="mt-auto text-center font-medium">
@@ -58,6 +58,7 @@ function CreateOrJoinRoom() {
 
   let animationInProgress = false;
   const [joining, setJoining] = createSignal(false);
+  const [roomErrorMessage, setRoomErrorMessage] = createSignal("");
 
   const navigate = useNavigate();
 
@@ -145,19 +146,21 @@ function CreateOrJoinRoom() {
 
   async function checkRoomAvailability() {
     if (roomInputElement.value.length <= 1) {
-      return;
-    }
+      setRoomErrorMessage("not long enough");
+    } else {
+      roomInputElement.disabled = true;
 
-    roomInputElement.disabled = true;
+      const res = await fetch(
+        `${import.meta.env.PUBLIC_SERVER}/api/room-available/${roomInputElement.value}`,
+      );
+      const available = (await res.text()) === "true";
 
-    const res = await fetch(
-      `${import.meta.env.PUBLIC_SERVER}/api/room-available/${roomInputElement.value}`,
-    );
-    const available = (await res.text()) === "true";
+      if (available) {
+        navigate(`/room/${roomInputElement.value}`);
+        return;
+      }
 
-    if (available) {
-      navigate(`/room/${roomInputElement.value}`);
-      return;
+      roomInputElement.disabled = false;
     }
 
     roomErrorElement.animate(
@@ -167,8 +170,6 @@ function CreateOrJoinRoom() {
         duration: 3000,
       },
     );
-
-    roomInputElement.disabled = false;
   }
 
   return (
@@ -193,7 +194,7 @@ function CreateOrJoinRoom() {
             ref={roomErrorElement}
             class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 opacity-0"
           >
-            name already in use
+            {roomErrorMessage()}
           </h1>
           <input
             ref={roomInputElement}
