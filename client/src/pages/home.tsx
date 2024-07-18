@@ -20,6 +20,7 @@ export default function Home() {
     <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-[#0C0D0A] p-5">
       <h1 class="text-3xl">wordplay</h1>
       <div class="min-h-[1px] w-full bg-[#475D50]/50"></div>
+      <CreateOrJoinRoom />
       <Switch>
         <Match when={data.loading}>
           <h1 class="text-center text-gray-400">loading...</h1>
@@ -30,13 +31,11 @@ export default function Home() {
         <Match when={data()}>
           {(data) => (
             <>
-              <CreateOrJoinRoom />
               <div class="h-full space-y-3 overflow-y-scroll">
-                {data().public_rooms.map((room) => (
-                  <Room {...room} />
-                ))}
-                {data().public_rooms.length === 0 && (
+                {data().public_rooms.length === 0 ? (
                   <h1 class="text-center text-gray-400">there aren't any public rooms yet!</h1>
+                ) : (
+                  data().public_rooms.map((room) => <Room {...room} />)
                 )}
               </div>
               <div class="mt-auto text-center font-medium">
@@ -57,7 +56,7 @@ function CreateOrJoinRoom() {
   let roomErrorElement!: HTMLHeadingElement;
 
   let animationInProgress = false;
-  const [joining, setJoining] = createSignal(false);
+  const [joining, setJoining] = createSignal<"creating" | "joining" | false>(false);
   const [roomErrorMessage, setRoomErrorMessage] = createSignal("");
 
   const navigate = useNavigate();
@@ -123,13 +122,13 @@ function CreateOrJoinRoom() {
       expanding.style.display = "none";
       creatingElement.parentElement!.style.gap = "0.5rem";
 
-      setJoining(true);
+      setJoining(clicked);
       await roomInputElement.animate({ opacity: [0, 100] }, animationOptions).finished;
       roomInputElement.focus();
     });
   }
 
-  async function exitInput() {
+  async function onInputEscape() {
     animation(async () => {
       await creatingElement.parentElement!.animate(
         { opacity: [100, 0], filter: "blur(5px)" },
@@ -144,7 +143,7 @@ function CreateOrJoinRoom() {
     });
   }
 
-  async function checkRoomAvailability() {
+  async function onInputEnter() {
     if (roomInputElement.value.length <= 1) {
       setRoomErrorMessage("not long enough");
     } else {
@@ -155,12 +154,12 @@ function CreateOrJoinRoom() {
       );
       const available = (await res.text()) === "true";
 
-      if (available) {
+      if ((available && joining() === "creating") || (!available && joining() == "joining")) {
         navigate(`/room/${roomInputElement.value}`);
         return;
       }
 
-      setRoomErrorMessage("name already in use");
+      setRoomErrorMessage(joining() === "creating" ? "name already in use" : "room doesn't exist");
 
       roomInputElement.disabled = false;
     }
@@ -207,9 +206,9 @@ function CreateOrJoinRoom() {
             class="w-full rounded-lg bg-transparent p-4 transition-all disabled:opacity-50"
             onKeyDown={(event) => {
               if (event.key === "Enter") {
-                checkRoomAvailability();
+                onInputEnter();
               } else if (event.key === "Escape") {
-                exitInput();
+                onInputEscape();
               }
             }}
           />
