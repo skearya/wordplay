@@ -1,4 +1,4 @@
-import { Link, QuestionMark } from "~/lib/icons";
+import { Bomb, Link, QuestionMark } from "~/lib/icons";
 
 function GameNav() {
   return (
@@ -113,7 +113,7 @@ function ReadyPlayers() {
       </div>
       <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
         {Array.from({ length: 5 }).map(() => (
-          <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-3">
+          <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
             <img
               src={`https://avatar.vercel.sh/skeary`}
               alt={`profile picture`}
@@ -191,6 +191,34 @@ export default function Game() {
             <ReadyPlayers />
             <JoinButtons />
           </div>
+        </div>
+        <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden">
+          <div class="mr-3">
+            <Bomb />
+          </div>
+          <h1 class="text-outline -skew-x-6 text-[4.5vw] leading-tight text-[#050705]">
+            waiting for players...
+          </h1>
+        </div>
+        <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[#8BA698]">practice</h3>
+            <div
+              style="background: linear-gradient(244.26deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
+              class="rounded-lg px-2.5 py-0.5 font-mono text-lg"
+            >
+              UTS
+            </div>
+          </div>
+          <div
+            style="background: linear-gradient(to right, #26D16C 70%, transparent 30%)"
+            class="h-[1px] w-full"
+          ></div>
+          <input
+            type="text"
+            placeholder="word"
+            class="rounded-lg border bg-transparent px-2.5 py-2"
+          />
         </div>
       </main>
     </>
