@@ -44,3 +44,14 @@ export function useEvent<EventT extends ServerMessageTypes>(
     }
   });
 }
+
+export function useEvents(events: {
+  [EventT in ServerMessageTypes]?: (data: ServerMessageData<EventT>) => void;
+}) {
+  for (const [type, f] of Object.entries(events)) {
+    useEvent(
+      type as ServerMessageTypes,
+      f as (data: ServerMessageData<ServerMessageTypes>) => void,
+    );
+  }
+}
