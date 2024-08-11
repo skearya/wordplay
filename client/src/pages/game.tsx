@@ -1,6 +1,78 @@
-import { Show } from "solid-js";
+import { useParams } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
+import { createStore } from "solid-js/store";
 import { Bomb, Link, QuestionMark } from "~/lib/icons";
 import { PostGameInfo } from "~/lib/types/messages";
+
+export default function JoinGame() {
+  const roomName = useParams().name;
+  const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
+  const [ready, setReady] = createSignal(false);
+  const canJoin = () => username().length <= 20 && username() !== "";
+
+  let socket: WebSocket | undefined = undefined;
+
+  function join() {
+    localStorage.setItem("username", username());
+
+    const rejoinToken: string | undefined = JSON.parse(
+      localStorage.getItem("rejoinTokens") ?? "{}",
+    )[roomName];
+
+    const params = new URLSearchParams({
+      username: username(),
+      ...(rejoinToken && { rejoin_token: rejoinToken }),
+    });
+
+    socket = new WebSocket(
+      `${(import.meta.env.PUBLIC_SERVER as string).replace(
+        "http",
+        "ws",
+      )}/rooms/${roomName}?${params}`,
+    );
+
+    socket.addEventListener("message", (event) => {});
+    socket.addEventListener("close", (event) => {});
+    socket.addEventListener("error", (event) => {});
+
+    // setReady(true);
+  }
+
+  return (
+    <Show
+      when={ready()}
+      fallback={
+        <main class="flex h-screen flex-col items-center justify-center">
+          <div class="flex min-w-64 flex-col gap-y-2.5">
+            <input
+              type="text"
+              maxlength="20"
+              placeholder="username"
+              autofocus
+              class="rounded-lg border bg-transparent px-3 py-2.5"
+              value={username()}
+              onInput={(event) => setUsername(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && canJoin()) {
+                  join();
+                }
+              }}
+            />
+            <button
+              class="rounded-lg border bg-[#475D50] py-3 font-medium transition-opacity disabled:opacity-50"
+              disabled={!canJoin()}
+              onClick={join}
+            >
+              Join
+            </button>
+          </div>
+        </main>
+      }
+    >
+      <Game />
+    </Show>
+  );
+}
 
 const guesses = [
   {
@@ -20,15 +92,39 @@ const guesses = [
   },
 ];
 
-export default function Game() {
-  const postGameInfo: PostGameInfo | undefined = undefined;
+function Game() {
+  const postGameInfo: PostGameInfo = undefined;
+  // {
+  //   type: "WordBomb",
+  //   winner: "2",
+  //   mins_elapsed: 21,
+  //   words_used: 2121,
+  //   letters_typed: 212121,
+  //   fastest_guesses: [],
+  //   longest_words: [],
+  //   avg_wpms: [],
+  //   avg_word_lengths: [],
+  // }
+
+  const [connection, setConnection] = createStore({
+    room: "",
+    uuid: "",
+    roomOwner: "",
+    clients: [],
+    settings: { game: "WordBomb", public: false },
+  });
+
+  const [status, setStatus] = createSignal("waiting for players...");
+  const [chatMessages, setChatMessages] = createSignal([]);
+  const [readyPlayers, setReadyPlayers] = createSignal([]);
+  const [startingCountdown, setStartingCountdown] = createSignal(undefined);
 
   return (
-    <div class="flex h-screen flex-col">
+    <>
       <GameNav />
       <Chat />
-      <main class="flex h-full items-center justify-center overflow-hidden">
-        <div class="flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
+      <main class="flex h-screen items-center justify-center overflow-hidden">
+        <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
           <Show when={postGameInfo}>
             <div class="flex flex-col gap-y-3.5">
               <Winner />
@@ -49,13 +145,13 @@ export default function Game() {
         <Status />
         <Practice />
       </main>
-    </div>
+    </>
   );
 }
 
 function GameNav() {
   return (
-    <nav class="flex items-center justify-between px-6 py-5">
+    <nav class="absolute top-0 flex w-full items-center justify-between px-6 py-5">
       <h1 class="text-2xl">wordplay</h1>
       <div class="flex items-center gap-x-5">
         <div
@@ -83,7 +179,7 @@ function GameNav() {
 
 function Chat() {
   return (
-    <div class="bg-primary-50/25 fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-lg border-r border-t">
+    <div class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t">
       <ul class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all">
         <li>skeary: hi</li>
       </ul>
@@ -213,7 +309,7 @@ function JoinButtons() {
 
 function Practice() {
   return (
-    <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+    <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-[#8BA698]">practice</h3>
         <div
