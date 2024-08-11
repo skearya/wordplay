@@ -63,7 +63,7 @@ pub struct PostGameInfo {
     mins_elapsed: f32,
     words_used: usize,
     letters_typed: usize,
-    fastest_guesses: Vec<(Uuid, f32, String)>,
+    fastest_guesses: Vec<(Uuid, f32)>,
     longest_words: Vec<(Uuid, String)>,
     avg_wpms: Vec<(Uuid, f32)>,
     avg_word_lengths: Vec<(Uuid, f32)>,
@@ -350,9 +350,9 @@ fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
                 player
                     .used_words
                     .iter()
-                    .map(|(duration, word)| (duration.as_secs_f32(), word))
-                    .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-                    .map(|(duration, word)| (player.uuid, duration, word.clone()))
+                    .map(|(duration, _)| duration.as_secs_f32())
+                    .min_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .map(|duration| (player.uuid, duration))
             })
             .sorted_by_vec(|a, b| a.1.partial_cmp(&b.1).unwrap()),
         longest_words: game

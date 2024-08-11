@@ -1,74 +1,55 @@
+import { Show } from "solid-js";
 import { Bomb, Link, QuestionMark } from "~/lib/icons";
+import { PostGameInfo } from "~/lib/types/messages";
+
+const guesses = [
+  {
+    pfp: "https://avatar.vercel.sh/skeary",
+    name: "skeary",
+    content: "4.3s",
+  },
+  {
+    pfp: "https://avatar.vercel.sh/skeary2",
+    name: "skeary2efafnjewknfkn",
+    content: "4s",
+  },
+  {
+    pfp: "https://avatar.vercel.sh/skeary3",
+    name: "skeary3",
+    content: ".3s",
+  },
+];
 
 export default function Game() {
-  const items = [
-    {
-      pfp: "https://avatar.vercel.sh/skeary",
-      name: "skeary",
-      content: "4.3s",
-    },
-    {
-      pfp: "https://avatar.vercel.sh/skeary2",
-      name: "skeary2efafnjewknfkn",
-      content: "4s",
-    },
-    {
-      pfp: "https://avatar.vercel.sh/skeary3",
-      name: "skeary3",
-      content: ".3s",
-    },
-  ];
+  const postGameInfo: PostGameInfo | undefined = undefined;
 
   return (
-    <>
+    <div class="flex h-screen flex-col">
       <GameNav />
-      <main class="flex h-[calc(100vh_-_82px)] items-center justify-start overflow-hidden">
-        <div class="flex h-[480px] gap-x-4 rounded-xl rounded-l-none border border-l-0 bg-[#0B0D0A] p-3.5">
-          <div class="flex flex-col gap-y-3.5">
-            <Winner />
-            <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
-              {["fastest guess", "longest word", "wpm", "word length"].map((title) => (
-                <Leaderboard title={title} items={items} />
-              ))}
+      <Chat />
+      <main class="flex h-full items-center justify-center overflow-hidden">
+        <div class="flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
+          <Show when={postGameInfo}>
+            <div class="flex flex-col gap-y-3.5">
+              <Winner />
+              <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
+                {["fastest guess", "longest word", "wpm", "word length"].map((title) => (
+                  <Leaderboard title={title} items={guesses} />
+                ))}
+              </div>
+              <Stats />
             </div>
-            <Stats />
-          </div>
-          <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
+            <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
+          </Show>
           <div class="flex w-[475px] flex-col gap-y-2">
             <ReadyPlayers />
             <JoinButtons />
           </div>
         </div>
-        <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden">
-          <div class="mr-3">
-            <Bomb />
-          </div>
-          <h1 class="text-outline -skew-x-6 text-[4.5vw] leading-tight text-[#050705]">
-            waiting for players...
-          </h1>
-        </div>
-        <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-[#8BA698]">practice</h3>
-            <div
-              style="background: linear-gradient(244.26deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
-              class="rounded-lg px-2.5 py-0.5 font-mono text-lg"
-            >
-              UTS
-            </div>
-          </div>
-          <div
-            style="background: linear-gradient(to right, #26D16C 70%, transparent 30%)"
-            class="h-[1px] w-full"
-          ></div>
-          <input
-            type="text"
-            placeholder="word"
-            class="rounded-lg border bg-transparent px-2.5 py-2"
-          />
-        </div>
+        <Status />
+        <Practice />
       </main>
-    </>
+    </div>
   );
 }
 
@@ -97,6 +78,22 @@ function GameNav() {
         <QuestionMark />
       </div>
     </nav>
+  );
+}
+
+function Chat() {
+  return (
+    <div class="bg-primary-50/25 fixed bottom-0 left-0 flex w-96 flex-col rounded-tr-lg border-r border-t">
+      <ul class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all">
+        <li>skeary: hi</li>
+      </ul>
+      <input
+        class="m-2 h-10 rounded-lg border bg-transparent px-2.5 py-2 placeholder-white/50"
+        type="text"
+        maxlength="250"
+        placeholder="send a message..."
+      />
+    </div>
   );
 }
 
@@ -210,6 +207,40 @@ function JoinButtons() {
     <div class="mt-auto flex gap-x-2.5">
       <button class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium">Ready</button>
       <button class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium">Start Early</button>
+    </div>
+  );
+}
+
+function Practice() {
+  return (
+    <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[#8BA698]">practice</h3>
+        <div
+          style="background: linear-gradient(244.26deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
+          class="rounded-lg px-2.5 py-0.5 font-mono text-lg"
+        >
+          UTS
+        </div>
+      </div>
+      <div
+        style="background: linear-gradient(to right, #26D16C 70%, transparent 30%)"
+        class="h-[1px] w-full"
+      ></div>
+      <input type="text" placeholder="word" class="rounded-lg border bg-transparent px-2.5 py-2" />
+    </div>
+  );
+}
+
+function Status() {
+  return (
+    <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden">
+      <div class="mr-3">
+        <Bomb />
+      </div>
+      <h1 class="text-outline -skew-x-6 text-[4.5vw] leading-tight text-[#050705]">
+        waiting for players...
+      </h1>
     </div>
   );
 }

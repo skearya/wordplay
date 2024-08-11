@@ -125,7 +125,7 @@ export type PostGameInfo =
       mins_elapsed: number;
       words_used: number;
       letters_typed: number;
-      fastest_guesses: Array<[Uuid, number, string]>;
+      fastest_guesses: Array<[Uuid, number]>;
       longest_words: Array<[Uuid, string]>;
       avg_wpms: Array<[Uuid, number]>;
       avg_word_lengths: Array<[Uuid, number]>;
