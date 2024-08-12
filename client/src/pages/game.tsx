@@ -1,15 +1,23 @@
 import { useParams } from "@solidjs/router";
-import { Accessor, createSignal, Show } from "solid-js";
-import { createStore } from "solid-js/store";
+import { Accessor, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createStore, SetStoreFunction } from "solid-js/store";
 import { callEventListeners, ServerMessageData, useEvent } from "~/lib/events";
 import { Bomb, Link, QuestionMark } from "~/lib/icons";
-import { AnagramsPlayerData, PostGameInfo, Uuid, WordBombPlayerData } from "~/lib/types/messages";
+import {
+  AnagramsPlayerData,
+  ClientInfo,
+  ClientMessage,
+  PostGameInfo,
+  RoomSettings,
+  Uuid,
+  WordBombPlayerData,
+} from "~/lib/types/messages";
 import { roomStateToCamelCase } from "~/lib/utils";
 
 export default function JoinGame() {
   const roomName = useParams().name;
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
-  const [gameInfo, setGameInfo] = createSignal<ServerMessageData<"Info"> | undefined>(undefined);
+  const [gameInfo, setGameInfo] = createSignal<Parameters<typeof Game>["0"] | undefined>(undefined);
   const canJoin = () => username().length <= 20 && username() !== "";
 
   function join() {
@@ -36,7 +44,10 @@ export default function JoinGame() {
     });
 
     useEvent("Info", (data) => {
-      setGameInfo(data);
+      setGameInfo({
+        ...data,
+        sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
+      });
     });
 
     socket.addEventListener("close", (event) => {
@@ -98,7 +109,37 @@ const guesses = [
   },
 ];
 
-function Game(props: ServerMessageData<"Info">) {
+type SendMessage = (message: ClientMessage) => void;
+
+type State =
+  | {
+      type: "Lobby";
+      ready: Array<Uuid>;
+      startingCountdown: number | undefined;
+    }
+  | {
+      type: "WordBomb";
+      players: Array<WordBombPlayerData>;
+      turn: Uuid;
+      prompt: string;
+      usedLetters: Array<string>;
+    }
+  | {
+      type: "Anagrams";
+      players: Array<AnagramsPlayerData>;
+      anagram: string;
+    };
+
+type StateType<T> = Extract<State, { type: T }>;
+
+type Connection = {
+  uuid: string;
+  clients: ClientInfo[];
+  owner: string;
+  settings: RoomSettings;
+};
+
+function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
   const postGameInfo: PostGameInfo = undefined;
   // {
   //   type: "WordBomb",
@@ -112,28 +153,8 @@ function Game(props: ServerMessageData<"Info">) {
   //   avg_word_lengths: [],
   // }
 
-  type State =
-    | {
-        type: "Lobby";
-        ready: Array<Uuid>;
-        startingCountdown: number | undefined;
-      }
-    | {
-        type: "WordBomb";
-        players: Array<WordBombPlayerData>;
-        turn: Uuid;
-        prompt: string;
-        usedLetters: Array<string>;
-      }
-    | {
-        type: "Anagrams";
-        players: Array<AnagramsPlayerData>;
-        anagram: string;
-      };
-
-  const [state, setState] = createSignal<State>(roomStateToCamelCase(props.room.state));
-  const [chatMessages, setChatMessages] = createSignal([]);
-  const [connection, setConnection] = createStore({
+  const [state, setState] = createStore<State>(roomStateToCamelCase(props.room.state));
+  const [connection, setConnection] = createStore<Connection>({
     uuid: props.uuid,
     clients: props.room.clients,
     owner: props.room.owner,
@@ -144,29 +165,55 @@ function Game(props: ServerMessageData<"Info">) {
     <>
       <GameNav />
       <Chat />
-      <main class="flex h-screen items-center justify-center overflow-hidden">
-        <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
-          <Show when={postGameInfo}>
-            <div class="flex flex-col gap-y-3.5">
-              <Winner />
-              <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
-                {["fastest guess", "longest word", "wpm", "word length"].map((title) => (
-                  <Leaderboard title={title} items={guesses} />
-                ))}
-              </div>
-              <Stats />
-            </div>
-            <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
-          </Show>
-          <div class="flex w-[475px] flex-col gap-y-2">
-            <ReadyPlayers readyPlayers={readyPlayers} />
-            <JoinButtons />
-          </div>
-        </div>
-        <Status />
-        <Practice />
-      </main>
+      <Switch>
+        <Match when={state.type === "Lobby"}>
+          <Lobby
+            sendMsg={props.sendMsg}
+            connection={() => connection}
+            state={() => state as StateType<"Lobby">}
+            setState={setState}
+            postGameInfo={postGameInfo}
+          />
+        </Match>
+      </Switch>
     </>
+  );
+}
+
+function Lobby(props: {
+  sendMsg: SendMessage;
+  connection: Accessor<Connection>;
+  state: Accessor<StateType<"Lobby">>;
+  setState: SetStoreFunction<StateType<"Lobby">>;
+  postGameInfo: PostGameInfo | undefined;
+}) {
+  useEvent("ReadyPlayers", (data) => {
+    props.setState("ready", data.ready);
+  });
+
+  return (
+    <main class="flex h-screen items-center justify-center overflow-hidden">
+      <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
+        <Show when={props.postGameInfo}>
+          <div class="flex flex-col gap-y-3.5">
+            <Winner />
+            <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
+              {["fastest guess", "longest word", "wpm", "word length"].map((title) => (
+                <Leaderboard title={title} items={guesses} />
+              ))}
+            </div>
+            <Stats />
+          </div>
+          <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
+        </Show>
+        <div class="flex w-[475px] flex-col gap-y-2">
+          <ReadyPlayers connection={props.connection} readyPlayers={() => props.state().ready} />
+          <JoinButtons sendMsg={props.sendMsg} />
+        </div>
+      </div>
+      <Status />
+      <Practice />
+    </main>
   );
 }
 
@@ -294,7 +341,10 @@ function Stats() {
   );
 }
 
-function ReadyPlayers(props: { readyPlayers: Accessor<> }) {
+function ReadyPlayers(props: {
+  connection: Accessor<Connection>;
+  readyPlayers: Accessor<Array<Uuid>>;
+}) {
   return (
     <>
       <div class="flex items-baseline justify-between">
@@ -302,27 +352,40 @@ function ReadyPlayers(props: { readyPlayers: Accessor<> }) {
         <h1 class="text-lg text-[#26D16C]">96 slots left</h1>
       </div>
       <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-        {Array.from({ length: 5 }).map(() => (
-          <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
-            <img
-              src={`https://avatar.vercel.sh/skeary`}
-              alt={`profile picture`}
-              height={55}
-              width={55}
-              class="rounded-full"
-            />
-            <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">skeary</h1>
-          </div>
-        ))}
+        <For each={props.readyPlayers()}>
+          {(uuid) => {
+            const username = props
+              .connection()
+              .clients.find((client) => client.uuid === uuid)!.username;
+
+            return (
+              <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
+                <img
+                  src={`https://avatar.vercel.sh/${username}`}
+                  alt={`profile picture`}
+                  height={55}
+                  width={55}
+                  class="rounded-full"
+                />
+                <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">{username}</h1>
+              </div>
+            );
+          }}
+        </For>
       </div>
     </>
   );
 }
 
-function JoinButtons() {
+function JoinButtons(props: { sendMsg: SendMessage }) {
   return (
     <div class="mt-auto flex gap-x-2.5">
-      <button class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium">Ready</button>
+      <button
+        class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium"
+        onClick={() => props.sendMsg({ type: "Ready" })}
+      >
+        Ready
+      </button>
       <button class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium">Start Early</button>
     </div>
   );
