@@ -86,7 +86,7 @@ export default function JoinGame() {
         </main>
       }
     >
-      <Game {...gameInfo()} />
+      <Game {...gameInfo()!} />
     </Show>
   );
 }
@@ -109,28 +109,27 @@ const guesses = [
   },
 ];
 
-type SendMessage = (message: ClientMessage) => void;
+type LobbyState = {
+  type: "Lobby";
+  ready: Array<Uuid>;
+  startingCountdown: number | undefined;
+};
 
-type State =
-  | {
-      type: "Lobby";
-      ready: Array<Uuid>;
-      startingCountdown: number | undefined;
-    }
-  | {
-      type: "WordBomb";
-      players: Array<WordBombPlayerData>;
-      turn: Uuid;
-      prompt: string;
-      usedLetters: Array<string>;
-    }
-  | {
-      type: "Anagrams";
-      players: Array<AnagramsPlayerData>;
-      anagram: string;
-    };
+type WordBombState = {
+  type: "WordBomb";
+  players: Array<WordBombPlayerData>;
+  turn: Uuid;
+  prompt: string;
+  usedLetters: Array<string> | undefined;
+};
 
-type StateType<T> = Extract<State, { type: T }>;
+type AnagramsState = {
+  type: "Anagrams";
+  players: Array<AnagramsPlayerData>;
+  anagram: string;
+};
+
+type State = LobbyState | WordBombState | AnagramsState;
 
 type Connection = {
   uuid: string;
@@ -139,8 +138,10 @@ type Connection = {
   settings: RoomSettings;
 };
 
+type SendMessage = (message: ClientMessage) => void;
+
 function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
-  const postGameInfo: PostGameInfo = undefined;
+  const postGameInfo: PostGameInfo | undefined = undefined;
   // {
   //   type: "WordBomb",
   //   winner: "2",
@@ -170,8 +171,8 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
           <Lobby
             sendMsg={props.sendMsg}
             connection={() => connection}
-            state={() => state as StateType<"Lobby">}
-            setState={setState}
+            state={() => state as LobbyState}
+            setState={setState as SetStoreFunction<LobbyState>}
             postGameInfo={postGameInfo}
           />
         </Match>
@@ -183,8 +184,8 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
 function Lobby(props: {
   sendMsg: SendMessage;
   connection: Accessor<Connection>;
-  state: Accessor<StateType<"Lobby">>;
-  setState: SetStoreFunction<StateType<"Lobby">>;
+  state: Accessor<LobbyState>;
+  setState: SetStoreFunction<LobbyState>;
   postGameInfo: PostGameInfo | undefined;
 }) {
   useEvent("ReadyPlayers", (data) => {
