@@ -3,7 +3,7 @@ import { ServerMessage } from "~/lib/types/messages";
 
 type ServerMessageTypes = ServerMessage["type"];
 
-type ServerMessageData<EventT> = Extract<ServerMessage, { type: EventT }>;
+export type ServerMessageData<EventT> = Extract<ServerMessage, { type: EventT }>;
 
 const listeners: {
   [EventT in ServerMessageTypes]: Array<(data: ServerMessageData<EventT>) => void>;

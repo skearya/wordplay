@@ -1,16 +1,16 @@
 import { useParams } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+import { Accessor, createSignal, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { callEventListeners, ServerMessageData, useEvent } from "~/lib/events";
 import { Bomb, Link, QuestionMark } from "~/lib/icons";
-import { PostGameInfo } from "~/lib/types/messages";
+import { AnagramsPlayerData, PostGameInfo, Uuid, WordBombPlayerData } from "~/lib/types/messages";
+import { roomStateToCamelCase } from "~/lib/utils";
 
 export default function JoinGame() {
   const roomName = useParams().name;
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
-  const [ready, setReady] = createSignal(false);
+  const [gameInfo, setGameInfo] = createSignal<ServerMessageData<"Info"> | undefined>(undefined);
   const canJoin = () => username().length <= 20 && username() !== "";
-
-  let socket: WebSocket | undefined = undefined;
 
   function join() {
     localStorage.setItem("username", username());
@@ -24,23 +24,29 @@ export default function JoinGame() {
       ...(rejoinToken && { rejoin_token: rejoinToken }),
     });
 
-    socket = new WebSocket(
+    const socket = new WebSocket(
       `${(import.meta.env.PUBLIC_SERVER as string).replace(
         "http",
         "ws",
       )}/rooms/${roomName}?${params}`,
     );
 
-    socket.addEventListener("message", (event) => {});
-    socket.addEventListener("close", (event) => {});
-    socket.addEventListener("error", (event) => {});
+    socket.addEventListener("message", (event) => {
+      callEventListeners(JSON.parse(event.data));
+    });
 
-    // setReady(true);
+    useEvent("Info", (data) => {
+      setGameInfo(data);
+    });
+
+    socket.addEventListener("close", (event) => {
+      throw new Error(event.reason ?? "Unknown error");
+    });
   }
 
   return (
     <Show
-      when={ready()}
+      when={gameInfo()}
       fallback={
         <main class="flex h-screen flex-col items-center justify-center">
           <div class="flex min-w-64 flex-col gap-y-2.5">
@@ -69,7 +75,7 @@ export default function JoinGame() {
         </main>
       }
     >
-      <Game />
+      <Game {...gameInfo()} />
     </Show>
   );
 }
@@ -92,7 +98,7 @@ const guesses = [
   },
 ];
 
-function Game() {
+function Game(props: ServerMessageData<"Info">) {
   const postGameInfo: PostGameInfo = undefined;
   // {
   //   type: "WordBomb",
@@ -106,18 +112,33 @@ function Game() {
   //   avg_word_lengths: [],
   // }
 
-  const [connection, setConnection] = createStore({
-    room: "",
-    uuid: "",
-    roomOwner: "",
-    clients: [],
-    settings: { game: "WordBomb", public: false },
-  });
+  type State =
+    | {
+        type: "Lobby";
+        ready: Array<Uuid>;
+        startingCountdown: number | undefined;
+      }
+    | {
+        type: "WordBomb";
+        players: Array<WordBombPlayerData>;
+        turn: Uuid;
+        prompt: string;
+        usedLetters: Array<string>;
+      }
+    | {
+        type: "Anagrams";
+        players: Array<AnagramsPlayerData>;
+        anagram: string;
+      };
 
-  const [status, setStatus] = createSignal("waiting for players...");
+  const [state, setState] = createSignal<State>(roomStateToCamelCase(props.room.state));
   const [chatMessages, setChatMessages] = createSignal([]);
-  const [readyPlayers, setReadyPlayers] = createSignal([]);
-  const [startingCountdown, setStartingCountdown] = createSignal(undefined);
+  const [connection, setConnection] = createStore({
+    uuid: props.uuid,
+    clients: props.room.clients,
+    owner: props.room.owner,
+    settings: props.room.settings,
+  });
 
   return (
     <>
@@ -138,7 +159,7 @@ function Game() {
             <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
           </Show>
           <div class="flex w-[475px] flex-col gap-y-2">
-            <ReadyPlayers />
+            <ReadyPlayers readyPlayers={readyPlayers} />
             <JoinButtons />
           </div>
         </div>
@@ -273,7 +294,7 @@ function Stats() {
   );
 }
 
-function ReadyPlayers() {
+function ReadyPlayers(props: { readyPlayers: Accessor<> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">

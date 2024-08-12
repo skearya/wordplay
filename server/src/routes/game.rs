@@ -42,6 +42,8 @@ pub async fn ws_handler(
 
     let err_msg = if params.username.len() > 20 {
         Some("username too long (max 20 characters)")
+    } else if params.username.is_empty() {
+        Some("username cannot be empty")
     } else if room.len() > 6 {
         Some("invalid room name, must be less than 6 characters")
     } else if !room.chars().all(|c| c.is_ascii_alphanumeric()) {

@@ -87,7 +87,7 @@ export type ServerMessage =
       guess: string;
     };
 
-type RoomInfo = {
+export type RoomInfo = {
   owner: Uuid;
   settings: RoomSettings;
   clients: Array<ClientInfo>;
@@ -99,7 +99,7 @@ export type RoomSettings = {
   game: Games;
 };
 
-type RoomStateInfo =
+export type RoomStateInfo =
   | {
       type: "Lobby";
       ready: Array<Uuid>;
