@@ -33,16 +33,23 @@ export function callEventListeners(event: ServerMessage) {
 export function useEvent<EventT extends ServerMessageTypes>(
   type: EventT,
   f: (data: ServerMessageData<EventT>) => void,
+  cleanup = true,
 ) {
   listeners[type].push(f);
 
-  onCleanup(() => {
+  const cleanupFn = () => {
     const index = listeners[type].indexOf(f);
 
     if (index > -1) {
       listeners[type].splice(index, 1);
     }
-  });
+  };
+
+  if (cleanup) {
+    onCleanup(cleanupFn);
+  }
+
+  return cleanupFn;
 }
 
 export function useEvents(events: {

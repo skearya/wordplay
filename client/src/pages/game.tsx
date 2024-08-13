@@ -43,13 +43,18 @@ export default function JoinGame() {
       callEventListeners(JSON.parse(event.data));
     });
 
-    // TODO: should this event be cleaned up / run once?
-    useEvent("Info", (data) => {
-      setGameInfo({
-        ...data,
-        sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
-      });
-    });
+    const removeInfoHandler = useEvent(
+      "Info",
+      (data) => {
+        setGameInfo({
+          ...data,
+          sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
+        });
+
+        removeInfoHandler();
+      },
+      false,
+    );
 
     // TODO: actually have error handling
     socket.addEventListener("close", (event) => {
@@ -135,9 +140,8 @@ type AnagramsState = {
 
 type State = LobbyState | WordBombState | AnagramsState;
 
-type Connection = {
-  uuid: string;
-  clients: ClientInfo[]; // TODO: should we just have a seperate signal?
+type Room = {
+  clients: ClientInfo[];
   owner: string;
   settings: RoomSettings;
 };
@@ -156,14 +160,12 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   //   avg_word_lengths: [],
   // }
 
-  const [state, setState] = createStore<State>(roomStateToCamelCase(props.room.state));
-
-  const [connection, setConnection] = createStore<Connection>({
-    uuid: props.uuid,
+  const [room, setRoom] = createStore<Room>({
     clients: props.room.clients,
     owner: props.room.owner,
     settings: props.room.settings,
   });
+  const [state, setState] = createStore<State>(roomStateToCamelCase(props.room.state));
 
   return (
     <>
@@ -173,9 +175,10 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
         <Match when={state.type === "Lobby"}>
           <Lobby
             sendMsg={props.sendMsg}
-            connection={() => connection}
+            room={() => room}
             state={() => state as LobbyState}
             setState={setState as SetStoreFunction<LobbyState>}
+            uuid={props.uuid}
             postGameInfo={postGameInfo}
           />
         </Match>
@@ -186,9 +189,10 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
 
 function Lobby(props: {
   sendMsg: SendFn;
-  connection: Accessor<Connection>;
+  room: Accessor<Room>;
   state: Accessor<LobbyState>;
   setState: SetStoreFunction<LobbyState>;
+  uuid: Uuid;
   postGameInfo: PostGameInfo | undefined;
 }) {
   useEvent("ReadyPlayers", (data) => {
@@ -211,8 +215,8 @@ function Lobby(props: {
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
-          <ReadyPlayers connection={props.connection} readyPlayers={() => props.state().ready} />
-          <JoinButtons sendMsg={props.sendMsg} />
+          <ReadyPlayers room={props.room} state={props.state} />
+          <JoinButtons sendMsg={props.sendMsg} state={props.state} uuid={props.uuid} />
         </div>
       </div>
       <Status />
@@ -345,10 +349,7 @@ function Stats() {
   );
 }
 
-function ReadyPlayers(props: {
-  connection: Accessor<Connection>;
-  readyPlayers: Accessor<Array<Uuid>>;
-}) {
+function ReadyPlayers(props: { room: Accessor<Room>; state: Accessor<LobbyState> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">
@@ -356,11 +357,9 @@ function ReadyPlayers(props: {
         <h1 class="text-lg text-[#26D16C]">96 slots left</h1>
       </div>
       <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-        <For each={props.readyPlayers()}>
+        <For each={props.state().ready}>
           {(uuid) => {
-            const username = props
-              .connection()
-              .clients.find((client) => client.uuid === uuid)!.username;
+            const username = props.room().clients.find((client) => client.uuid === uuid)!.username;
 
             return (
               <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
@@ -381,14 +380,16 @@ function ReadyPlayers(props: {
   );
 }
 
-function JoinButtons(props: { sendMsg: SendFn }) {
+function JoinButtons(props: { sendMsg: SendFn; state: Accessor<LobbyState>; uuid: Uuid }) {
+  const ready = () => props.state().ready.includes(props.uuid);
+
   return (
     <div class="mt-auto flex gap-x-2.5">
       <button
         class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium"
-        onClick={() => props.sendMsg({ type: "Ready" })}
+        onClick={() => props.sendMsg({ type: ready() ? "Unready" : "Ready" })}
       >
-        Ready
+        {ready() ? "Unready" : "Ready"}
       </button>
       <button class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium">Start Early</button>
     </div>
