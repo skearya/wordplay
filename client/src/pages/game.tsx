@@ -43,6 +43,7 @@ export default function JoinGame() {
       callEventListeners(JSON.parse(event.data));
     });
 
+    // TODO: should this event be cleaned up / run once?
     useEvent("Info", (data) => {
       setGameInfo({
         ...data,
@@ -50,6 +51,7 @@ export default function JoinGame() {
       });
     });
 
+    // TODO: actually have error handling
     socket.addEventListener("close", (event) => {
       throw new Error(event.reason ?? "Unknown error");
     });
@@ -109,6 +111,8 @@ const guesses = [
   },
 ];
 
+type SendFn = (message: ClientMessage) => void;
+
 type LobbyState = {
   type: "Lobby";
   ready: Array<Uuid>;
@@ -133,14 +137,12 @@ type State = LobbyState | WordBombState | AnagramsState;
 
 type Connection = {
   uuid: string;
-  clients: ClientInfo[];
+  clients: ClientInfo[]; // TODO: should we just have a seperate signal?
   owner: string;
   settings: RoomSettings;
 };
 
-type SendMessage = (message: ClientMessage) => void;
-
-function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
+function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   const postGameInfo: PostGameInfo | undefined = undefined;
   // {
   //   type: "WordBomb",
@@ -155,6 +157,7 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
   // }
 
   const [state, setState] = createStore<State>(roomStateToCamelCase(props.room.state));
+
   const [connection, setConnection] = createStore<Connection>({
     uuid: props.uuid,
     clients: props.room.clients,
@@ -182,7 +185,7 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendMessage }) {
 }
 
 function Lobby(props: {
-  sendMsg: SendMessage;
+  sendMsg: SendFn;
   connection: Accessor<Connection>;
   state: Accessor<LobbyState>;
   setState: SetStoreFunction<LobbyState>;
@@ -378,7 +381,7 @@ function ReadyPlayers(props: {
   );
 }
 
-function JoinButtons(props: { sendMsg: SendMessage }) {
+function JoinButtons(props: { sendMsg: SendFn }) {
   return (
     <div class="mt-auto flex gap-x-2.5">
       <button
