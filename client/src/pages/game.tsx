@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
-import { Accessor, createSignal, For, Match, Show, Switch } from "solid-js";
+import { Accessor, createSignal, For, Match, Setter, Show, Switch } from "solid-js";
 import { createStore, SetStoreFunction } from "solid-js/store";
-import { callEventListeners, ServerMessageData, useEvent } from "~/lib/events";
+import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
 import { Bomb, Link, QuestionMark } from "~/lib/icons";
 import {
   AnagramsPlayerData,
@@ -12,7 +12,7 @@ import {
   Uuid,
   WordBombPlayerData,
 } from "~/lib/types/messages";
-import { roomStateToCamelCase } from "~/lib/utils";
+import { getUsername, roomStateToCamelCase } from "~/lib/utils";
 
 export default function JoinGame() {
   const roomName = useParams().name;
@@ -60,6 +60,10 @@ export default function JoinGame() {
     socket.addEventListener("close", (event) => {
       throw new Error(event.reason ?? "Unknown error");
     });
+
+    if (import.meta.hot) {
+      // TODO
+    }
   }
 
   return (
@@ -118,6 +122,13 @@ const guesses = [
 
 type SendFn = (message: ClientMessage) => void;
 
+export type Room = {
+  uuid: Uuid;
+  clients: ClientInfo[];
+  owner: Uuid;
+  settings: RoomSettings;
+};
+
 type LobbyState = {
   type: "Lobby";
   ready: Array<Uuid>;
@@ -140,13 +151,7 @@ type AnagramsState = {
 
 type State = LobbyState | WordBombState | AnagramsState;
 
-type Room = {
-  clients: ClientInfo[];
-  owner: string;
-  settings: RoomSettings;
-};
-
-function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
+function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   const postGameInfo: PostGameInfo | undefined = undefined;
   // {
   //   type: "WordBomb",
@@ -161,24 +166,64 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   // }
 
   const [room, setRoom] = createStore<Room>({
-    clients: props.room.clients,
-    owner: props.room.owner,
-    settings: props.room.settings,
+    uuid,
+    clients: roomInfo.clients,
+    owner: roomInfo.owner,
+    settings: roomInfo.settings,
   });
-  const [state, setState] = createStore<State>(roomStateToCamelCase(props.room.state));
+  const [state, setState] = createStore<State>(roomStateToCamelCase(roomInfo.state));
+  const [messages, setMessages] = createSignal<Array<string>>([]);
+
+  useEvents({
+    Error: (data) => {
+      window.alert(data.content);
+    },
+    RoomSettings: (data) => {
+      const { type, ...settings } = data;
+      setRoom("settings", settings);
+    },
+    ConnectionUpdate: (data) => {
+      if (data.state.type === "Connected" || data.state.type === "Reconnected") {
+        const message = `${data.state.username} has joined`;
+        setMessages((messages) => [...messages, message]);
+
+        const newClient = {
+          uuid: data.uuid,
+          username: data.state.username,
+          disconnected: false,
+        };
+        setRoom("clients", (clients) => [
+          ...clients.filter((client) => client.uuid !== data.uuid),
+          newClient,
+        ]);
+      } else {
+        const message = `${getUsername(room, data.uuid)} has left`;
+        setMessages((messages) => [...messages, message]);
+
+        if (data.state.new_room_owner) {
+          setRoom("owner", data.state.new_room_owner);
+        }
+
+        if (state.type !== "Lobby") {
+          setRoom("clients", (client) => client.uuid == data.uuid, "disconnected", true);
+        } else {
+          setRoom("clients", (clients) => clients.filter((client) => client.uuid !== data.uuid));
+        }
+      }
+    },
+  });
 
   return (
     <>
       <GameNav />
-      <Chat />
+      <Chat sendMsg={sendMsg} room={() => room} messages={messages} setMessages={setMessages} />
       <Switch>
         <Match when={state.type === "Lobby"}>
           <Lobby
-            sendMsg={props.sendMsg}
+            sendMsg={sendMsg}
             room={() => room}
             state={() => state as LobbyState}
             setState={setState as SetStoreFunction<LobbyState>}
-            uuid={props.uuid}
             postGameInfo={postGameInfo}
           />
         </Match>
@@ -187,22 +232,27 @@ function Game(props: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   );
 }
 
-function Lobby(props: {
+function Lobby({
+  sendMsg,
+  room,
+  state,
+  setState,
+  postGameInfo,
+}: {
   sendMsg: SendFn;
   room: Accessor<Room>;
   state: Accessor<LobbyState>;
   setState: SetStoreFunction<LobbyState>;
-  uuid: Uuid;
   postGameInfo: PostGameInfo | undefined;
 }) {
   useEvent("ReadyPlayers", (data) => {
-    props.setState("ready", data.ready);
+    setState("ready", data.ready);
   });
 
   return (
     <main class="flex h-screen items-center justify-center overflow-hidden">
       <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
-        <Show when={props.postGameInfo}>
+        <Show when={postGameInfo}>
           <div class="flex flex-col gap-y-3.5">
             <Winner />
             <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
@@ -215,8 +265,8 @@ function Lobby(props: {
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
-          <ReadyPlayers room={props.room} state={props.state} />
-          <JoinButtons sendMsg={props.sendMsg} state={props.state} uuid={props.uuid} />
+          <ReadyPlayers room={room} state={state} />
+          <JoinButtons sendMsg={sendMsg} room={room} state={state} />
         </div>
       </div>
       <Status />
@@ -253,17 +303,37 @@ function GameNav() {
   );
 }
 
-function Chat() {
+function Chat({
+  sendMsg,
+  room,
+  messages,
+  setMessages,
+}: {
+  sendMsg: SendFn;
+  room: Accessor<Room>;
+  messages: Accessor<Array<string>>;
+  setMessages: Setter<Array<string>>;
+}) {
+  useEvent("ChatMessage", (data) => {
+    const message = `${getUsername(room(), data.author)}: ${data.content}`;
+    setMessages((messages) => [...messages, message]);
+  });
+
   return (
     <div class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t">
       <ul class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all">
-        <li>skeary: hi</li>
+        <For each={messages()}>{(message) => <li>{message}</li>}</For>
       </ul>
       <input
         class="m-2 h-10 rounded-lg border bg-transparent px-2.5 py-2 placeholder-white/50"
         type="text"
         maxlength="250"
         placeholder="send a message..."
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            sendMsg({ type: "ChatMessage", content: (event.target as HTMLInputElement).value });
+          }
+        }}
       />
     </div>
   );
@@ -349,17 +419,17 @@ function Stats() {
   );
 }
 
-function ReadyPlayers(props: { room: Accessor<Room>; state: Accessor<LobbyState> }) {
+function ReadyPlayers({ room, state }: { room: Accessor<Room>; state: Accessor<LobbyState> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">
         <h1 class="text-xl">Ready Players</h1>
-        <h1 class="text-lg text-[#26D16C]">96 slots left</h1>
+        <h1 class="text-lg text-[#26D16C]">{100 - state().ready.length} slots left</h1>
       </div>
       <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-        <For each={props.state().ready}>
+        <For each={state().ready}>
           {(uuid) => {
-            const username = props.room().clients.find((client) => client.uuid === uuid)!.username;
+            const username = room().clients.find((client) => client.uuid === uuid)!.username;
 
             return (
               <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
@@ -380,18 +450,34 @@ function ReadyPlayers(props: { room: Accessor<Room>; state: Accessor<LobbyState>
   );
 }
 
-function JoinButtons(props: { sendMsg: SendFn; state: Accessor<LobbyState>; uuid: Uuid }) {
-  const ready = () => props.state().ready.includes(props.uuid);
+function JoinButtons({
+  sendMsg,
+  room,
+  state,
+}: {
+  sendMsg: SendFn;
+  room: Accessor<Room>;
+  state: Accessor<LobbyState>;
+}) {
+  const ready = () => (state().ready.includes(room().uuid) ? "Unready" : "Ready");
 
   return (
     <div class="mt-auto flex gap-x-2.5">
       <button
         class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium"
-        onClick={() => props.sendMsg({ type: ready() ? "Unready" : "Ready" })}
+        onClick={() => sendMsg({ type: ready() })}
       >
-        {ready() ? "Unready" : "Ready"}
+        {ready()}
       </button>
-      <button class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium">Start Early</button>
+      <Show when={room().owner === room().uuid}>
+        <button
+          class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium transition-all disabled:opacity-50"
+          disabled={state().ready.length < 2}
+          onClick={() => sendMsg({ type: "StartEarly" })}
+        >
+          Start Early
+        </button>
+      </Show>
     </div>
   );
 }

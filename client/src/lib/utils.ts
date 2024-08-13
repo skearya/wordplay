@@ -1,4 +1,5 @@
-import type { RoomStateInfo } from "./types/messages";
+import { Room } from "~/pages/game";
+import type { RoomStateInfo, Uuid } from "./types/messages";
 
 export function cloneElement(element: HTMLElement) {
   const clone = element.cloneNode(true) as HTMLElement;
@@ -38,4 +39,8 @@ export function roomStateToCamelCase(state: RoomStateInfo) {
       return state;
     }
   }
+}
+
+export function getUsername(room: Room, uuid: Uuid): string | undefined {
+  return room.clients.find((client) => client.uuid === uuid)?.username;
 }
