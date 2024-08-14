@@ -30,6 +30,11 @@ export function callEventListeners(event: ServerMessage) {
   );
 }
 
+/*
+  TODO: make sure events recieved before a listener subscribes will get sent to it
+  look into https://www.npmjs.com/package/mitt
+*/
+
 export function useEvent<EventT extends ServerMessageTypes>(
   type: EventT,
   f: (data: ServerMessageData<EventT>) => void,

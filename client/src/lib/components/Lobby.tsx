@@ -1,9 +1,9 @@
 import { Accessor, For, Show } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
-import { useEvent } from "~/lib/events";
-import { LobbyState, Room, SendFn } from "~/lib/types/game";
+import { useEvents } from "~/lib/events";
+import { Bomb } from "~/lib/icons";
+import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo } from "~/lib/types/messages";
-import { Bomb } from "../icons";
 
 export function Lobby({
   sendMsg,
@@ -14,12 +14,21 @@ export function Lobby({
 }: {
   sendMsg: SendFn;
   room: Accessor<Room>;
-  state: Accessor<LobbyState>;
-  setState: SetStoreFunction<LobbyState>;
+  state: Accessor<State>;
+  setState: SetStoreFunction<State>;
   postGameInfo: PostGameInfo | undefined;
 }) {
-  useEvent("ReadyPlayers", (data) => {
-    setState("ready", data.ready);
+  const [lobby, setLobby] = [
+    state as Accessor<LobbyState>,
+    setState as SetStoreFunction<LobbyState>,
+  ];
+
+  useEvents({
+    ReadyPlayers: (data) => {
+      setLobby("ready", data.ready);
+    },
+    StartingCountdown: (data) => {},
+    GameStarted: (data) => {},
   });
 
   return (
@@ -38,8 +47,8 @@ export function Lobby({
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
-          <ReadyPlayers room={room} state={state} />
-          <JoinButtons sendMsg={sendMsg} room={room} state={state} />
+          <ReadyPlayers room={room} lobby={lobby} />
+          <JoinButtons sendMsg={sendMsg} room={room} lobby={lobby} />
         </div>
       </div>
       <Status />
@@ -128,15 +137,15 @@ function Stats() {
   );
 }
 
-function ReadyPlayers({ room, state }: { room: Accessor<Room>; state: Accessor<LobbyState> }) {
+function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">
         <h1 class="text-xl">Ready Players</h1>
-        <h1 class="text-lg text-[#26D16C]">{100 - state().ready.length} slots left</h1>
+        <h1 class="text-lg text-[#26D16C]">{100 - lobby().ready.length} slots left</h1>
       </div>
       <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-        <For each={state().ready}>
+        <For each={lobby().ready}>
           {(uuid) => {
             const username = room().clients.find((client) => client.uuid === uuid)!.username;
 
@@ -162,13 +171,13 @@ function ReadyPlayers({ room, state }: { room: Accessor<Room>; state: Accessor<L
 function JoinButtons({
   sendMsg,
   room,
-  state,
+  lobby,
 }: {
   sendMsg: SendFn;
   room: Accessor<Room>;
-  state: Accessor<LobbyState>;
+  lobby: Accessor<LobbyState>;
 }) {
-  const ready = () => (state().ready.includes(room().uuid) ? "Unready" : "Ready");
+  const ready = () => (lobby().ready.includes(room().uuid) ? "Unready" : "Ready");
 
   return (
     <div class="mt-auto flex gap-x-2.5">
@@ -181,7 +190,7 @@ function JoinButtons({
       <Show when={room().owner === room().uuid}>
         <button
           class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium transition-all disabled:opacity-50"
-          disabled={state().ready.length < 2}
+          disabled={lobby().ready.length < 2}
           onClick={() => sendMsg({ type: "StartEarly" })}
         >
           Start Early

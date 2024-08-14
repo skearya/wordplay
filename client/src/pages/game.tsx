@@ -1,11 +1,12 @@
 import { useParams } from "@solidjs/router";
 import { createSignal, Match, Show, Switch } from "solid-js";
-import { createStore, SetStoreFunction } from "solid-js/store";
+import { createStore } from "solid-js/store";
 import { Chat } from "~/lib/components/Chat";
 import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
+import { WordBomb } from "~/lib/components/WordBomb";
 import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
-import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
+import { Room, SendFn, State } from "~/lib/types/game";
 import { ClientMessage, PostGameInfo } from "~/lib/types/messages";
 import { getUsername, roomStateToCamelCase } from "~/lib/utils";
 
@@ -168,19 +169,13 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
           <Lobby
             sendMsg={sendMsg}
             room={() => room}
-            state={() => state as LobbyState}
-            setState={setState as SetStoreFunction<LobbyState>}
+            state={() => state}
+            setState={setState}
             postGameInfo={postGameInfo}
           />
         </Match>
         <Match when={state.type === "WordBomb"}>
-          <Lobby
-            sendMsg={sendMsg}
-            room={() => room}
-            state={() => state as LobbyState}
-            setState={setState as SetStoreFunction<LobbyState>}
-            postGameInfo={postGameInfo}
-          />
+          <WordBomb />
         </Match>
         <Match when={state.type === "Anagrams"}>
           <h1>anagrams unimplemented</h1>
