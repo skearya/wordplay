@@ -230,9 +230,9 @@ function Room(props: { name: string; players: Array<string> }) {
           <img
             src={`https://avatar.vercel.sh/${player}`}
             alt={player}
-            width="38"
-            height="38"
             title={player}
+            width={38}
+            height={38}
             class="rounded-full border-[3px] border-black"
           />
         ))}

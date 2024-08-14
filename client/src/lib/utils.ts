@@ -1,5 +1,5 @@
-import { Room } from "~/pages/game";
-import type { RoomStateInfo, Uuid } from "./types/messages";
+import { Room } from "./types/game";
+import { RoomStateInfo, Uuid } from "./types/messages";
 
 export function cloneElement(element: HTMLElement) {
   const clone = element.cloneNode(true) as HTMLElement;
