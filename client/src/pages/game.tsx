@@ -54,10 +54,6 @@ export default function JoinGame() {
     socket.addEventListener("close", (event) => {
       throw new Error(event.reason ?? "Unknown error");
     });
-
-    if (import.meta.hot) {
-      import.meta.hot.on("vite:beforeUpdate", () => socket.close());
-    }
   }
 
   return (

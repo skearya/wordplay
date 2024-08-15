@@ -1,4 +1,4 @@
-import { Accessor, For } from "solid-js";
+import { Accessor, createEffect, For, on, onMount } from "solid-js";
 import { ChatMessage, SendFn } from "~/lib/types/game";
 
 export function Chat({
@@ -8,11 +8,66 @@ export function Chat({
   sendMsg: SendFn;
   messages: Accessor<Array<ChatMessage>>;
 }) {
-  // TODO: have chat jump down with new message
+  let chatElement!: HTMLDivElement;
+  let chatContentElement!: HTMLUListElement;
+  let chatInputElement!: HTMLInputElement;
+
+  let animations: Array<Animation> = [];
+  let fadeOutTimeout: NodeJS.Timeout | undefined;
+
+  function startFadeOut() {
+    clearTimeout(fadeOutTimeout);
+
+    const options = {
+      easing: "ease-out",
+      duration: 5000,
+      fill: "forwards",
+    } as const;
+
+    animations.push(chatElement.animate({ borderColor: "transparent" }, options));
+    animations.push(chatContentElement.animate({ opacity: "0%" }, options));
+  }
+
+  function reappear() {
+    animations.forEach((animation) => animation.cancel());
+    animations = [];
+  }
+
+  onMount(() => {
+    startFadeOut();
+  });
+
+  createEffect(
+    on(
+      () => messages().length,
+      () => {
+        chatContentElement.scrollTop = chatContentElement.scrollHeight;
+
+        reappear();
+        clearTimeout(fadeOutTimeout);
+        fadeOutTimeout = setTimeout(startFadeOut, 3000);
+      },
+    ),
+  );
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "t") {
+      chatInputElement.focus();
+      reappear();
+    }
+  });
 
   return (
-    <div class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t">
-      <ul class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all">
+    <div
+      ref={chatElement}
+      class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t"
+      onMouseEnter={reappear}
+      onMouseLeave={startFadeOut}
+    >
+      <ul
+        ref={chatContentElement}
+        class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
+      >
         <For each={messages()}>
           {([content, isServer]) => (
             <li class={isServer ? "text-green-400" : undefined}>
@@ -22,6 +77,7 @@ export function Chat({
         </For>
       </ul>
       <input
+        ref={chatInputElement}
         class="m-2 h-10 rounded-lg border bg-transparent px-2.5 py-2 placeholder-white/50"
         type="text"
         maxlength="250"
