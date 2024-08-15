@@ -198,7 +198,7 @@ function JoinButtons({
       </button>
       <Show when={room().owner === room().uuid}>
         <button
-          class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium transition-all disabled:opacity-50"
+          class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium transition-opacity disabled:opacity-50"
           disabled={lobby().ready.length < 2}
           onClick={() => sendMsg({ type: "StartEarly" })}
         >

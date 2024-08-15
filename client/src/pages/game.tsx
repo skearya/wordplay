@@ -10,17 +10,29 @@ import { ChatMessage, Room, SendFn, State } from "~/lib/types/game";
 import { ClientMessage, PostGameInfo } from "~/lib/types/messages";
 import { convertStateMessage, getRejoinToken, getUsername, saveRejoinToken } from "~/lib/utils";
 
+type JoinGameState =
+  | {
+      type: "waiting" | "connecting" | "fading out";
+    }
+  | {
+      type: "ready";
+      gameInfo: Parameters<typeof Game>[0];
+    };
+
 export default function JoinGame() {
+  let rootElement!: HTMLElement;
+
   const roomName = useParams().name;
+  const [state, setState] = createSignal<JoinGameState>({ type: "waiting" });
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
-  const [gameInfo, setGameInfo] = createSignal<Parameters<typeof Game>[0] | undefined>(undefined);
-  const canJoin = () => username().length <= 20 && username() !== "";
+  const validUsername = () => username().length <= 20 && username() !== "";
 
   function join() {
+    setState({ type: "connecting" });
+
     localStorage.setItem("username", username());
 
     const rejoinToken = getRejoinToken(roomName);
-
     const params = new URLSearchParams({
       username: username(),
       ...(rejoinToken && { rejoin_token: rejoinToken }),
@@ -40,12 +52,17 @@ export default function JoinGame() {
     const removeInfoHandler = useEvent(
       "Info",
       (data) => {
-        setGameInfo({
+        removeInfoHandler();
+
+        const gameInfo = {
           ...data,
           sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
-        });
+        };
 
-        removeInfoHandler();
+        rootElement.classList.add("fade-out");
+        rootElement.addEventListener("animationend", () => setState({ type: "ready", gameInfo }), {
+          once: true,
+        });
       },
       false,
     );
@@ -56,29 +73,32 @@ export default function JoinGame() {
     });
   }
 
+  // TODO: show game info
+
   return (
     <Show
-      when={gameInfo()}
+      when={state().type === "ready"}
       fallback={
-        <main class="flex h-screen flex-col items-center justify-center">
+        <main ref={rootElement} class="flex h-screen flex-col items-center justify-center">
           <div class="flex min-w-64 flex-col gap-y-2.5">
             <input
               type="text"
               maxlength="20"
               placeholder="username"
-              autofocus
-              class="rounded-lg border bg-transparent px-3 py-2.5"
+              disabled={state().type !== "waiting"}
               value={username()}
+              autofocus
+              class="rounded-lg border bg-transparent px-3 py-2.5 transition-opacity disabled:opacity-50"
               onInput={(event) => setUsername(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && canJoin()) {
+                if (event.key === "Enter" && validUsername()) {
                   join();
                 }
               }}
             />
             <button
+              disabled={!validUsername() || state().type !== "waiting"}
               class="rounded-lg border bg-[#475D50] py-3 font-medium transition-opacity disabled:opacity-50"
-              disabled={!canJoin()}
               onClick={join}
             >
               Join
@@ -87,14 +107,16 @@ export default function JoinGame() {
         </main>
       }
     >
-      <Game {...gameInfo()!} />
+      <div class="fade-in">
+        <Game {...(state() as Extract<JoinGameState, { type: "ready" }>).gameInfo} />
+      </div>
     </Show>
   );
 }
 
 function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
   const roomName = useParams().name;
-  let postGameInfo: PostGameInfo | undefined = undefined;
+  const [postGameInfo, setPostGameInfo] = createSignal<PostGameInfo | undefined>(undefined);
   const [messages, setMessages] = createSignal<Array<ChatMessage>>([]);
   const [room, setRoom] = createStore<Room>({
     uuid,
@@ -157,7 +179,8 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
         setRoom("owner", data.new_room_owner);
       }
 
-      postGameInfo = data.info;
+      setPostGameInfo(data.info);
+      setState({ type: "Lobby", ready: [], startingCountdown: undefined });
     },
   });
 
@@ -172,7 +195,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
             room={() => room}
             state={() => state}
             setState={setState}
-            postGameInfo={postGameInfo}
+            postGameInfo={postGameInfo()}
           />
         </Match>
         <Match when={state.type === "WordBomb"}>

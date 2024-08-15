@@ -1,4 +1,4 @@
-import { Accessor, createEffect, For, on, onMount } from "solid-js";
+import { Accessor, createEffect, For, on, onCleanup, onMount } from "solid-js";
 import { ChatMessage, SendFn } from "~/lib/types/game";
 
 export function Chat({
@@ -33,10 +33,6 @@ export function Chat({
     animations = [];
   }
 
-  onMount(() => {
-    startFadeOut();
-  });
-
   createEffect(
     on(
       () => messages().length,
@@ -50,11 +46,28 @@ export function Chat({
     ),
   );
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "t") {
-      chatInputElement.focus();
-      reappear();
-    }
+  onMount(() => {
+    startFadeOut();
+  });
+
+  const controller = new AbortController();
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (document.activeElement?.tagName === "INPUT") return;
+
+      if (event.key === "t") {
+        event.preventDefault();
+        chatInputElement.focus();
+        reappear();
+      }
+    },
+    { signal: controller.signal },
+  );
+
+  onCleanup(() => {
+    controller.abort();
   });
 
   return (

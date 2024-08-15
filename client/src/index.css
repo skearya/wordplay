@@ -12,14 +12,33 @@
   }
 }
 
-.text-outline {
-  text-shadow:
-    -1px -1px 0 #475d50,
-    0 -1px 0 #475d50,
-    1px -1px 0 #475d50,
-    1px 0 0 #475d50,
-    1px 1px 0 #475d50,
-    0 1px 0 #475d50,
-    -1px 1px 0 #475d50,
-    -1px 0 0 #475d50;
+@layer utilities {
+  .text-outline {
+    text-shadow:
+      -1px -1px 0 #475d50,
+      0 -1px 0 #475d50,
+      1px -1px 0 #475d50,
+      1px 0 0 #475d50,
+      1px 1px 0 #475d50,
+      0 1px 0 #475d50,
+      -1px 1px 0 #475d50,
+      -1px 0 0 #475d50;
+  }
+
+  @keyframes fade-out {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .fade-out {
+    animation: 300ms ease fade-out;
+  }
+
+  .fade-in {
+    animation: 300ms ease reverse fade-out;
+  }
 }
