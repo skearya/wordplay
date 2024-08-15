@@ -38,10 +38,10 @@ export function Chat({
       () => messages().length,
       () => {
         chatContentElement.scrollTop = chatContentElement.scrollHeight;
-
         reappear();
+
         clearTimeout(fadeOutTimeout);
-        fadeOutTimeout = setTimeout(startFadeOut, 3000);
+        fadeOutTimeout = setTimeout(startFadeOut, 1500);
       },
     ),
   );
@@ -50,25 +50,18 @@ export function Chat({
     startFadeOut();
   });
 
-  const controller = new AbortController();
+  function onDocumentKeydown(event: KeyboardEvent) {
+    if (document.activeElement?.tagName === "INPUT") return;
 
-  document.addEventListener(
-    "keydown",
-    (event) => {
-      if (document.activeElement?.tagName === "INPUT") return;
+    if (event.key === "t") {
+      chatInputElement.focus();
+      event.preventDefault();
+    }
+  }
 
-      if (event.key === "t") {
-        event.preventDefault();
-        chatInputElement.focus();
-        reappear();
-      }
-    },
-    { signal: controller.signal },
-  );
+  document.addEventListener("keydown", onDocumentKeydown);
 
-  onCleanup(() => {
-    controller.abort();
-  });
+  onCleanup(() => document.removeEventListener("keydown", onDocumentKeydown));
 
   return (
     <div
@@ -103,6 +96,8 @@ export function Chat({
             input.value = "";
           }
         }}
+        onFocus={reappear}
+        onBlur={startFadeOut}
       />
     </div>
   );

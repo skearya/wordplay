@@ -153,26 +153,47 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
         <h1 class="text-xl">Ready Players</h1>
         <h1 class="text-lg text-[#26D16C]">{100 - lobby().ready.length} slots left</h1>
       </div>
-      <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-        <For each={lobby().ready}>
-          {(uuid) => {
-            const username = room().clients.find((client) => client.uuid === uuid)!.username;
+      <Show
+        when={lobby().ready.length !== 0}
+        fallback={
+          <div class="flex h-full flex-col items-center justify-center gap-y-3 text-[#8BA698]">
+            <h1>looks like nobody's here, invite someone!</h1>
+            <button
+              class="rounded-lg border px-2 py-1.5"
+              onClick={(event) => {
+                navigator.clipboard.writeText(window.location.href);
+                event.target.textContent = "copied";
+                setTimeout(() => (event.target.textContent = "copy invite link"), 1000);
+              }}
+            >
+              copy invite link
+            </button>
+          </div>
+        }
+      >
+        <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
+          <For each={lobby().ready}>
+            {(uuid) => {
+              const username = room().clients.find((client) => client.uuid === uuid)!.username;
 
-            return (
-              <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
-                <img
-                  src={`https://avatar.vercel.sh/${username}`}
-                  alt={`profile picture`}
-                  height={55}
-                  width={55}
-                  class="rounded-full"
-                />
-                <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">{username}</h1>
-              </div>
-            );
-          }}
-        </For>
-      </div>
+              return (
+                <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
+                  <img
+                    src={`https://avatar.vercel.sh/${username}`}
+                    alt={`profile picture`}
+                    height={55}
+                    width={55}
+                    class="rounded-full"
+                  />
+                  <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">
+                    {username}
+                  </h1>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
     </>
   );
 }
