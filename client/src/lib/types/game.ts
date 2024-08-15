@@ -9,6 +9,8 @@ import {
 
 export type SendFn = (message: ClientMessage) => void;
 
+export type ChatMessage = [content: string, isServer: boolean];
+
 export type Room = {
   uuid: Uuid;
   clients: ClientInfo[];
@@ -27,7 +29,7 @@ export type WordBombState = {
   players: Array<WordBombPlayerData>;
   turn: Uuid;
   prompt: string;
-  usedLetters: Array<string> | undefined;
+  usedLetters: Set<string> | undefined;
 };
 
 export type AnagramsState = {

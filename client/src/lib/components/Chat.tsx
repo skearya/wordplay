@@ -1,28 +1,25 @@
-import { Accessor, For, Setter } from "solid-js";
-import { useEvent } from "~/lib/events";
-import { Room, SendFn } from "~/lib/types/game";
-import { getUsername } from "~/lib/utils";
+import { Accessor, For } from "solid-js";
+import { ChatMessage, SendFn } from "~/lib/types/game";
 
 export function Chat({
   sendMsg,
-  room,
   messages,
-  setMessages,
 }: {
   sendMsg: SendFn;
-  room: Accessor<Room>;
-  messages: Accessor<Array<string>>;
-  setMessages: Setter<Array<string>>;
+  messages: Accessor<Array<ChatMessage>>;
 }) {
-  useEvent("ChatMessage", (data) => {
-    const message = `${getUsername(room(), data.author)}: ${data.content}`;
-    setMessages((messages) => [...messages, message]);
-  });
+  // TODO: have chat jump down with new message
 
   return (
     <div class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t">
       <ul class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all">
-        <For each={messages()}>{(message) => <li>{message}</li>}</For>
+        <For each={messages()}>
+          {([content, isServer]) => (
+            <li class={isServer ? "text-green-400" : undefined}>
+              {isServer ? `server: ${content}` : content}
+            </li>
+          )}
+        </For>
       </ul>
       <input
         class="m-2 h-10 rounded-lg border bg-transparent px-2.5 py-2 placeholder-white/50"

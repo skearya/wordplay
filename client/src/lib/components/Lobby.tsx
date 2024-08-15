@@ -26,9 +26,18 @@ export function Lobby({
   useEvents({
     ReadyPlayers: (data) => {
       setLobby("ready", data.ready);
+
+      if (data.countdown_update) {
+        if (data.countdown_update.type === "InProgress") {
+          setLobby("startingCountdown", data.countdown_update.time_left);
+        } else {
+          setLobby("startingCountdown", undefined);
+        }
+      }
     },
-    StartingCountdown: (data) => {},
-    GameStarted: (data) => {},
+    StartingCountdown: (data) => {
+      setLobby("startingCountdown", data.time_left);
+    },
   });
 
   return (
@@ -51,7 +60,7 @@ export function Lobby({
           <JoinButtons sendMsg={sendMsg} room={room} lobby={lobby} />
         </div>
       </div>
-      <Status />
+      <Status lobby={lobby} />
       <Practice />
     </main>
   );
@@ -221,14 +230,16 @@ function Practice() {
   );
 }
 
-function Status() {
+function Status({ lobby }: { lobby: Accessor<LobbyState> }) {
   return (
     <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden">
       <div class="mr-3">
         <Bomb />
       </div>
       <h1 class="text-outline -skew-x-6 text-[4.5vw] leading-tight text-[#050705]">
-        waiting for players...
+        {lobby().startingCountdown
+          ? `starting in ${lobby().startingCountdown}`
+          : "waiting for players..."}
       </h1>
     </div>
   );

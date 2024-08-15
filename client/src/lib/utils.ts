@@ -1,4 +1,4 @@
-import { Room } from "./types/game";
+import { Room, State } from "./types/game";
 import { RoomStateInfo, Uuid } from "./types/messages";
 
 export function cloneElement(element: HTMLElement) {
@@ -13,7 +13,31 @@ export function cloneElement(element: HTMLElement) {
   return clone;
 }
 
-export function roomStateToCamelCase(state: RoomStateInfo) {
+export function getRejoinToken(roomName: string): string | undefined {
+  const rejoinTokensString = localStorage.getItem("rejoinTokens");
+
+  if (rejoinTokensString) {
+    return JSON.parse(rejoinTokensString)[roomName];
+  }
+}
+
+export function saveRejoinToken(roomName: string, token: string) {
+  const rejoinTokensString = localStorage.getItem("rejoinTokens");
+
+  if (rejoinTokensString) {
+    const rejoinTokens = JSON.parse(rejoinTokensString) as Record<string, string | undefined>;
+
+    localStorage.setItem(
+      "rejoinTokens",
+      JSON.stringify({
+        ...rejoinTokens,
+        roomName: token,
+      }),
+    );
+  }
+}
+
+export function convertStateMessage(state: RoomStateInfo): State {
   switch (state.type) {
     case "Lobby": {
       const { type, ready, starting_countdown } = state;
@@ -32,7 +56,7 @@ export function roomStateToCamelCase(state: RoomStateInfo) {
         players,
         turn,
         prompt,
-        usedLetters: used_letters,
+        usedLetters: new Set(used_letters),
       };
     }
     case "Anagrams": {

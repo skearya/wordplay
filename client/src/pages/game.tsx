@@ -6,9 +6,9 @@ import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
 import { WordBomb } from "~/lib/components/WordBomb";
 import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
-import { Room, SendFn, State } from "~/lib/types/game";
+import { ChatMessage, Room, SendFn, State } from "~/lib/types/game";
 import { ClientMessage, PostGameInfo } from "~/lib/types/messages";
-import { getUsername, roomStateToCamelCase } from "~/lib/utils";
+import { convertStateMessage, getRejoinToken, getUsername, saveRejoinToken } from "~/lib/utils";
 
 export default function JoinGame() {
   const roomName = useParams().name;
@@ -19,9 +19,7 @@ export default function JoinGame() {
   function join() {
     localStorage.setItem("username", username());
 
-    const rejoinToken: string | undefined = JSON.parse(
-      localStorage.getItem("rejoinTokens") ?? "{}",
-    )[roomName];
+    const rejoinToken = getRejoinToken(roomName);
 
     const params = new URLSearchParams({
       username: username(),
@@ -99,27 +97,16 @@ export default function JoinGame() {
 }
 
 function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
-  const postGameInfo: PostGameInfo | undefined = undefined;
-  // {
-  //   type: "WordBomb",
-  //   winner: "2",
-  //   mins_elapsed: 21,
-  //   words_used: 2121,
-  //   letters_typed: 212121,
-  //   fastest_guesses: [],
-  //   longest_words: [],
-  //   avg_wpms: [],
-  //   avg_word_lengths: [],
-  // }
-
+  const roomName = useParams().name;
+  let postGameInfo: PostGameInfo | undefined = undefined;
+  const [messages, setMessages] = createSignal<Array<ChatMessage>>([]);
   const [room, setRoom] = createStore<Room>({
     uuid,
     clients: roomInfo.clients,
     owner: roomInfo.owner,
     settings: roomInfo.settings,
   });
-  const [state, setState] = createStore<State>(roomStateToCamelCase(roomInfo.state));
-  const [messages, setMessages] = createSignal<Array<string>>([]);
+  const [state, setState] = createStore<State>(convertStateMessage(roomInfo.state));
 
   useEvents({
     Error: (data) => {
@@ -129,10 +116,14 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
       const { type, ...settings } = data;
       setRoom("settings", settings);
     },
+    ChatMessage: (data) => {
+      const message = `${getUsername(room, data.author)}: ${data.content}`;
+      setMessages((messages) => [...messages, [message, false]]);
+    },
     ConnectionUpdate: (data) => {
       if (data.state.type === "Connected" || data.state.type === "Reconnected") {
         const message = `${data.state.username} has joined`;
-        setMessages((messages) => [...messages, message]);
+        setMessages((messages) => [...messages, [message, true]]);
 
         const newClient = {
           uuid: data.uuid,
@@ -145,7 +136,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
         ]);
       } else {
         const message = `${getUsername(room, data.uuid)} has left`;
-        setMessages((messages) => [...messages, message]);
+        setMessages((messages) => [...messages, [message, true]]);
 
         if (data.state.new_room_owner) {
           setRoom("owner", data.state.new_room_owner);
@@ -158,12 +149,26 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
         }
       }
     },
+    GameStarted: (data) => {
+      if (data.rejoin_token) {
+        saveRejoinToken(roomName, data.rejoin_token);
+      }
+
+      setState(convertStateMessage(data.game));
+    },
+    GameEnded: (data) => {
+      if (data.new_room_owner) {
+        setRoom("owner", data.new_room_owner);
+      }
+
+      postGameInfo = data.info;
+    },
   });
 
   return (
     <>
       <GameNav room={() => room} />
-      <Chat sendMsg={sendMsg} room={() => room} messages={messages} setMessages={setMessages} />
+      <Chat sendMsg={sendMsg} messages={messages} />
       <Switch>
         <Match when={state.type === "Lobby"}>
           <Lobby
