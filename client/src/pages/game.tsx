@@ -65,7 +65,7 @@ export default function JoinGame() {
           sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
         };
 
-        rootElement.classList.add("fade-out");
+        rootElement.classList.add("quick-fade-out");
         rootElement.addEventListener("animationend", () => setState({ type: "ready", gameInfo }), {
           once: true,
         });
@@ -112,7 +112,7 @@ export default function JoinGame() {
         </main>
       }
     >
-      <div class="fade-in">
+      <div class="quick-fade-in">
         <Game {...(state() as Variant<JoinGameState, "ready">).gameInfo} />
       </div>
     </Show>

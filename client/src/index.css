@@ -34,11 +34,11 @@
     }
   }
 
-  .fade-out {
+  .quick-fade-out {
     animation: 300ms ease fade-out;
   }
 
-  .fade-in {
+  .quick-fade-in {
     animation: 300ms ease reverse fade-out;
   }
 }
