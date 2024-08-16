@@ -1,5 +1,5 @@
 import { Accessor, createEffect, For, on, onCleanup, onMount } from "solid-js";
-import { ChatMessage, SendFn } from "~/lib/types/game";
+import { ChatMessage, ChatMessageType, SendFn } from "~/lib/types/game";
 
 export function Chat({
   sendMsg,
@@ -75,11 +75,16 @@ export function Chat({
         class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
       >
         <For each={messages()}>
-          {([content, isServer]) => (
-            <li class={isServer ? "text-green-400" : undefined}>
-              {isServer ? `server: ${content}` : content}
-            </li>
-          )}
+          {([content, type]) => {
+            switch (type) {
+              case ChatMessageType.Client:
+                return <li>{content}</li>;
+              case ChatMessageType.Server:
+                return <li class="text-green-400">{`server: ${content}`}</li>;
+              case ChatMessageType.Error:
+                return <li class="text-red-400">{`error: ${content}`}</li>;
+            }
+          }}
         </For>
       </ul>
       <input

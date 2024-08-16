@@ -1,9 +1,10 @@
 import { onCleanup } from "solid-js";
 import { ServerMessage } from "~/lib/types/messages";
+import { Variant } from "~/lib/utils";
+
+export type ServerMessageData<EventT> = Variant<ServerMessage, EventT>;
 
 type ServerMessageTypes = ServerMessage["type"];
-
-export type ServerMessageData<EventT> = Extract<ServerMessage, { type: EventT }>;
 
 const listeners: {
   [EventT in ServerMessageTypes]: Array<(data: ServerMessageData<EventT>) => void>;

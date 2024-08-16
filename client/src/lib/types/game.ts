@@ -9,7 +9,13 @@ import {
 
 export type SendFn = (message: ClientMessage) => void;
 
-export type ChatMessage = [content: string, isServer: boolean];
+export enum ChatMessageType {
+  Client,
+  Server,
+  Error,
+}
+
+export type ChatMessage = [content: string, type: ChatMessageType];
 
 export type Room = {
   uuid: Uuid;

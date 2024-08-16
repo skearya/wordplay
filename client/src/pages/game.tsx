@@ -6,13 +6,19 @@ import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
 import { WordBomb } from "~/lib/components/WordBomb";
 import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
-import { ChatMessage, Room, SendFn, State } from "~/lib/types/game";
+import { ChatMessage, ChatMessageType, Room, SendFn, State } from "~/lib/types/game";
 import { ClientMessage, PostGameInfo } from "~/lib/types/messages";
-import { convertStateMessage, getRejoinToken, getUsername, saveRejoinToken } from "~/lib/utils";
+import {
+  convertStateMessage,
+  getRejoinToken,
+  getUsername,
+  saveRejoinToken,
+  Variant,
+} from "~/lib/utils";
 
 type JoinGameState =
   | {
-      type: "waiting" | "connecting" | "fading out";
+      type: "waiting" | "connecting";
     }
   | {
       type: "ready";
@@ -74,7 +80,6 @@ export default function JoinGame() {
   }
 
   // TODO: show game info
-
   return (
     <Show
       when={state().type === "ready"}
@@ -108,7 +113,7 @@ export default function JoinGame() {
       }
     >
       <div class="fade-in">
-        <Game {...(state() as Extract<JoinGameState, { type: "ready" }>).gameInfo} />
+        <Game {...(state() as Variant<JoinGameState, "ready">).gameInfo} />
       </div>
     </Show>
   );
@@ -128,7 +133,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
 
   useEvents({
     Error: (data) => {
-      window.alert(data.content);
+      setMessages((messages) => [...messages, [data.content, ChatMessageType.Error]]);
     },
     RoomSettings: (data) => {
       const { type, ...settings } = data;
@@ -136,12 +141,12 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
     },
     ChatMessage: (data) => {
       const message = `${getUsername(room, data.author)}: ${data.content}`;
-      setMessages((messages) => [...messages, [message, false]]);
+      setMessages((messages) => [...messages, [message, ChatMessageType.Client]]);
     },
     ConnectionUpdate: (data) => {
       if (data.state.type === "Connected" || data.state.type === "Reconnected") {
         const message = `${data.state.username} has joined`;
-        setMessages((messages) => [...messages, [message, true]]);
+        setMessages((messages) => [...messages, [message, ChatMessageType.Server]]);
 
         const newClient = {
           uuid: data.uuid,
@@ -154,7 +159,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
         ]);
       } else {
         const message = `${getUsername(room, data.uuid)} has left`;
-        setMessages((messages) => [...messages, [message, true]]);
+        setMessages((messages) => [...messages, [message, ChatMessageType.Server]]);
 
         if (data.state.new_room_owner) {
           setRoom("owner", data.state.new_room_owner);

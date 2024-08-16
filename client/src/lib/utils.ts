@@ -1,5 +1,5 @@
-import { Room, State } from "./types/game";
-import { RoomStateInfo, Uuid } from "./types/messages";
+import { Room, State } from "~/lib/types/game";
+import { RoomStateInfo, Uuid } from "~/lib/types/messages";
 
 export function cloneElement(element: HTMLElement) {
   const clone = element.cloneNode(true) as HTMLElement;
@@ -31,7 +31,7 @@ export function saveRejoinToken(roomName: string, token: string) {
       "rejoinTokens",
       JSON.stringify({
         ...rejoinTokens,
-        roomName: token,
+        [roomName]: token,
       }),
     );
   }
@@ -68,3 +68,5 @@ export function convertStateMessage(state: RoomStateInfo): State {
 export function getUsername(room: Room, uuid: Uuid): string | undefined {
   return room.clients.find((client) => client.uuid === uuid)?.username;
 }
+
+export type Variant<T, U> = Extract<T, { type: U }>;

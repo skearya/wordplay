@@ -61,17 +61,8 @@ export function Lobby({
         </div>
       </div>
       <Status lobby={lobby} />
-      <Practice />
+      {/* <Practice /> */}
     </main>
-  );
-}
-
-function Tabs() {
-  return (
-    <div class="flex overflow-hidden rounded-lg border text-center">
-      <button class="flex-1 rounded-lg bg-[#475D50] py-2">Info</button>
-      <button class="flex-1 rounded-lg py-2">Settings</button>
-    </div>
   );
 }
 
@@ -157,7 +148,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
         when={lobby().ready.length !== 0}
         fallback={
           <div class="flex h-full flex-col items-center justify-center gap-y-3 text-[#8BA698]">
-            <h1>looks like nobody's here, invite someone!</h1>
+            <h1>maybe invite someone?</h1>
             <button
               class="rounded-lg border px-2 py-1.5"
               onClick={(event) => {
