@@ -1,4 +1,4 @@
-import { JSX } from "solid-js/jsx-runtime";
+import { ComponentProps } from "solid-js";
 import { tv, VariantProps } from "tailwind-variants";
 
 const input = tv({
@@ -18,7 +18,7 @@ const input = tv({
   },
 });
 
-type InputProps = JSX.HTMLElementTags["input"] & {
+type InputProps = ComponentProps<"input"> & {
   onEnter?: (input: HTMLInputElement) => void;
 } & VariantProps<typeof input>;
 

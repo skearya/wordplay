@@ -1,4 +1,4 @@
-import { JSX } from "solid-js/jsx-runtime";
+import { ComponentProps } from "solid-js";
 import { tv, VariantProps } from "tailwind-variants";
 
 const button = tv({
@@ -21,7 +21,7 @@ const button = tv({
   },
 });
 
-type ButtonProps = JSX.HTMLElementTags["button"] & VariantProps<typeof button>;
+type ButtonProps = ComponentProps<"button"> & VariantProps<typeof button>;
 
 export function Button(props: ButtonProps) {
   props["class"] = button(props);

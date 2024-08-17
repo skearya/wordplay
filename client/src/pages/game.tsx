@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { createSignal, Match, Show, Switch } from "solid-js";
+import { ComponentProps, createSignal, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Chat } from "~/lib/components/Chat";
 import { Lobby } from "~/lib/components/Lobby";
@@ -24,7 +24,7 @@ type JoinGameState =
     }
   | {
       type: "ready";
-      gameInfo: Parameters<typeof Game>[0];
+      gameInfo: ComponentProps<typeof Game>;
     };
 
 export default function JoinGame() {
@@ -204,7 +204,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
           />
         </Match>
         <Match when={state.type === "WordBomb"}>
-          <WordBomb />
+          <WordBomb sendMsg={sendMsg} room={() => room} state={() => state} setState={setState} />
         </Match>
         <Match when={state.type === "Anagrams"}>
           <h1>anagrams unimplemented</h1>

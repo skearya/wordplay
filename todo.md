@@ -1,16 +1,17 @@
 # current todo:
 
-- client and server version checking
+- page transitions with solid-transition-group
 
-- review all `.unwrap()`s
+- client and server version checking
 
 - use tracing
 
-- store and display previous winners of session
-
 - probably look into using dashmap instead of std hashmap for global game data for concurrent references
+
+- store and display previous winners of session
 
 - probably use parking_lot because panics with a mutex lock DONT poison i think
 
-- future word games:
-  - greentea
+- future word games: greentea
+
+- review all `.unwrap()`s

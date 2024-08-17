@@ -1,20 +1,36 @@
-import { Heart, LostHeart } from "../icons";
+import { Accessor } from "solid-js";
+import { SetStoreFunction } from "solid-js/store";
+import { Heart, LostHeart } from "~/lib/icons";
+import { Room, SendFn, State, WordBombState } from "~/lib/types/game";
 
-export function WordBomb() {
+export function WordBomb({
+  sendMsg,
+  room,
+  state,
+  setState,
+}: {
+  sendMsg: SendFn;
+  room: Accessor<Room>;
+  state: Accessor<State>;
+  setState: SetStoreFunction<State>;
+}) {
+  const [game, setGame] = [
+    state as Accessor<WordBombState>,
+    setState as SetStoreFunction<WordBombState>,
+  ];
+
   return (
-    <main class="mt-[82px] flex h-[calc(100vh_-_82px)] flex-col items-center justify-start">
+    <main class="mt-[82px] flex h-[calc(100vh_-_82px)] flex-col justify-start">
       <header
         style="background: linear-gradient(185deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
         class="flex h-24 w-full items-center justify-center font-mono text-[34px]"
       >
         UTS
       </header>
-      <div class="flex h-full w-full items-center justify-center">
-        <div class="flex w-5/6 flex-wrap items-center justify-around gap-x-[200px] gap-y-8">
-          {Array.from({ length: 9 }).map(() => (
-            <Player />
-          ))}
-        </div>
+      <div class="flex h-full w-full items-center justify-around">
+        {Array.from({ length: 3 }).map(() => (
+          <Player />
+        ))}
       </div>
     </main>
   );

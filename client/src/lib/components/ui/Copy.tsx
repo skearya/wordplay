@@ -1,7 +1,7 @@
-import { createSignal } from "solid-js";
+import { ComponentProps, createSignal } from "solid-js";
 import { Button } from "./Button";
 
-type CopyProps = Omit<Parameters<typeof Button>[0], "children"> & {
+type CopyProps = Omit<ComponentProps<typeof Button>, "children"> & {
   content: string;
   children: string;
 };
