@@ -25,22 +25,30 @@ const listeners: {
   AnagramsCorrectGuess: [],
 };
 
-export function callEventListeners(event: ServerMessage) {
-  (listeners[event.type] as Array<(data: ServerMessage) => void>).forEach((listener) =>
-    listener(event),
-  );
-}
+const unactedMessages: {
+  [EventT in ServerMessageTypes]?: Array<ServerMessageData<EventT>>;
+} = {};
 
-/*
-  TODO: make sure events recieved before a listener subscribes will get sent to it
-  look into https://www.npmjs.com/package/mitt
-*/
+export function callEventListeners(event: ServerMessage) {
+  if (listeners[event.type].length !== 0) {
+    (listeners[event.type] as Array<(data: ServerMessage) => void>).forEach((listener) =>
+      listener(event),
+    );
+  } else {
+    unactedMessages[event.type] ??= [];
+    (unactedMessages[event.type] as Array<ServerMessage>).push(event);
+  }
+}
 
 export function useEvent<EventT extends ServerMessageTypes>(
   type: EventT,
   f: (data: ServerMessageData<EventT>) => void,
   cleanup = true,
 ) {
+  if (unactedMessages[type]) {
+    unactedMessages[type].forEach(f);
+  }
+
   listeners[type].push(f);
 
   const cleanupFn = () => {

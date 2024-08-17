@@ -30,7 +30,7 @@ type JoinGameState =
 export default function JoinGame() {
   let rootElement!: HTMLElement;
 
-  const roomName = useParams().name;
+  const roomName = useParams().name!;
   const [state, setState] = createSignal<JoinGameState>({ type: "waiting" });
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
   const validUsername = () => username().length <= 20 && username() !== "";
@@ -120,7 +120,7 @@ export default function JoinGame() {
 }
 
 function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { sendMsg: SendFn }) {
-  const roomName = useParams().name;
+  const roomName = useParams().name!;
   const [postGameInfo, setPostGameInfo] = createSignal<PostGameInfo | undefined>(undefined);
   const [messages, setMessages] = createSignal<Array<ChatMessage>>([]);
   const [room, setRoom] = createStore<Room>({

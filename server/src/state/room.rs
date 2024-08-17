@@ -118,7 +118,7 @@ impl AppState {
             })
         });
 
-        let uuid = if let Some((prev_uuid, client)) = prev_client {
+        let (uuid, connection_update) = if let Some((prev_uuid, client)) = prev_client {
             if client.socket.is_some() {
                 client.close(Some(CloseFrame {
                     code: close_code::ABNORMAL,
@@ -132,14 +132,12 @@ impl AppState {
 
             let uuid = *prev_uuid;
 
-            clients.broadcast(ServerMessage::ConnectionUpdate {
+            (
                 uuid,
-                state: ConnectionUpdate::Reconnected {
+                ConnectionUpdate::Reconnected {
                     username: params.username,
                 },
-            });
-
-            uuid
+            )
         } else {
             let uuid = Uuid::new_v4();
 
@@ -157,15 +155,21 @@ impl AppState {
                 },
             );
 
-            clients.broadcast(ServerMessage::ConnectionUpdate {
+            (
                 uuid,
-                state: ConnectionUpdate::Connected {
+                ConnectionUpdate::Connected {
                     username: params.username.clone(),
                 },
-            });
-
-            uuid
+            )
         };
+
+        clients.broadcast_except(
+            ServerMessage::ConnectionUpdate {
+                uuid,
+                state: connection_update,
+            },
+            &[uuid],
+        );
 
         clients[&uuid].send(ServerMessage::Info {
             uuid,

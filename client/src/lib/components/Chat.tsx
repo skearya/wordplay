@@ -105,8 +105,10 @@ export function Chat({
         maxLength={250}
         placeholder="send a message..."
         onEnter={(input) => {
-          sendMsg({ type: "ChatMessage", content: input.value });
-          input.value = "";
+          if (input.value.length !== 0) {
+            sendMsg({ type: "ChatMessage", content: input.value });
+            input.value = "";
+          }
         }}
         onFocus={reappear}
         onBlur={startFadeOut}

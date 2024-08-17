@@ -15,6 +15,7 @@ pub trait ClientUtils {
     fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)>;
     fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
     fn broadcast(&self, message: ServerMessage);
+    fn broadcast_except(&self, message: ServerMessage, except: &[Uuid]);
 }
 
 impl ClientUtils for HashMap<Uuid, Client> {
@@ -32,6 +33,17 @@ impl ClientUtils for HashMap<Uuid, Client> {
         let serialized: Message = message.into();
 
         for (_uuid, client) in self.connected() {
+            client.tx.send(serialized.clone()).ok();
+        }
+    }
+
+    fn broadcast_except(&self, message: ServerMessage, except: &[Uuid]) {
+        let serialized: Message = message.into();
+
+        for (_uuid, client) in self
+            .connected()
+            .filter(|(uuid, _client)| !except.contains(&uuid))
+        {
             client.tx.send(serialized.clone()).ok();
         }
     }
