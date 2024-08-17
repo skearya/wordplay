@@ -14,7 +14,7 @@ export function Chat({
   let chatInputElement!: HTMLInputElement;
 
   let animations: Array<Animation> = [];
-  let fadeOutTimeout: NodeJS.Timeout | undefined;
+  let fadeOutTimeout: ReturnType<typeof setTimeout> | undefined;
 
   function startFadeOut() {
     clearTimeout(fadeOutTimeout);

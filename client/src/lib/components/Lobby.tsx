@@ -1,11 +1,12 @@
 import { Accessor, For, Show } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
+import { Button } from "~/lib/components/ui/Button";
+import { Copy } from "~/lib/components/ui/Copy";
 import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
 import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo } from "~/lib/types/messages";
-import { Button } from "./ui/Button";
 
 export function Lobby({
   sendMsg,
@@ -30,11 +31,10 @@ export function Lobby({
       setLobby("ready", data.ready);
 
       if (data.countdown_update) {
-        if (data.countdown_update.type === "InProgress") {
-          setLobby("startingCountdown", data.countdown_update.time_left);
-        } else {
-          setLobby("startingCountdown", undefined);
-        }
+        setLobby(
+          "startingCountdown",
+          data.countdown_update.type === "InProgress" ? data.countdown_update.time_left : undefined,
+        );
       }
     },
     StartingCountdown: (data) => {
@@ -151,17 +151,9 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
         fallback={
           <div class="flex h-full flex-col items-center justify-center gap-y-3 text-light-green">
             <h1>maybe invite someone!</h1>
-            <Button
-              color="muted"
-              size="sm"
-              onClick={(event) => {
-                navigator.clipboard.writeText(window.location.href);
-                event.target.textContent = "copied";
-                setTimeout(() => (event.target.textContent = "copy invite link"), 1000);
-              }}
-            >
-              copy game link
-            </Button>
+            <Copy color="muted" size="sm" content={window.location.href}>
+              copy invite link
+            </Copy>
           </div>
         }
       >
