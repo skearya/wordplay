@@ -1,5 +1,6 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Match, Show, Switch, createResource, createSignal } from "solid-js";
+import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
 import { cloneElement } from "~/lib/utils";
 
@@ -176,20 +177,23 @@ function CreateOrJoinRoom() {
 
   return (
     <div class="flex gap-2">
-      <button
+      <Button
         ref={creatingElement}
-        class="h-16 flex-1 overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-dark-green font-medium transition-all"
+        size="lg"
+        class="h-16 flex-1 p-0"
         onClick={() => clickAnimation("creating")}
       >
         Create Game
-      </button>
-      <button
+      </Button>
+      <Button
         ref={joiningElement}
-        class="h-16 flex-1 overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-blue font-medium transition-all"
+        color="secondary"
+        size="lg"
+        class="h-16 flex-1 p-0"
         onClick={() => clickAnimation("joining")}
       >
         Join Game
-      </button>
+      </Button>
       <Show when={joining()}>
         <div class="relative h-16 w-full rounded-lg border">
           <h1

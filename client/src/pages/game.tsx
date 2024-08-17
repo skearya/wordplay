@@ -4,6 +4,7 @@ import { createStore } from "solid-js/store";
 import { Chat } from "~/lib/components/Chat";
 import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
+import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
 import { WordBomb } from "~/lib/components/WordBomb";
 import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
@@ -100,13 +101,13 @@ export default function JoinGame() {
                 }
               }}
             />
-            <button
+            <Button
+              size="lg"
               disabled={!validUsername() || state().type !== "waiting"}
-              class="rounded-lg border bg-dark-green py-3 font-medium transition-opacity disabled:opacity-50"
               onClick={join}
             >
               Join
-            </button>
+            </Button>
           </div>
         </main>
       }

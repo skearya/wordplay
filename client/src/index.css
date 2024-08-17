@@ -8,7 +8,7 @@
   }
 
   * {
-    @apply border-white/10 focus:border-green focus:outline-none;
+    @apply border-white/10 focus:outline-none focus-visible:border-green;
   }
 
   kbd {

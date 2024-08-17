@@ -5,6 +5,7 @@ import { useEvents } from "~/lib/events";
 import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo } from "~/lib/types/messages";
+import { Button } from "./ui/Button";
 
 export function Lobby({
   sendMsg,
@@ -148,18 +149,19 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
       <Show
         when={lobby().ready.length !== 0}
         fallback={
-          <div class="flex h-full flex-col items-center justify-center gap-y-3 text-[#8BA698]">
-            <h1>maybe invite someone?</h1>
-            <button
-              class="rounded-lg border px-2 py-1.5"
+          <div class="flex h-full flex-col items-center justify-center gap-y-3 text-light-green">
+            <h1>maybe invite someone!</h1>
+            <Button
+              color="muted"
+              size="sm"
               onClick={(event) => {
                 navigator.clipboard.writeText(window.location.href);
                 event.target.textContent = "copied";
                 setTimeout(() => (event.target.textContent = "copy invite link"), 1000);
               }}
             >
-              copy invite link
-            </button>
+              copy game link
+            </Button>
           </div>
         }
       >
@@ -203,20 +205,19 @@ function JoinButtons({
 
   return (
     <div class="mt-auto flex gap-x-2.5">
-      <button
-        class="flex-1 rounded-lg border bg-[#475D50] py-4 font-medium"
-        onClick={() => sendMsg({ type: ready() })}
-      >
+      <Button size="lg" class="flex-1" onClick={() => sendMsg({ type: ready() })}>
         {ready()}
-      </button>
+      </Button>
       <Show when={room().owner === room().uuid}>
-        <button
-          class="flex-1 rounded-lg border bg-[#345C8A] py-4 font-medium transition-opacity disabled:opacity-50"
+        <Button
+          color="secondary"
+          size="lg"
+          class="flex-1"
           disabled={lobby().ready.length < 2}
           onClick={() => sendMsg({ type: "StartEarly" })}
         >
           Start Early
-        </button>
+        </Button>
       </Show>
     </div>
   );
