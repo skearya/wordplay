@@ -1,5 +1,6 @@
 import { Accessor, For, Show } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
+import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
 import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
@@ -61,7 +62,7 @@ export function Lobby({
         </div>
       </div>
       <Status lobby={lobby} />
-      {/* <Practice /> */}
+      <Practice />
     </main>
   );
 }
@@ -225,7 +226,7 @@ function Practice() {
   return (
     <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
       <div class="flex items-center justify-between">
-        <h3 class="text-[#8BA698]">practice</h3>
+        <h3 class="text-light-green">practice</h3>
         <div
           style="background: linear-gradient(244.26deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
           class="rounded-lg px-2.5 py-0.5 font-mono text-lg"
@@ -237,7 +238,7 @@ function Practice() {
         style="background: linear-gradient(to right, #26D16C 70%, transparent 30%)"
         class="h-[1px] w-full"
       ></div>
-      <input type="text" placeholder="word" class="rounded-lg border bg-transparent px-2.5 py-2" />
+      <Input size="sm" placeholder="word" class="bg-transparent" />
     </div>
   );
 }

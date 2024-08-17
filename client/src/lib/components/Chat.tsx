@@ -1,4 +1,5 @@
 import { Accessor, createEffect, For, on, onCleanup, onMount } from "solid-js";
+import { Input } from "~/lib/components/ui/Input";
 import { ChatMessage, ChatMessageType, SendFn } from "~/lib/types/game";
 
 export function Chat({
@@ -66,40 +67,46 @@ export function Chat({
   return (
     <div
       ref={chatElement}
-      class="bg-primary-50/25 fixed bottom-0 left-0 z-50 flex w-96 flex-col rounded-tr-lg border-r border-t"
+      class="fixed bottom-0 left-0 z-50 flex w-96 flex-col gap-y-2 rounded-tr-lg border-r border-t bg-transparent p-2"
       onMouseEnter={reappear}
       onMouseLeave={startFadeOut}
     >
-      <ul
-        ref={chatContentElement}
-        class="m-2 mb-0 list-item h-48 overflow-y-auto text-wrap break-all"
-      >
+      <ul ref={chatContentElement} class="list-item h-48 overflow-y-auto text-wrap break-all">
+        <li class="text-green">server: welcome to wordplay beta</li>
+        <li class="text-green">
+          server: leave issues/feedback on{" "}
+          <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200">
+            github
+          </a>
+        </li>
+        <li class="text-green">
+          server: use <kbd>t</kbd> to open chat
+        </li>
+        <li class="text-green">
+          server: and <kbd>esc</kbd> to focus game input
+        </li>
         <For each={messages()}>
           {([content, type]) => {
             switch (type) {
               case ChatMessageType.Client:
                 return <li>{content}</li>;
               case ChatMessageType.Server:
-                return <li class="text-green-400">{`server: ${content}`}</li>;
+                return <li class="text-green">{`server: ${content}`}</li>;
               case ChatMessageType.Error:
                 return <li class="text-red-400">{`error: ${content}`}</li>;
             }
           }}
         </For>
       </ul>
-      <input
+      <Input
         ref={chatInputElement}
-        class="m-2 h-10 rounded-lg border bg-transparent px-2.5 py-2 placeholder-white/50"
-        type="text"
-        maxlength="250"
+        size="sm"
+        class="bg-transparent"
+        maxLength={250}
         placeholder="send a message..."
-        onKeyDown={(event) => {
-          const input = event.target as HTMLInputElement;
-
-          if (event.key === "Enter" && input.value !== "") {
-            sendMsg({ type: "ChatMessage", content: input.value });
-            input.value = "";
-          }
+        onEnter={(input) => {
+          sendMsg({ type: "ChatMessage", content: input.value });
+          input.value = "";
         }}
         onFocus={reappear}
         onBlur={startFadeOut}

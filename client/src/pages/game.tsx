@@ -4,6 +4,7 @@ import { createStore } from "solid-js/store";
 import { Chat } from "~/lib/components/Chat";
 import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
+import { Input } from "~/lib/components/ui/Input";
 import { WordBomb } from "~/lib/components/WordBomb";
 import { callEventListeners, ServerMessageData, useEvent, useEvents } from "~/lib/events";
 import { ChatMessage, ChatMessageType, Room, SendFn, State } from "~/lib/types/game";
@@ -86,24 +87,22 @@ export default function JoinGame() {
       fallback={
         <main ref={rootElement} class="flex h-screen flex-col items-center justify-center">
           <div class="flex min-w-64 flex-col gap-y-2.5">
-            <input
-              type="text"
+            <Input
               maxlength="20"
               placeholder="username"
               disabled={state().type !== "waiting"}
               value={username()}
               autofocus
-              class="rounded-lg border bg-transparent px-3 py-2.5 transition-opacity disabled:opacity-50"
               onInput={(event) => setUsername(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && validUsername()) {
+              onEnter={() => {
+                if (validUsername()) {
                   join();
                 }
               }}
             />
             <button
               disabled={!validUsername() || state().type !== "waiting"}
-              class="rounded-lg border bg-[#475D50] py-3 font-medium transition-opacity disabled:opacity-50"
+              class="rounded-lg border bg-dark-green py-3 font-medium transition-opacity disabled:opacity-50"
               onClick={join}
             >
               Join

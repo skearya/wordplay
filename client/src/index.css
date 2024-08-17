@@ -4,11 +4,15 @@
 
 @layer base {
   html {
-    @apply bg-[#050705] text-white;
+    @apply bg-background text-foreground;
   }
 
   * {
-    @apply border-white/10;
+    @apply border-white/10 focus:border-green focus:outline-none;
+  }
+
+  kbd {
+    @apply inline-flex min-h-[20px] items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-1 font-mono text-sm text-neutral-200;
   }
 }
 

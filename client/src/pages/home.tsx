@@ -1,5 +1,6 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Match, Show, Switch, createResource, createSignal } from "solid-js";
+import { Input } from "~/lib/components/ui/Input";
 import { cloneElement } from "~/lib/utils";
 
 type Info = {
@@ -17,13 +18,13 @@ export default function Home() {
   });
 
   return (
-    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-[#0C0D0A] p-5">
+    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-light-background p-5">
       <h1 class="text-3xl">wordplay</h1>
-      <div class="min-h-[1px] w-full bg-[#475D50]/50"></div>
+      <div class="min-h-[1px] w-full bg-dark-green/50"></div>
       <CreateOrJoinRoom />
       <Switch>
         <Match when={data.loading}>
-          <h1 class="text-center text-gray-400">loading...</h1>
+          <h1 class="text-center text-light-green">loading...</h1>
         </Match>
         <Match when={data.error}>
           <h1 class="text-center text-red-400">something went wrong...</h1>
@@ -39,7 +40,7 @@ export default function Home() {
                 )}
               </div>
               <div class="mt-auto text-center font-medium">
-                <span class="text-[#62E297]">{data().clients_connected}</span> connected
+                <span class="text-green">{data().clients_connected}</span> connected
               </div>
             </>
           )}
@@ -123,8 +124,8 @@ function CreateOrJoinRoom() {
       creatingElement.parentElement!.style.gap = "0.5rem";
 
       setJoining(clicked);
-      await roomInputElement.animate({ opacity: [0, 100] }, animationOptions).finished;
       roomInputElement.focus();
+      await roomInputElement.animate({ opacity: [0, 100] }, animationOptions).finished;
     });
   }
 
@@ -174,36 +175,35 @@ function CreateOrJoinRoom() {
   }
 
   return (
-    <div class="flex h-14 gap-2">
+    <div class="flex gap-2">
       <button
         ref={creatingElement}
-        class="w-full overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-[#475D50] p-4 font-medium transition-all"
+        class="h-16 flex-1 overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-dark-green font-medium transition-all"
         onClick={() => clickAnimation("creating")}
       >
         Create Game
       </button>
       <button
         ref={joiningElement}
-        class="w-full overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-[#345C8A] p-4 font-medium transition-all"
+        class="h-16 flex-1 overflow-hidden whitespace-nowrap rounded-lg border border-transparent bg-blue font-medium transition-all"
         onClick={() => clickAnimation("joining")}
       >
         Join Game
       </button>
       <Show when={joining()}>
-        <div class="relative w-full rounded-lg border">
+        <div class="relative h-16 w-full rounded-lg border">
           <h1
             ref={roomErrorElement}
             class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 opacity-0"
           >
             {roomErrorMessage()}
           </h1>
-          <input
+          <Input
             ref={roomInputElement}
-            type="text"
             placeholder="room name"
             minlength={1}
             maxlength={6}
-            class="w-full rounded-lg bg-transparent p-4 transition-all disabled:opacity-50"
+            class="h-full w-full rounded-lg border-none bg-transparent py-0"
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 onInputEnter();
