@@ -43,6 +43,7 @@ impl AppState {
 
     pub fn handle(&self, sender: SenderInfo, message: ClientMessage) {
         let result = match message {
+            ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
             ClientMessage::RoomSettings(settings) => self.client_room_settings(sender, settings),
             ClientMessage::Ready => self.client_ready(sender),
             ClientMessage::StartEarly => self.client_start_early(sender),

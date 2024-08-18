@@ -4,6 +4,7 @@ export type Games = "WordBomb" | "Anagrams";
 
 export type ClientMessage =
   // lobby / generic
+  | { type: "Ping"; timestamp: number }
   | { type: "Ready" }
   | { type: "StartEarly" }
   | { type: "Unready" }
@@ -17,6 +18,10 @@ export type ClientMessage =
 
 export type ServerMessage =
   // lobby / generic
+  | {
+      type: "Pong";
+      timestamp: number;
+    }
   | {
       type: "Info";
       uuid: Uuid;

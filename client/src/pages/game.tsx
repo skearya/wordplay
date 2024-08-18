@@ -213,7 +213,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
 
   return (
     <>
-      <GameNav room={() => room} />
+      <GameNav sendMsg={sendMsg} room={() => room} />
       <Chat sendMsg={sendMsg} messages={messages} />
       <Switch>
         <Match when={state.type === "Lobby"}>

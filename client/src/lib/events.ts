@@ -9,6 +9,7 @@ type ServerMessageTypes = ServerMessage["type"];
 const listeners: {
   [EventT in ServerMessageTypes]: Array<(data: ServerMessageData<EventT>) => void>;
 } = {
+  Pong: [],
   Info: [],
   Error: [],
   RoomSettings: [],
@@ -47,6 +48,7 @@ export function useEvent<EventT extends ServerMessageTypes>(
 ) {
   if (unactedMessages[type]) {
     unactedMessages[type].forEach(f);
+    unactedMessages[type] = [];
   }
 
   listeners[type].push(f);

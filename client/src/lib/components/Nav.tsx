@@ -1,8 +1,20 @@
-import { Accessor, Show } from "solid-js";
+import { Accessor, createSignal, onCleanup, Show } from "solid-js";
+import { useEvent } from "~/lib/events";
 import { Link, QuestionMark } from "~/lib/icons";
-import { Room } from "~/lib/types/game";
+import { Room, SendFn } from "~/lib/types/game";
 
-export function GameNav({ room }: { room: Accessor<Room> }) {
+export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) {
+  const [ping, setPing] = createSignal(0);
+
+  const sendPing = () => sendMsg({ type: "Ping", timestamp: Date.now() });
+  sendPing();
+
+  const pingInterval = setInterval(sendPing, 10000);
+
+  useEvent("Pong", (data) => setPing(Date.now() - data.timestamp));
+
+  onCleanup(() => clearInterval(pingInterval));
+
   return (
     <nav class="absolute top-0 flex w-full items-center justify-between px-6 py-5">
       <h1 class="text-2xl">wordplay</h1>
@@ -11,7 +23,7 @@ export function GameNav({ room }: { room: Accessor<Room> }) {
           style="box-shadow: 0px 0px 15.5px 1px #26D16C"
           class="h-[13px] w-[13px] rounded-full bg-[#26D16C]"
         />
-        <h1 class="text-[#B1C1AE]">44ms</h1>
+        <h1 class="text-[#B1C1AE]">{ping()}ms</h1>
         <div class="flex -space-x-2">
           {room()
             .clients.slice(0, 3)

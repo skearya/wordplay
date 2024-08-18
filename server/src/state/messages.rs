@@ -16,6 +16,7 @@ pub enum Games {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
+    Ping { timestamp: u64 },
     Ready,
     StartEarly,
     Unready,
@@ -30,6 +31,9 @@ pub enum ClientMessage {
 #[serde(tag = "type")]
 pub enum ServerMessage {
     // lobby / generic
+    Pong {
+        timestamp: u64,
+    },
     Info {
         uuid: Uuid,
         room: RoomInfo,

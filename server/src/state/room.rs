@@ -259,6 +259,15 @@ impl AppState {
         Ok(())
     }
 
+    pub fn client_ping(&self, SenderInfo { uuid, room }: SenderInfo, timestamp: u64) -> Result<()> {
+        let lock = self.game.lock().unwrap();
+        let Room { clients, .. } = lock.room(room)?;
+
+        clients[&uuid].send(ServerMessage::Pong { timestamp });
+
+        Ok(())
+    }
+
     pub fn client_chat_message(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
