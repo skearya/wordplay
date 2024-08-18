@@ -149,7 +149,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
       <Show
         when={lobby().ready.length !== 0}
         fallback={
-          <div class="flex h-full flex-col items-center justify-center gap-y-3 text-light-green">
+          <div class="flex h-full flex-col items-center justify-center gap-y-2.5 text-light-green">
             <h1>maybe invite someone!</h1>
             <Copy color="muted" size="sm" content={window.location.href}>
               copy invite link
