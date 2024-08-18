@@ -1,7 +1,8 @@
 import { useParams } from "@solidjs/router";
-import { ComponentProps, createSignal, Match, Show, Switch } from "solid-js";
+import { ComponentProps, createSignal, ErrorBoundary, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Chat } from "~/lib/components/Chat";
+import { error, ErrorDisplay, setError } from "~/lib/components/Error";
 import { Lobby } from "~/lib/components/Lobby";
 import { GameNav } from "~/lib/components/Nav";
 import { Button } from "~/lib/components/ui/Button";
@@ -12,11 +13,29 @@ import { ChatMessage, ChatMessageType, Room, SendFn, State } from "~/lib/types/g
 import { ClientMessage, PostGameInfo } from "~/lib/types/messages";
 import {
   convertStateMessage,
+  GameError,
   getRejoinToken,
   getUsername,
   saveRejoinToken,
   Variant,
 } from "~/lib/utils";
+
+export default function ErrorHandler() {
+  return (
+    <Show
+      when={error() !== undefined}
+      fallback={
+        <ErrorBoundary
+          fallback={(error, reset) => <ErrorDisplay error={error as unknown} reset={reset} />}
+        >
+          <JoinGame />
+        </ErrorBoundary>
+      }
+    >
+      <ErrorDisplay error={error()} />
+    </Show>
+  );
+}
 
 type JoinGameState =
   | {
@@ -27,7 +46,7 @@ type JoinGameState =
       gameInfo: ComponentProps<typeof Game>;
     };
 
-export default function JoinGame() {
+function JoinGame() {
   let rootElement!: HTMLElement;
 
   const roomName = useParams().name!;
@@ -75,13 +94,16 @@ export default function JoinGame() {
       false,
     );
 
-    // TODO: actually have error handling
     socket.addEventListener("close", (event) => {
-      throw new Error(event.reason ?? "Unknown error");
+      setError(
+        new GameError({
+          type: "socket closed",
+          message: event.reason || "connection closed",
+        }),
+      );
     });
   }
 
-  // TODO: show game info
   return (
     <Show
       when={state().type === "ready"}

@@ -1,6 +1,19 @@
 import { Room, State } from "~/lib/types/game";
 import { RoomStateInfo, Uuid } from "~/lib/types/messages";
 
+export type ErrorType = "socket closed";
+
+export class GameError extends Error {
+  type: ErrorType;
+
+  constructor({ type, message }: { type: ErrorType; message: string }) {
+    super(message);
+    this.name = "GameError";
+    this.type = type;
+    this.message = message;
+  }
+}
+
 export function cloneElement(element: HTMLElement) {
   const clone = element.cloneNode(true) as HTMLElement;
   clone.style.position = "absolute";
