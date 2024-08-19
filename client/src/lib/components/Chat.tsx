@@ -80,10 +80,10 @@ export function Chat({
           </a>
         </li>
         <li class="text-green">
-          server: use <kbd>t</kbd> to open chat
+          server: use <kbd class="small-key">t</kbd> to open chat
         </li>
         <li class="text-green">
-          server: and <kbd>esc</kbd> to focus game input
+          server: and <kbd class="small-key">esc</kbd> to focus game input
         </li>
         <For each={messages()}>
           {([content, type]) => {

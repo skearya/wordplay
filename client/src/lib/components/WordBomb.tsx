@@ -84,12 +84,12 @@ export function WordBomb({
 
   return (
     <main class="mt-[82px] flex h-[calc(100vh_-_82px)] flex-col justify-start">
-      <header
+      <div
         style="background: linear-gradient(185deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
         class="flex h-24 w-full items-center justify-center font-mono text-[34px]"
       >
         {game().prompt}
-      </header>
+      </div>
       <div class="flex h-full w-full items-center justify-around">
         <For each={game().players}>{(player) => <Player room={room} player={player} />}</For>
       </div>
@@ -103,6 +103,7 @@ export function WordBomb({
         onInput={(event) => sendMsg({ type: "WordBombInput", input: event.target.value })}
         onEnter={(input) => sendMsg({ type: "WordBombGuess", word: input.value })}
       />
+      <Letters usedLetters={() => game().usedLetters!} />
     </main>
   );
 }
@@ -136,6 +137,27 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
         </div>
       </div>
       <h1>{player.input}</h1>
+    </div>
+  );
+}
+
+function Letters({ usedLetters }: { usedLetters: Accessor<Set<string>> }) {
+  const keyboard = [[..."qwertyuiop"], [..."asdfghjkl"], [..."zxcvbnm"]];
+
+  return (
+    <div class="absolute bottom-6 right-6 flex flex-col space-y-2">
+      {keyboard.map((row) => (
+        <div class="flex justify-center gap-x-2">
+          {row.map((key) => (
+            <kbd
+              classList={{ "bg-dark-green": usedLetters().has(key) }}
+              class="flex h-8 w-8 items-center justify-center rounded border"
+            >
+              {key}
+            </kbd>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

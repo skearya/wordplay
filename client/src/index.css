@@ -11,7 +11,7 @@
     @apply border-white/10 focus:outline-none focus-visible:border-green;
   }
 
-  kbd {
+  .small-key {
     @apply inline-flex min-h-[20px] items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-1 font-mono text-sm text-neutral-200;
   }
 }
