@@ -2,6 +2,8 @@
 
 - page transitions with solid-transition-group
 
+- open graph images
+
 - client and server version checking
 
 - use tracing
