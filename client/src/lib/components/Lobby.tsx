@@ -80,10 +80,16 @@ function WordBombPostGameInfo({
     <div class="flex flex-col gap-y-3.5">
       <Winner room={room} winner={info.winner} />
       <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
-        <Leaderboard room={room} title="fastest guess" items={info.fastest_guesses} />
-        <Leaderboard room={room} title="longest word" items={info.longest_words} />
-        <Leaderboard room={room} title="wpm" items={info.avg_wpms} />
-        <Leaderboard room={room} title="word length" items={info.avg_word_lengths} />
+        {(
+          [
+            ["fastest guess", info.fastest_guesses],
+            ["longest word", info.longest_words],
+            ["wpm", info.avg_wpms],
+            ["word length", info.avg_word_lengths],
+          ] as const
+        ).map(([title, items]) => (
+          <>{items.length !== 0 && <Leaderboard room={room} title={title} items={items} />}</>
+        ))}
       </div>
       <Stats
         minsElapsed={info.mins_elapsed}
@@ -100,7 +106,7 @@ function Winner({ room, winner }: { room: Room; winner: Uuid }) {
   return (
     <div
       style="background-image: linear-gradient(135deg, #171717 6.52%, transparent 6.52%, transparent 50%, #171717 50%, #171717 56.52%, transparent 56.52%, transparent 100%); background-size: 23.00px 23.00px;"
-      class="flex items-center justify-between rounded-lg border p-2.5"
+      class="flex min-w-72 items-center justify-between gap-x-2 rounded-lg border p-2.5"
     >
       <h1 class="text-lg font-medium">winner!</h1>
       <div class="flex items-center gap-x-4">
