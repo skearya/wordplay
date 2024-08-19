@@ -26,6 +26,7 @@ export function WordBomb({
   ];
 
   const animateInput = (color: "green" | "red") => {
+    // TODO: Keyframe property value “” is invalid according to the syntax for “border-color”
     inputElement.animate(
       {
         borderColor: [
