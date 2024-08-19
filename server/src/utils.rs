@@ -42,7 +42,7 @@ impl ClientUtils for HashMap<Uuid, Client> {
 
         for (_uuid, client) in self
             .connected()
-            .filter(|(uuid, _client)| !except.contains(&uuid))
+            .filter(|(uuid, _client)| !except.contains(uuid))
         {
             client.tx.send(serialized.clone()).ok();
         }
@@ -78,7 +78,7 @@ impl<I: Iterator> Sorted for I {}
 
 pub fn filter_string(input: &mut String) {
     input.make_ascii_lowercase();
-    input.retain(|c| c.is_alphabetic());
+    input.retain(char::is_alphabetic);
 }
 
 pub fn random_string(len: usize) -> String {

@@ -73,7 +73,13 @@ impl Lobby {
 
     pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
         let timer = Arc::new(
-            tokio::spawn(async move { app_state.anagrams_timer(room).await }).abort_handle(),
+            tokio::spawn(async move {
+                app_state
+                    .anagrams_timer(room)
+                    .await
+                    .inspect_err(|error| eprintln!("anagrams timer error: {error:#?}"))
+            })
+            .abort_handle(),
         );
 
         let (original, anagram) = GLOBAL.get().unwrap().random_anagram();
@@ -219,8 +225,13 @@ pub fn check_for_countdown_update(
         None if lobby.ready.len() >= 2 => {
             lobby.countdown = Some(Countdown {
                 timer_handle: Arc::new(
-                    tokio::spawn(async move { app_state.start_when_ready(room).await })
-                        .abort_handle(),
+                    tokio::spawn(async move {
+                        app_state
+                            .start_when_ready(room)
+                            .await
+                            .inspect_err(|error| eprintln!("countdown error: {error:#?}"))
+                    })
+                    .abort_handle(),
                 ),
                 time_left: 10,
             });
@@ -249,7 +260,10 @@ fn start_game(
             *state = lobby.start_word_bomb(|prompt, timer_len| {
                 Arc::new(
                     tokio::spawn(async move {
-                        app_state.word_bomb_timer(room, timer_len, prompt).await
+                        app_state
+                            .word_bomb_timer(room, timer_len, prompt)
+                            .await
+                            .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
                     })
                     .abort_handle(),
                 )

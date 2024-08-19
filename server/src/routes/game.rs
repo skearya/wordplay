@@ -12,7 +12,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
-use futures::{stream::StreamExt, SinkExt, TryFutureExt};
+use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -69,12 +69,9 @@ async fn handle_socket(socket: WebSocket, state: AppState, room: String, params:
 
     let sending_task = tokio::spawn(async move {
         while let Some(msg) = inbox.recv().await {
-            sender
-                .send(msg)
-                .unwrap_or_else(|e| {
-                    eprintln!("ws send error for {}: {e}", info.uuid);
-                })
-                .await;
+            sender.send(msg).await.unwrap_or_else(|e| {
+                eprintln!("ws send error for {}: {e}", info.uuid);
+            });
         }
     });
 

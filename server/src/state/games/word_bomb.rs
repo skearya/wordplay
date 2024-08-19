@@ -287,21 +287,23 @@ impl AppState {
         let game = state.try_word_bomb()?;
 
         if original_prompt == game.prompt {
-            game.player_timed_out()?;
+            match game.player_timed_out() {
+                Ok(()) => {
+                    clients.broadcast(ServerMessage::WordBombPrompt {
+                        correct_guess: None,
+                        life_change: -1,
+                        prompt: game.prompt.clone(),
+                        turn: game.turn,
+                    });
 
-            if game.alive_players().len() <= 1 {
-                let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
+                    spawn_timeout_task(self.clone(), game, room);
+                }
+                Err(GameError::WordBomb(WordBombError::NoPlayersAlive)) => {
+                    let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
 
-                end_game(state, clients, owner, game_info);
-            } else {
-                clients.broadcast(ServerMessage::WordBombPrompt {
-                    correct_guess: None,
-                    life_change: -1,
-                    prompt: game.prompt.clone(),
-                    turn: game.turn,
-                });
-
-                spawn_timeout_task(self.clone(), game, room);
+                    end_game(state, clients, owner, game_info);
+                }
+                Err(error) => Err(error)?,
             }
         }
 
@@ -318,6 +320,7 @@ fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
             app_state
                 .word_bomb_timer(room, timer_len, current_prompt)
                 .await
+                .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
         })
         .abort_handle(),
     );
@@ -351,7 +354,7 @@ fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
                     .used_words
                     .iter()
                     .map(|(duration, _)| duration.as_secs_f32())
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
                     .map(|duration| (player.uuid, duration))
             })
             .sorted_by_vec(|a, b| a.1.partial_cmp(&b.1).unwrap()),

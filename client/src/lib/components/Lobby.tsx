@@ -1,12 +1,13 @@
-import { Accessor, For, Show } from "solid-js";
-import { SetStoreFunction } from "solid-js/store";
+import { Accessor, For, Match, Show, Switch } from "solid-js";
+import { SetStoreFunction, unwrap } from "solid-js/store";
 import { Button } from "~/lib/components/ui/Button";
 import { Copy } from "~/lib/components/ui/Copy";
 import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
 import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
-import { PostGameInfo } from "~/lib/types/messages";
+import { PostGameInfo, Uuid } from "~/lib/types/messages";
+import { getUsername, Variant } from "../utils";
 
 export function Lobby({
   sendMsg,
@@ -46,15 +47,15 @@ export function Lobby({
     <main class="flex h-screen items-center justify-center overflow-hidden">
       <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
         <Show when={postGameInfo}>
-          <div class="flex flex-col gap-y-3.5">
-            <Winner />
-            <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
-              {["fastest guess", "longest word", "wpm", "word length"].map((title) => (
-                <Leaderboard title={title} items={[]} />
-              ))}
-            </div>
-            <Stats />
-          </div>
+          <Switch>
+            <Match when={postGameInfo!.type === "WordBomb"}>
+              <WordBombPostGameInfo
+                room={unwrap(room())}
+                info={postGameInfo as Variant<PostGameInfo, "WordBomb">}
+              />
+            </Match>
+            <Match when={postGameInfo!.type === "Anagrams"}>we arent there yet</Match>
+          </Switch>
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
@@ -68,7 +69,34 @@ export function Lobby({
   );
 }
 
-function Winner() {
+function WordBombPostGameInfo({
+  room,
+  info,
+}: {
+  room: Room;
+  info: Variant<PostGameInfo, "WordBomb">;
+}) {
+  return (
+    <div class="flex flex-col gap-y-3.5">
+      <Winner room={room} winner={info.winner} />
+      <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
+        <Leaderboard room={room} title="fastest guess" items={info.fastest_guesses} />
+        <Leaderboard room={room} title="longest word" items={info.longest_words} />
+        <Leaderboard room={room} title="wpm" items={info.avg_wpms} />
+        <Leaderboard room={room} title="word length" items={info.avg_word_lengths} />
+      </div>
+      <Stats
+        minsElapsed={info.mins_elapsed}
+        wordsUsed={info.words_used}
+        lettersTyped={info.letters_typed}
+      />
+    </div>
+  );
+}
+
+function Winner({ room, winner }: { room: Room; winner: Uuid }) {
+  const username = getUsername(room, winner);
+
   return (
     <div
       style="background-image: linear-gradient(135deg, #171717 6.52%, transparent 6.52%, transparent 50%, #171717 50%, #171717 56.52%, transparent 56.52%, transparent 100%); background-size: 23.00px 23.00px;"
@@ -76,9 +104,9 @@ function Winner() {
     >
       <h1 class="text-lg font-medium">winner!</h1>
       <div class="flex items-center gap-x-4">
-        <h1 class="text-lg">Player 1</h1>
+        <h1 class="text-lg">{username}</h1>
         <img
-          src="https://avatar.vercel.sh/skeary"
+          src={`https://avatar.vercel.sh/${username}`}
           alt="profile picture"
           width={50}
           height={50}
@@ -90,50 +118,62 @@ function Winner() {
 }
 
 function Leaderboard({
+  room,
   title,
   items,
 }: {
+  room: Room;
   title: string;
-  items: Array<{
-    pfp: string;
-    name: string;
-    content: string;
-  }>;
+  items: Array<[Uuid, value: string | number]>;
 }) {
   return (
     <div>
       <h1 class="mb-1.5">{title}</h1>
       <div class="w-48 space-y-1.5">
-        {items.map(({ pfp, name, content }, i) => (
-          <div class="flex items-center gap-x-1">
-            <h1 class="text-sm tabular-nums">{i + 1}.</h1>
-            <img
-              src={pfp}
-              alt="profile picture"
-              width={18}
-              height={18}
-              class="flex-none rounded-full"
-            />
-            <h1 class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">{name}</h1>
-            <h1 class="justify-self-end text-sm text-[#8BA698]">{content}</h1>
-          </div>
-        ))}
+        {items.map(([uuid, value], i) => {
+          const username = getUsername(room, uuid);
+
+          return (
+            <div class="flex items-center gap-x-1">
+              <h1 class="text-sm tabular-nums">{i + 1}.</h1>
+              <img
+                src={`https://avatar.vercel.sh/${getUsername(room, uuid)}`}
+                alt="profile picture"
+                width={18}
+                height={18}
+                class="flex-none rounded-full"
+              />
+              <h1 class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">
+                {username}
+              </h1>
+              <h1 class="justify-self-end text-sm text-light-green">{value}</h1>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function Stats() {
+function Stats({
+  minsElapsed,
+  wordsUsed,
+  lettersTyped,
+}: {
+  minsElapsed: number;
+  wordsUsed: number;
+  lettersTyped: number;
+}) {
   return (
     <div class="mt-auto text-center [&>h1>span]:text-[#62E297]">
       <h1 class="flex-1 border-[#62E297]">
-        <span>21</span> mins elapsed
+        <span>{minsElapsed}</span> mins elapsed
       </h1>
       <h1 class="flex-1 border-[#62E297]">
-        <span>209</span> words used
+        <span>{wordsUsed}</span> words used
       </h1>
       <h1 class="flex-1">
-        <span>2032</span> letters typed
+        <span>{lettersTyped}</span> letters typed
       </h1>
     </div>
   );

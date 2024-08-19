@@ -208,6 +208,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
 
       setPostGameInfo(data.info);
       setState({ type: "Lobby", ready: [], startingCountdown: undefined });
+      setRoom("clients", (clients) => clients.filter((client) => !client.disconnected));
     },
   });
 

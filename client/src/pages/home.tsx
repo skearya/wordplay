@@ -31,20 +31,16 @@ export default function Home() {
           <h1 class="text-center text-red-400">something went wrong...</h1>
         </Match>
         <Match when={data()}>
-          {(data) => (
-            <>
-              <div class="h-full space-y-3 overflow-y-scroll">
-                {data().public_rooms.length === 0 ? (
-                  <h1 class="text-center text-gray-400">there aren't any public rooms yet!</h1>
-                ) : (
-                  data().public_rooms.map((room) => <Room {...room} />)
-                )}
-              </div>
-              <div class="mt-auto text-center font-medium">
-                <span class="text-green">{data().clients_connected}</span> connected
-              </div>
-            </>
-          )}
+          <div class="h-full space-y-3 overflow-y-scroll">
+            {data()!.public_rooms.length === 0 ? (
+              <h1 class="text-center text-gray-400">there aren't any public rooms yet!</h1>
+            ) : (
+              data()!.public_rooms.map((room) => <Room {...room} />)
+            )}
+          </div>
+          <div class="mt-auto text-center font-medium">
+            <span class="text-green">{data()!.clients_connected}</span> connected
+          </div>
         </Match>
       </Switch>
     </main>
