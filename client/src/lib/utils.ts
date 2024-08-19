@@ -1,5 +1,5 @@
 import { Room, State } from "~/lib/types/game";
-import { RoomStateInfo, Uuid } from "~/lib/types/messages";
+import { ClientInfo, RoomStateInfo, Uuid } from "~/lib/types/messages";
 
 export type ErrorType = "socket closed";
 
@@ -76,6 +76,10 @@ export function convertStateMessage(state: RoomStateInfo): State {
       return state;
     }
   }
+}
+
+export function getClient(room: Room, uuid: Uuid): ClientInfo | undefined {
+  return room.clients.find((client) => client.uuid === uuid);
 }
 
 export function getUsername(room: Room, uuid: Uuid): string | undefined {

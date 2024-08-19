@@ -10,6 +10,7 @@ const input = tv({
     size: {
       sm: "px-2.5 py-2",
       md: "px-3 py-2.5",
+      lg: "px-3.5 py-3 text-lg rounded-xl",
     },
   },
   defaultVariants: {
