@@ -54,9 +54,16 @@ export function WordBomb({
         (lives) => lives + data.life_change,
       );
 
-      if (game().turn === room().uuid && data.correct_guess) {
-        setGame("usedLetters", (usedLetters) => new Set([...usedLetters!, ...data.correct_guess!]));
-        animateInput("green");
+      if (game().turn === room().uuid) {
+        if (data.correct_guess) {
+          setGame(
+            "usedLetters",
+            (usedLetters) => new Set([...usedLetters!, ...data.correct_guess!]),
+          );
+          animateInput("green");
+        } else {
+          animateInput("red");
+        }
       }
 
       setGame({ prompt: data.prompt, turn: data.turn });
@@ -87,7 +94,7 @@ export function WordBomb({
       </div>
       <Input
         ref={inputElement}
-        class="absolute bottom-6 left-1/2 -translate-x-1/2 focus-visible:border-foreground"
+        class="absolute bottom-6 left-1/2 -translate-x-1/2 focus-visible:border-foreground disabled:opacity-100"
         placeholder={`a word containing ${game().prompt}`}
         maxlength="35"
         disabled={game().turn !== room().uuid}

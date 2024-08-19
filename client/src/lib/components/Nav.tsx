@@ -1,6 +1,6 @@
 import { Accessor, createSignal, onCleanup, Show } from "solid-js";
 import { useEvent } from "~/lib/events";
-import { Link, QuestionMark } from "~/lib/icons";
+import { Link } from "~/lib/icons";
 import { Room, SendFn } from "~/lib/types/game";
 
 export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) {
@@ -16,14 +16,14 @@ export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Roo
   onCleanup(() => clearInterval(pingInterval));
 
   return (
-    <nav class="absolute top-0 flex w-full items-center justify-between px-6 py-5">
-      <h1 class="text-2xl">wordplay</h1>
+    <nav class="absolute top-0 flex w-full items-center justify-between px-6 py-5 text-light-green">
+      <h1 class="text-xl text-foreground">wordplay</h1>
       <div class="flex items-center gap-x-5">
         <div
           style="box-shadow: 0px 0px 15.5px 1px #26D16C"
-          class="h-[13px] w-[13px] rounded-full bg-[#26D16C]"
+          class="h-[13px] w-[13px] rounded-full bg-green"
         />
-        <h1 class="text-[#B1C1AE]">{ping()}ms</h1>
+        <h1>{ping()}ms</h1>
         <div class="flex -space-x-2">
           {room()
             .clients.slice(0, 3)
@@ -43,8 +43,15 @@ export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Roo
             </div>
           </Show>
         </div>
-        <Link />
-        <QuestionMark />
+        <button
+          class="transition-opacity active:opacity-50"
+          onClick={() => navigator.clipboard.writeText(window.location.href)}
+        >
+          <Link />
+        </button>
+        {/* <button class="transition-opacity active:opacity-50">
+          <QuestionMark />
+        </button> */}
       </div>
     </nav>
   );
