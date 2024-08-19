@@ -107,23 +107,23 @@ export function WordBomb({
 }
 
 function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayerData }) {
-  const client = getClient(room(), player.uuid)!;
+  const client = () => getClient(room(), player.uuid)!;
 
   return (
     <div
-      classList={{ "opacity-50": client.disconnected }}
+      classList={{ "opacity-50": client().disconnected }}
       class="flex h-min flex-col items-center gap-y-2.5 text-xl transition-opacity"
     >
       <div class="flex items-center gap-x-4">
         <img
-          src={`https://avatar.vercel.sh/${client.username}`}
+          src={`https://avatar.vercel.sh/${client().username}`}
           alt={`profile picture`}
           height={100}
           width={100}
           class="rounded-full"
         />
         <div class="flex flex-col gap-y-2">
-          <h1>{client.username}</h1>
+          <h1>{client().username}</h1>
           <div class="flex gap-x-2">
             {Array.from({ length: player.lives }).map(() => (
               <Heart />

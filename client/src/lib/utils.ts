@@ -37,17 +37,17 @@ export function getRejoinToken(roomName: string): string | undefined {
 export function saveRejoinToken(roomName: string, token: string) {
   const rejoinTokensString = localStorage.getItem("rejoinTokens");
 
-  if (rejoinTokensString) {
-    const rejoinTokens = JSON.parse(rejoinTokensString) as Record<string, string | undefined>;
+  const rejoinTokens: Record<string, string | undefined> = rejoinTokensString
+    ? JSON.parse(rejoinTokensString)
+    : {};
 
-    localStorage.setItem(
-      "rejoinTokens",
-      JSON.stringify({
-        ...rejoinTokens,
-        [roomName]: token,
-      }),
-    );
-  }
+  localStorage.setItem(
+    "rejoinTokens",
+    JSON.stringify({
+      ...rejoinTokens,
+      [roomName]: token,
+    }),
+  );
 }
 
 export function convertStateMessage(state: RoomStateInfo): State {
