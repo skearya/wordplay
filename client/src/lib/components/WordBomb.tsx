@@ -1,8 +1,8 @@
-import { Accessor, For, onMount } from "solid-js";
+import { Accessor, For, onMount, Show } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
 import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
-import { Heart, LostHeart } from "~/lib/icons";
+import { Heart, LostHeart, SmallBomb } from "~/lib/icons";
 import { Room, SendFn, State, WordBombState } from "~/lib/types/game";
 import { Uuid, WordBombPlayerData } from "~/lib/types/messages";
 import { getClient } from "~/lib/utils";
@@ -22,6 +22,7 @@ export function WordBomb({
   setState: SetStoreFunction<State>;
 }) {
   let inputElement!: HTMLInputElement;
+  let bombOverlayElement!: HTMLDivElement;
 
   const [game, setGame] = [
     state as Accessor<WordBombState>,
@@ -30,7 +31,7 @@ export function WordBomb({
 
   const animateInput = (correct: boolean) => {
     inputElement.animate(
-      { borderColor: [correct ? green : red, "rgb(255 255 255 / 0.1)"] },
+      { borderColor: [correct ? green : red, "rgb(255 255 255)"] },
       { duration: 800 },
     );
   };
@@ -93,6 +94,18 @@ export function WordBomb({
     if (game().turn === room().uuid) {
       inputElement.focus();
     }
+
+    // const playerElement = document.getElementById(game().players[0]!.uuid!);
+
+    // if (playerElement) {
+    //   const rect = playerElement.getBoundingClientRect();
+    //   const paddingX = 30;
+    //   const paddingY = 28;
+    //   bombOverlayElement.style.top = `${rect.top - paddingY / 2}px`;
+    //   bombOverlayElement.style.left = `${rect.left - paddingX / 2}px`;
+    //   bombOverlayElement.style.height = `${rect.height + paddingY}px`;
+    //   bombOverlayElement.style.width = `${rect.width + paddingX}px`;
+    // }
   });
 
   return (
@@ -104,7 +117,9 @@ export function WordBomb({
         {game().prompt}
       </div>
       <div class="flex h-full w-full items-center justify-around">
-        <For each={game().players}>{(player) => <Player room={room} player={player} />}</For>
+        <For each={game().players}>
+          {(player) => <Player room={room} player={player} active={player.uuid === game().turn} />}
+        </For>
       </div>
       <Input
         ref={inputElement}
@@ -121,14 +136,22 @@ export function WordBomb({
   );
 }
 
-function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayerData }) {
+function Player({
+  room,
+  player,
+  active,
+}: {
+  room: Accessor<Room>;
+  player: WordBombPlayerData;
+  active: boolean;
+}) {
   const client = () => getClient(room(), player.uuid)!;
 
   return (
     <div
       id={player.uuid}
       classList={{ "opacity-50": client().disconnected }}
-      class="flex h-min flex-col items-center gap-y-2.5 text-xl transition-opacity"
+      class="relative flex h-min flex-col items-center gap-y-2.5 text-xl transition-opacity"
     >
       <div class="flex items-center gap-x-4">
         <img
@@ -150,7 +173,17 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
           </div>
         </div>
       </div>
-      <h1>{player.input}</h1>
+      <p>{player.input}</p>
+      <Show when={active}>
+        <div
+          id="bomb-overlay"
+          class="absolute h-[calc(100%_+_40px)] w-[calc(100%_+_40px)] -translate-y-[20px] rounded-xl border border-dark-green"
+        >
+          <div class="absolute bottom-1.5 left-1.5 -translate-x-1/2 translate-y-1/2">
+            <SmallBomb />
+          </div>
+        </div>
+      </Show>
     </div>
   );
 }
