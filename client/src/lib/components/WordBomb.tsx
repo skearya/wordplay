@@ -1,4 +1,4 @@
-import { Accessor, createEffect, For, on, onCleanup, onMount, Show } from "solid-js";
+import { Accessor, For, onCleanup, onMount, Show } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
 import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
@@ -7,9 +7,12 @@ import { Room, SendFn, State, WordBombState } from "~/lib/types/game";
 import { Uuid, WordBombPlayerData } from "~/lib/types/messages";
 import { getClient } from "~/lib/utils";
 
-const green = "rgb(98 226 151)";
-const red = "rgb(220 38 38)";
+const keyboard = [[..."qwertyuiop"], [..."asdfghjkl"], [..."zxcvbnm"]];
 const easing = "cubic-bezier(0.33, 1, 0.68, 1)";
+const green = "rgb(98 226 151)";
+const darkGreen = "rgb(71 93 80)";
+const red = "rgb(220 38 38)";
+const orange = "rgb(234 88 12)";
 
 export function WordBomb({
   sendMsg,
@@ -49,30 +52,35 @@ export function WordBomb({
     }
   };
 
-  const animateOverlay = () => {
+  const animateOverlay = (exploded?: boolean) => {
     const playerElement = document.getElementById(game().turn);
 
     if (playerElement) {
       const rect = playerElement.getBoundingClientRect();
       const padding = 35;
+      const positionProps = {
+        top: `${rect.top - padding / 2}px`,
+        left: `${rect.left - padding / 2}px`,
+        width: `${rect.width + padding}px`,
+        height: `${rect.height + padding}px`,
+      };
 
       if (!overlayPosSet) {
-        bombOverlayElement.style.top = `${rect.top - padding / 2}px`;
-        bombOverlayElement.style.left = `${rect.left - padding / 2}px`;
-        bombOverlayElement.style.width = `${rect.width + padding}px`;
-        bombOverlayElement.style.height = `${rect.height + padding}px`;
-
+        Object.assign(bombOverlayElement.style, positionProps);
         overlayPosSet = true;
       } else {
-        bombOverlayElement.animate(
-          {
-            top: `${rect.top - padding / 2}px`,
-            left: `${rect.left - padding / 2}px`,
-            width: `${rect.width + padding}px`,
-            height: `${rect.height + padding}px`,
-          },
-          { easing, fill: "forwards", duration: 600 },
-        );
+        bombOverlayElement.animate(positionProps, { easing, fill: "forwards", duration: 600 });
+
+        if (exploded) {
+          bombOverlayElement.animate(
+            {
+              borderColor: [orange, darkGreen],
+              color: [orange, darkGreen],
+              filter: ["blur(2.5px)", "blur(0px)"],
+            },
+            { easing: "ease", duration: 1500 },
+          );
+        }
       }
     }
   };
@@ -82,7 +90,7 @@ export function WordBomb({
       const prevLen = game().players.find((player) => player.uuid === data.uuid)!.input.length;
 
       if ((prevLen == 0 && data.input.length >= 1) || (prevLen >= 1 && data.input.length === 0)) {
-        requestAnimationFrame(animateOverlay);
+        requestAnimationFrame(() => animateOverlay());
       }
 
       setGame("players", (player) => player.uuid === data.uuid, "input", data.input);
@@ -95,29 +103,35 @@ export function WordBomb({
       }
     },
     WordBombPrompt: (data) => {
+      const prevTurn = game().turn;
+
+      setGame({ prompt: data.prompt, turn: data.turn });
+
       setGame(
         "players",
-        (player) => player.uuid === game().turn,
+        (player) => player.uuid === prevTurn,
         "lives",
         (lives) => lives + data.life_change,
       );
 
-      animatePlayer(game().turn, data.correct_guess ? true : false);
+      if (prevTurn === room().uuid && data.correct_guess) {
+        setGame("usedLetters", (usedLetters) => new Set([...usedLetters!, ...data.correct_guess!]));
 
-      if (game().turn === room().uuid) {
-        if (data.correct_guess) {
-          setGame(
-            "usedLetters",
-            (usedLetters) => new Set([...usedLetters!, ...data.correct_guess!]),
-          );
+        const letters = keyboard.reduce((acc, keys) => acc + keys.length, 0);
 
-          animateInput(true);
-        } else {
-          animateInput(false);
+        if (data.life_change > 0 && game().usedLetters!.size === letters) {
+          setGame("usedLetters", new Set());
         }
       }
 
-      setGame({ prompt: data.prompt, turn: data.turn });
+      if (prevTurn === room().uuid && data.correct_guess) {
+        animateInput(true);
+      } else {
+        animateInput(false);
+      }
+
+      animatePlayer(prevTurn, data.correct_guess ? true : false);
+      animateOverlay(data.correct_guess ? false : true);
 
       if (data.turn === room().uuid) {
         inputElement.value = "";
@@ -126,17 +140,32 @@ export function WordBomb({
     },
   });
 
-  createEffect(on(() => game().turn, animateOverlay));
-
   onMount(() => {
     if (game().turn === room().uuid) {
       inputElement.focus();
     }
+
+    animateOverlay();
   });
 
-  window.addEventListener("resize", animateOverlay);
+  const controller = new AbortController();
 
-  onCleanup(() => window.removeEventListener("resize", animateOverlay));
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (document.activeElement?.tagName === "INPUT") return;
+
+      if (event.key === "Escape") {
+        inputElement.focus();
+        event.preventDefault();
+      }
+    },
+    { signal: controller.signal },
+  );
+
+  window.addEventListener("resize", () => animateOverlay(), { signal: controller.signal });
+
+  onCleanup(() => controller.abort());
 
   return (
     <main class="mt-[78px] flex h-[calc(100vh_-_78px)] flex-col justify-start">
@@ -149,7 +178,10 @@ export function WordBomb({
       <div class="flex h-full w-full items-center justify-around">
         <For each={game().players}>{(player) => <Player room={room} player={player} />}</For>
       </div>
-      <div ref={bombOverlayElement} class="absolute rounded-xl border border-dark-green">
+      <div
+        ref={bombOverlayElement}
+        class="absolute rounded-xl border border-dark-green text-dark-green"
+      >
         <div class="absolute bottom-1.5 left-1.5 -translate-x-1/2 translate-y-1/2">
           <SmallBomb />
         </div>
@@ -206,8 +238,6 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
 }
 
 function Letters({ usedLetters }: { usedLetters: Accessor<Set<string>> }) {
-  const keyboard = [[..."qwertyuiop"], [..."asdfghjkl"], [..."zxcvbnm"]];
-
   return (
     <div class="absolute bottom-6 right-6 flex flex-col space-y-1.5">
       {keyboard.map((row) => (
@@ -215,7 +245,7 @@ function Letters({ usedLetters }: { usedLetters: Accessor<Set<string>> }) {
           {row.map((key) => (
             <kbd
               classList={{ "bg-dark-green": usedLetters().has(key) }}
-              class="flex h-9 w-9 items-center justify-center rounded-md border text-gray-200 transition-colors duration-300"
+              class="flex h-9 w-9 items-center justify-center rounded-md border text-neutral-200 transition-colors duration-300"
             >
               {key}
             </kbd>

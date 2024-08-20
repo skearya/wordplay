@@ -1,5 +1,7 @@
 # current todo:
 
+- show unready players
+
 - page transitions with solid-transition-group
 
 - open graph images
