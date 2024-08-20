@@ -21,7 +21,7 @@ export function Chat({
 
     const options = {
       easing: "ease-out",
-      duration: 5000,
+      duration: 3500,
       fill: "forwards",
     } as const;
 
