@@ -59,7 +59,7 @@ export function Lobby({
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
-          <Players room={room} lobby={lobby} />
+          <ReadyPlayers room={room} lobby={lobby} />
           <JoinButtons sendMsg={sendMsg} room={room} lobby={lobby} />
         </div>
       </div>
@@ -185,11 +185,11 @@ function Stats({
   );
 }
 
-function Players({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
+function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">
-        <h1 class="text-xl">Players</h1>
+        <h1 class="text-xl">Ready Players</h1>
         <h1 class="text-lg text-green">{100 - lobby().ready.length} slots left</h1>
       </div>
       <Show
