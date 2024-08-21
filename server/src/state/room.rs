@@ -95,6 +95,12 @@ impl State {
 }
 
 impl AppState {
+    pub fn room_full(&self, room: &str) -> bool {
+        let lock = self.game.lock().unwrap();
+
+        lock.room(room).is_ok_and(|room| room.clients.len() >= 100)
+    }
+
     pub fn add_client(
         &self,
         room: &str,

@@ -48,6 +48,8 @@ pub async fn ws_handler(
         Some("invalid room name, must be less than 6 characters")
     } else if !room.chars().all(|c| c.is_ascii_alphanumeric()) {
         Some("invalid room name, must be alphanumeric")
+    } else if state.room_full(&room) {
+        Some("room full")
     } else {
         None
     };
