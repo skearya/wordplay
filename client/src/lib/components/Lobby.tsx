@@ -59,7 +59,7 @@ export function Lobby({
           <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
-          <ReadyPlayers room={room} lobby={lobby} />
+          <Players room={room} lobby={lobby} />
           <JoinButtons sendMsg={sendMsg} room={room} lobby={lobby} />
         </div>
       </div>
@@ -185,15 +185,15 @@ function Stats({
   );
 }
 
-function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
+function Players({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
     <>
       <div class="flex items-baseline justify-between">
-        <h1 class="text-xl">Ready Players</h1>
-        <h1 class="text-lg text-[#26D16C]">{100 - lobby().ready.length} slots left</h1>
+        <h1 class="text-xl">Players</h1>
+        <h1 class="text-lg text-green">{100 - lobby().ready.length} slots left</h1>
       </div>
       <Show
-        when={lobby().ready.length !== 0}
+        when={room().clients.length !== 0}
         fallback={
           <div class="flex h-full flex-col items-center justify-center gap-y-2.5 text-light-green">
             <h1>maybe invite someone!</h1>
@@ -204,21 +204,25 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
         }
       >
         <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
-          <For each={lobby().ready}>
-            {(uuid) => {
-              const username = room().clients.find((client) => client.uuid === uuid)!.username;
-
+          <For each={room().clients}>
+            {(client) => {
               return (
-                <div class="flex items-center justify-between gap-x-4 rounded-lg border bg-[#475D50]/30 p-2">
+                <div
+                  classList={{
+                    "bg-dark-green/30": lobby().ready.includes(client.uuid),
+                    "bg-red-600/20": !lobby().ready.includes(client.uuid),
+                  }}
+                  class="flex items-center justify-between gap-x-4 rounded-lg border p-2 transition-colors"
+                >
                   <img
-                    src={`https://avatar.vercel.sh/${username}`}
-                    alt={`profile picture`}
+                    src={`https://avatar.vercel.sh/${client.username}`}
+                    alt="profile picture"
                     height={55}
                     width={55}
                     class="rounded-full"
                   />
                   <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">
-                    {username}
+                    {client.username}
                   </h1>
                 </div>
               );
