@@ -69,18 +69,16 @@ export function WordBomb({
         Object.assign(bombOverlayElement.style, positionProps);
         overlayPosSet = true;
       } else {
-        bombOverlayElement.animate(positionProps, { easing, fill: "forwards", duration: 600 });
-
-        if (exploded) {
-          bombOverlayElement.animate(
-            {
+        bombOverlayElement.animate(
+          {
+            ...positionProps,
+            ...{
               borderColor: [orange, darkGreen],
               color: [orange, darkGreen],
-              filter: ["blur(2.5px)", "blur(0px)"],
             },
-            { easing: "ease", duration: 1500 },
-          );
-        }
+          },
+          { easing, fill: "forwards", duration: 600 },
+        );
       }
     }
   };
