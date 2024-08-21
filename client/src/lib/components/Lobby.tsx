@@ -44,7 +44,7 @@ export function Lobby({
   });
 
   return (
-    <main class="flex h-screen items-center justify-center overflow-hidden">
+    <main class="flex h-full items-center justify-center overflow-hidden">
       <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
         <Show when={postGameInfo}>
           <Switch>

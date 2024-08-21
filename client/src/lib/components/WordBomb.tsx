@@ -124,14 +124,13 @@ export function WordBomb({
         }
       }
 
-      if (prevTurn === room().uuid && data.correct_guess) {
-        animateInput(true);
-      } else {
-        animateInput(false);
-      }
+      const guessIsCorrect = data.correct_guess !== undefined ? true : false;
 
-      animatePlayer(prevTurn, data.correct_guess ? true : false);
-      animateOverlay(data.correct_guess ? false : true);
+      if (prevTurn === room().uuid) {
+        animateInput(guessIsCorrect);
+      }
+      animatePlayer(prevTurn, guessIsCorrect);
+      animateOverlay(!guessIsCorrect);
 
       if (data.turn === room().uuid) {
         inputElement.value = "";
@@ -168,7 +167,7 @@ export function WordBomb({
   onCleanup(() => controller.abort());
 
   return (
-    <main class="mt-[78px] flex h-[calc(100vh_-_78px)] flex-col justify-start">
+    <main class="flex h-full flex-col justify-start">
       <div
         style="background: linear-gradient(185deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
         class="flex h-24 w-full items-center justify-center font-mono text-[34px]"

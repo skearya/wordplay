@@ -16,7 +16,7 @@ export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Roo
   onCleanup(() => clearInterval(pingInterval));
 
   return (
-    <nav class="absolute top-0 flex w-full items-center justify-between px-6 py-5 text-light-green">
+    <nav class="flex w-full items-center justify-between px-6 py-5 text-light-green">
       <h1 class="text-xl text-foreground">wordplay</h1>
       <div class="flex items-center gap-x-5">
         <div

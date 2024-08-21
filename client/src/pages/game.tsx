@@ -213,7 +213,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
   });
 
   return (
-    <>
+    <div class="flex h-screen flex-col">
       <GameNav sendMsg={sendMsg} room={() => room} />
       <Chat sendMsg={sendMsg} messages={messages} />
       <Switch>
@@ -233,6 +233,6 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
           <h1>anagrams unimplemented</h1>
         </Match>
       </Switch>
-    </>
+    </div>
   );
 }
