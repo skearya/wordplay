@@ -72,10 +72,10 @@ export function WordBomb({
         bombOverlayElement.animate(
           {
             ...positionProps,
-            ...{
+            ...(exploded && {
               borderColor: [orange, darkGreen],
               color: [orange, darkGreen],
-            },
+            }),
           },
           { easing, fill: "forwards", duration: 600 },
         );
