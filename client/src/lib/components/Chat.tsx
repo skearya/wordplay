@@ -69,7 +69,7 @@ export function Chat({
       ref={chatElement}
       class="fixed bottom-0 left-0 z-50 flex w-96 flex-col gap-y-2 rounded-tr-lg border-r border-t bg-transparent p-2"
       onMouseEnter={reappear}
-      onMouseLeave={() => startFadeOut}
+      onMouseLeave={() => startFadeOut()}
     >
       <ul ref={chatContentElement} class="list-item h-48 overflow-y-auto text-wrap break-all">
         <li class="text-green">server: welcome to wordplay beta</li>
@@ -111,7 +111,7 @@ export function Chat({
           }
         }}
         onFocus={reappear}
-        onBlur={() => startFadeOut}
+        onBlur={() => startFadeOut()}
       />
     </div>
   );
