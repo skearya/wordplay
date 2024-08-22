@@ -4,25 +4,21 @@ pub mod lobby;
 pub mod messages;
 pub mod room;
 
-use error::GameError;
+use dashmap::{
+    mapref::one::{Ref, RefMut},
+    DashMap,
+};
+use error::{GameError, Result};
 use messages::ClientMessage;
 use room::Room;
 use sqlx::SqlitePool;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub db: SqlitePool,
-    pub game: Arc<Mutex<GameState>>,
-}
-
-#[derive(Debug)]
-pub struct GameState {
-    pub rooms: HashMap<String, Room>,
+    pub rooms: Arc<DashMap<String, Room>>,
 }
 
 #[derive(Clone, Copy)]
@@ -35,10 +31,20 @@ impl AppState {
     pub fn new(db: SqlitePool) -> Self {
         Self {
             db,
-            game: Arc::new(Mutex::new(GameState {
-                rooms: HashMap::new(),
-            })),
+            rooms: Arc::new(DashMap::new()),
         }
+    }
+
+    pub fn room(&self, room: &str) -> Result<Ref<String, Room>> {
+        self.rooms.get(room).ok_or(GameError::RoomNotFound {
+            room: room.to_string(),
+        })
+    }
+
+    pub fn room_mut(&self, room: &str) -> Result<RefMut<String, Room>> {
+        self.rooms.get_mut(room).ok_or(GameError::RoomNotFound {
+            room: room.to_string(),
+        })
     }
 
     pub fn handle(&self, sender: SenderInfo, message: ClientMessage) {
@@ -58,19 +64,5 @@ impl AppState {
             eprintln!("error: {} caused {:#?}", sender.uuid, error);
             self.send_error_msg(sender, &error.to_string()).ok();
         }
-    }
-}
-
-impl GameState {
-    pub fn room(&self, room: &str) -> Result<&Room, GameError> {
-        self.rooms.get(room).ok_or(GameError::RoomNotFound {
-            room: room.to_string(),
-        })
-    }
-
-    pub fn room_mut(&mut self, room: &str) -> Result<&mut Room, GameError> {
-        self.rooms.get_mut(room).ok_or(GameError::RoomNotFound {
-            room: room.to_string(),
-        })
     }
 }

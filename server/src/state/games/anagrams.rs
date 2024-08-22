@@ -113,8 +113,8 @@ impl AppState {
             return Err(AnagramsError::GuessTooLong)?;
         }
 
-        let mut lock = self.game.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let game = state.try_anagrams()?;
 
         match game.check_guess(uuid, &guess) {
@@ -133,13 +133,13 @@ impl AppState {
     pub async fn anagrams_timer(&self, room: String) -> Result<()> {
         tokio::time::sleep(Duration::from_secs(30)).await;
 
-        let mut lock = self.game.lock().unwrap();
+        let mut lock = self.room_mut(&room)?;
         let Room {
             clients,
             state,
             owner,
             ..
-        } = lock.room_mut(&room)?;
+        } = lock.value_mut();
         let game = state.try_anagrams()?;
 
         let game_info = messages::PostGameInfo::Anagrams(PostGameInfo {

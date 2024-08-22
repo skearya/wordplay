@@ -96,9 +96,7 @@ impl State {
 
 impl AppState {
     pub fn room_full(&self, room: &str) -> bool {
-        let lock = self.game.lock().unwrap();
-
-        lock.room(room).is_ok_and(|room| room.clients.len() >= 100)
+        self.room(room).is_ok_and(|room| room.clients.len() >= 100)
     }
 
     pub fn add_client(
@@ -108,13 +106,13 @@ impl AppState {
         socket_uuid: Uuid,
         tx: UnboundedSender<Message>,
     ) -> Uuid {
-        let mut lock = self.game.lock().unwrap();
+        let mut lock = self.rooms.entry(room.to_string()).or_default();
         let Room {
             clients,
             state,
             owner,
             settings,
-        } = lock.rooms.entry(room.to_string()).or_default();
+        } = lock.value_mut();
 
         let prev_client = params.rejoin_token.and_then(|rejoin_token| {
             clients.iter_mut().find(|(_uuid, client)| {
@@ -202,13 +200,13 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         socket_id: Uuid,
     ) -> Result<()> {
-        let mut lock = self.game.lock().unwrap();
+        let mut lock = self.room_mut(room)?;
         let Room {
+            owner,
             clients,
             state,
-            owner,
             ..
-        } = lock.room_mut(room)?;
+        } = lock.value_mut();
 
         let client = clients
             .get_mut(&uuid)
@@ -230,7 +228,8 @@ impl AppState {
                 State::Lobby(_) => {}
             }
 
-            lock.rooms.remove(room);
+            drop(lock);
+            self.rooms.remove(room);
             return Ok(());
         }
 
@@ -266,8 +265,8 @@ impl AppState {
     }
 
     pub fn client_ping(&self, SenderInfo { uuid, room }: SenderInfo, timestamp: u64) -> Result<()> {
-        let lock = self.game.lock().unwrap();
-        let Room { clients, .. } = lock.room(room)?;
+        let lock = self.room(room)?;
+        let Room { clients, .. } = lock.value();
 
         clients[&uuid].send(ServerMessage::Pong { timestamp });
 
@@ -283,8 +282,8 @@ impl AppState {
             return Err(RoomError::ChatMessageTooLong)?;
         }
 
-        let lock = self.game.lock().unwrap();
-        let Room { clients, .. } = lock.room(room)?;
+        let lock = self.room(room)?;
+        let Room { clients, .. } = lock.value();
 
         clients.broadcast(ServerMessage::ChatMessage {
             author: uuid,
@@ -299,8 +298,8 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         message: &str,
     ) -> Result<()> {
-        let lock = self.game.lock().unwrap();
-        let Room { clients, .. } = lock.room(room)?;
+        let lock = self.room(room)?;
+        let Room { clients, .. } = lock.value();
 
         clients[&uuid].send(ServerMessage::Error {
             content: format!("server error: {message}"),

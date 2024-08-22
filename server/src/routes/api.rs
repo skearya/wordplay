@@ -35,30 +35,26 @@ pub struct RoomData {
 
 impl AppState {
     pub fn info(&self) -> ServerInfo {
-        let lock = self.game.lock().unwrap();
-
         ServerInfo {
-            clients_connected: lock.rooms.values().map(|room| room.clients.len()).sum(),
-            public_rooms: lock
+            clients_connected: self.rooms.iter().map(|room| room.clients.len()).sum(),
+            public_rooms: self
                 .rooms
                 .iter()
-                .filter(|(_, room)| room.settings.public)
-                .map(|(name, data)| RoomData {
-                    name: name.clone(),
-                    players: data
+                .filter(|room| room.settings.public)
+                .map(|room| RoomData {
+                    name: room.key().clone(),
+                    players: room
                         .clients
                         .values()
                         .map(|client| client.username.clone())
                         .collect(),
-                    game: data.settings.game,
+                    game: room.settings.game,
                 })
                 .collect(),
         }
     }
 
     pub fn room_available(&self, name: &str) -> bool {
-        let lock = self.game.lock().unwrap();
-
-        !lock.rooms.contains_key(name)
+        !self.rooms.contains_key(name)
     }
 }

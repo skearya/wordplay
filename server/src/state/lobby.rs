@@ -99,9 +99,10 @@ impl Lobby {
 
 impl AppState {
     pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.game.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let lobby = state.try_lobby()?;
+
         if !lobby.ready.insert(uuid) {
             return Ok(());
         }
@@ -117,13 +118,13 @@ impl AppState {
     }
 
     pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.game.lock().unwrap();
+        let mut lock = self.room_mut(room)?;
         let Room {
             clients,
             state,
             settings,
             owner,
-        } = lock.room_mut(room)?;
+        } = lock.value_mut();
         let lobby = state.try_lobby()?;
 
         if uuid == *owner && lobby.ready.len() >= 2 {
@@ -138,9 +139,10 @@ impl AppState {
     }
 
     pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.game.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let lobby = state.try_lobby()?;
+
         if !lobby.ready.remove(&uuid) {
             return Ok(());
         }
@@ -159,13 +161,13 @@ impl AppState {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let mut lock = self.game.lock().unwrap();
+            let mut lock = self.room_mut(&room)?;
             let Room {
                 clients,
                 state,
                 settings,
                 ..
-            } = lock.room_mut(&room)?;
+            } = lock.value_mut();
             let lobby = state.try_lobby()?;
 
             if let Some(countdown) = lobby.countdown.as_mut() {
@@ -193,13 +195,13 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
     ) -> Result<()> {
-        let mut lock = self.game.lock().unwrap();
+        let mut lock = self.room_mut(room)?;
         let Room {
             clients,
             state,
             owner,
             settings,
-        } = lock.room_mut(room)?;
+        } = lock.value_mut();
 
         if state.try_lobby().is_ok() && *owner == uuid {
             settings.clone_from(&settings_update);
