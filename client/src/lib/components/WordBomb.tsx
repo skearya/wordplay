@@ -230,12 +230,15 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
 function Letters({ usedLetters }: { usedLetters: Accessor<Set<string>> }) {
   return (
     <div class="absolute bottom-6 right-6 flex flex-col space-y-1.5">
+      <h1 class="fade-after-10 mb-1.5 text-end text-gray-400">
+        use all letters to gain an extra life!
+      </h1>
       {keyboard.map((row) => (
         <div class="flex justify-center gap-x-1.5">
           {row.map((key) => (
             <kbd
               classList={{ "bg-dark-green": usedLetters().has(key) }}
-              class="flex h-9 w-9 items-center justify-center rounded-md border text-neutral-200 transition-colors duration-300"
+              class="flex h-9 w-9 items-center justify-center rounded-md border transition-colors duration-300"
             >
               {key}
             </kbd>

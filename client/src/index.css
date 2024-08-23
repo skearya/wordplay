@@ -45,4 +45,17 @@
   .quick-fade-in {
     animation: 300ms ease reverse fade-out;
   }
+
+  @keyframes late-fade-out {
+    90% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .fade-after-10 {
+    animation: 10s ease forwards late-fade-out;
+  }
 }
