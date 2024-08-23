@@ -69,7 +69,7 @@ export function Chat({
   return (
     <div
       ref={chatElement}
-      class="fixed bottom-0 left-0 z-50 flex w-96 flex-col gap-y-2 rounded-tr-lg border-r border-t bg-transparent p-2"
+      class="fixed bottom-0 left-0 z-10 flex w-96 flex-col gap-y-2 rounded-tr-lg border-r border-t bg-transparent p-2"
       onMouseEnter={reappear}
       onMouseLeave={() => startFadeOut()}
     >

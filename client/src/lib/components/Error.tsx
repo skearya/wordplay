@@ -17,7 +17,7 @@ export function ErrorDisplay({ error, reset }: { error: unknown; reset?: () => v
       <div class="flex flex-col gap-y-4 rounded-lg border bg-light-background p-4">
         <div class="flex items-center gap-x-3">
           <h1 class="text-lg">oh, we errored</h1>
-          <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
+          <div class="w-[1px] scale-y-90 self-stretch bg-dark-green/30"></div>
           <pre class="text-light-green">
             {JSON.stringify(
               error instanceof Error

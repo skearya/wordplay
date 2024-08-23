@@ -151,8 +151,6 @@ export function WordBomb({
   document.addEventListener(
     "keydown",
     (event) => {
-      if (document.activeElement?.tagName === "INPUT") return;
-
       if (event.key === "Escape") {
         inputElement.focus();
         event.preventDefault();

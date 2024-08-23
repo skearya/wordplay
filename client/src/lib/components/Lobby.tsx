@@ -8,6 +8,7 @@ import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo, Uuid } from "~/lib/types/messages";
 import { getUsername, Variant } from "../utils";
+import { Settings } from "./Settings";
 import { Avatar } from "./ui/Avatar";
 
 export function Lobby({
@@ -46,7 +47,7 @@ export function Lobby({
 
   return (
     <main>
-      <div class="absolute left-1/2 top-1/2 z-10 flex h-[480px] -translate-x-1/2 -translate-y-1/2 gap-x-4 rounded-xl border bg-light-background p-3.5">
+      <div class="absolute left-1/2 top-1/2 flex h-[480px] -translate-x-1/2 -translate-y-1/2 gap-x-4 rounded-xl border bg-light-background p-3.5">
         <Show when={postGameInfo}>
           <Switch>
             <Match when={postGameInfo!.type === "WordBomb"}>
@@ -66,6 +67,7 @@ export function Lobby({
       </div>
       <Status lobby={lobby} />
       <Practice />
+      <Settings sendMsg={sendMsg} room={room} />
     </main>
   );
 }
@@ -238,7 +240,7 @@ function JoinButtons({
 
 function Practice() {
   return (
-    <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+    <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-light-green">practice</h3>
         <div
@@ -259,7 +261,7 @@ function Practice() {
 
 function Status({ lobby }: { lobby: Accessor<LobbyState> }) {
   return (
-    <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden text-[clamp(50px,_5vw,_80px)]">
+    <div class="absolute bottom-0 right-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,_5vw,_80px)]">
       <Bomb class="mr-3 h-min w-[3em]" />
       <h1 class="text-outline -skew-x-6 text-[1em] leading-tight text-[#050705]">
         {lobby().startingCountdown
