@@ -80,13 +80,18 @@ function WordBombPostGameInfo({
   return (
     <div class="flex w-96 flex-col gap-y-3.5">
       <Winner room={room} winner={info.winner} />
-      <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
+      <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-auto">
         {(
           [
-            ["fastest guess", info.fastest_guesses],
+            [
+              "fastest guess",
+              info.fastest_guesses.map(
+                ([uuid, seconds]) => [uuid, `${seconds.toFixed(2)}s`] as [string, string],
+              ),
+            ],
             ["longest word", info.longest_words],
-            ["wpm", info.avg_wpms],
-            ["word length", info.avg_word_lengths],
+            ["average wpm", info.avg_wpms],
+            ["average word length", info.avg_word_lengths],
           ] as const
         ).map(([title, items]) => (
           <>{items.length !== 0 && <Leaderboard room={room} title={title} items={items} />}</>
@@ -158,14 +163,14 @@ function Stats({
   lettersTyped: number;
 }) {
   return (
-    <div class="mt-auto text-center [&>h1>span]:text-[#62E297]">
-      <h1 class="flex-1 border-[#62E297]">
-        <span>{minsElapsed}</span> mins elapsed
+    <div class="mt-auto text-center [&>h1>span]:text-lightest-green">
+      <h1>
+        <span>{minsElapsed.toFixed(2)}</span> mins elapsed
       </h1>
-      <h1 class="flex-1 border-[#62E297]">
+      <h1>
         <span>{wordsUsed}</span> words used
       </h1>
-      <h1 class="flex-1">
+      <h1>
         <span>{lettersTyped}</span> letters typed
       </h1>
     </div>
@@ -190,7 +195,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
           </div>
         }
       >
-        <div class="grid grid-cols-2 gap-2.5 overflow-y-scroll">
+        <div class="grid grid-cols-2 gap-2.5 overflow-y-auto">
           <For each={room().clients}>
             {(client) => {
               return (

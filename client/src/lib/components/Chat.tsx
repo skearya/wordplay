@@ -73,7 +73,10 @@ export function Chat({
       onMouseEnter={reappear}
       onMouseLeave={() => startFadeOut()}
     >
-      <ul ref={chatContentElement} class="list-item h-48 overflow-y-auto text-wrap break-all">
+      <ul
+        ref={chatContentElement}
+        class="list-item h-48 overflow-y-auto overflow-x-hidden text-wrap"
+      >
         <li class="text-green">server: welcome to wordplay beta</li>
         <li class="text-green">
           server: leave issues/feedback on{" "}

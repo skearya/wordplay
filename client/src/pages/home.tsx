@@ -32,7 +32,7 @@ export default function Home() {
           <h1 class="text-center text-red-400">something went wrong...</h1>
         </Match>
         <Match when={data()}>
-          <div class="h-full space-y-3 overflow-y-scroll">
+          <div class="h-full space-y-3 overflow-y-auto">
             {data()!.public_rooms.length === 0 ? (
               <h1 class="text-center text-gray-400">there aren't any public rooms yet!</h1>
             ) : (

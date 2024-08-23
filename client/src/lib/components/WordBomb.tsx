@@ -13,7 +13,6 @@ const easing = "cubic-bezier(0.33, 1, 0.68, 1)";
 const green = "rgb(98 226 151)";
 const darkGreen = "rgb(71 93 80)";
 const red = "rgb(220 38 38)";
-const orange = "rgb(234 88 12)";
 
 export function WordBomb({
   sendMsg,
@@ -74,8 +73,9 @@ export function WordBomb({
           {
             ...positionProps,
             ...(exploded && {
-              borderColor: [orange, darkGreen],
-              color: [orange, darkGreen],
+              borderColor: [red, darkGreen],
+              backgroundColor: [red, "transparent"],
+              color: [red, darkGreen],
             }),
           },
           { easing, fill: "forwards", duration: 600 },
