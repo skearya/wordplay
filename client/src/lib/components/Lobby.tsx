@@ -97,11 +97,7 @@ function WordBombPostGameInfo({
           <>{items.length !== 0 && <Leaderboard room={room} title={title} items={items} />}</>
         ))}
       </div>
-      <Stats
-        minsElapsed={info.mins_elapsed}
-        wordsUsed={info.words_used}
-        lettersTyped={info.letters_typed}
-      />
+      <Stats minsElapsed={info.mins_elapsed} wordsUsed={info.words_used} />
     </div>
   );
 }
@@ -153,25 +149,14 @@ function Leaderboard({
   );
 }
 
-function Stats({
-  minsElapsed,
-  wordsUsed,
-  lettersTyped,
-}: {
-  minsElapsed: number;
-  wordsUsed: number;
-  lettersTyped: number;
-}) {
+function Stats({ minsElapsed, wordsUsed }: { minsElapsed: number; wordsUsed: number }) {
   return (
-    <div class="mt-auto text-center [&>h1>span]:text-lightest-green">
-      <h1>
-        <span>{minsElapsed.toFixed(2)}</span> mins elapsed
+    <div class="mt-auto flex text-center [&>h1>span]:text-lightest-green">
+      <h1 class="flex-1">
+        <span>{minsElapsed.toFixed(1)}</span> mins
       </h1>
-      <h1>
+      <h1 class="flex-1">
         <span>{wordsUsed}</span> words used
-      </h1>
-      <h1>
-        <span>{lettersTyped}</span> letters typed
       </h1>
     </div>
   );

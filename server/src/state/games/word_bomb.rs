@@ -62,7 +62,6 @@ pub struct PostGameInfo {
     winner: Uuid,
     mins_elapsed: f32,
     words_used: usize,
-    letters_typed: usize,
     fastest_guesses: Vec<(Uuid, f32)>,
     longest_words: Vec<(Uuid, String)>,
     avg_wpms: Vec<(Uuid, f32)>,
@@ -334,17 +333,6 @@ fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
             .players
             .iter()
             .map(|player| player.used_words.len())
-            .sum(),
-        letters_typed: game
-            .players
-            .iter()
-            .map(|player| {
-                player
-                    .used_words
-                    .iter()
-                    .map(|(_, word)| word.len())
-                    .sum::<usize>()
-            })
             .sum(),
         fastest_guesses: game
             .players

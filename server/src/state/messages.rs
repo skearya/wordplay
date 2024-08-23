@@ -65,7 +65,6 @@ pub enum ServerMessage {
         new_room_owner: Option<Uuid>,
         info: PostGameInfo,
     },
-
     // word bomb
     WordBombInput {
         uuid: Uuid,
@@ -81,7 +80,6 @@ pub enum ServerMessage {
         prompt: String,
         turn: Uuid,
     },
-
     // anagrams
     AnagramsInvalidGuess {
         reason: anagrams::GuessInfo,
