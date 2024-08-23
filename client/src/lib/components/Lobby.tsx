@@ -44,8 +44,8 @@ export function Lobby({
   });
 
   return (
-    <main class="flex h-full items-center justify-center overflow-hidden">
-      <div class="z-10 flex h-[480px] gap-x-4 rounded-xl border bg-[#0B0D0A] p-3.5">
+    <main>
+      <div class="absolute left-1/2 top-1/2 z-10 flex h-[480px] -translate-x-1/2 -translate-y-1/2 gap-x-4 rounded-xl border bg-light-background p-3.5">
         <Show when={postGameInfo}>
           <Switch>
             <Match when={postGameInfo!.type === "WordBomb"}>
@@ -56,7 +56,7 @@ export function Lobby({
             </Match>
             <Match when={postGameInfo!.type === "Anagrams"}>we arent there yet</Match>
           </Switch>
-          <div class="w-[1px] scale-y-90 self-stretch bg-[#475D50]/30"></div>
+          <div class="w-[1px] self-stretch bg-dark-green/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
           <ReadyPlayers room={room} lobby={lobby} />
@@ -77,7 +77,7 @@ function WordBombPostGameInfo({
   info: Variant<PostGameInfo, "WordBomb">;
 }) {
   return (
-    <div class="flex flex-col gap-y-3.5">
+    <div class="flex w-96 flex-col gap-y-3.5">
       <Winner room={room} winner={info.winner} />
       <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-scroll">
         {(
@@ -133,30 +133,28 @@ function Leaderboard({
   items: Array<[Uuid, value: string | number]>;
 }) {
   return (
-    <div>
-      <h1 class="mb-1.5">{title}</h1>
-      <div class="w-48 space-y-1.5">
-        {items.map(([uuid, value], i) => {
-          const username = getUsername(room, uuid);
+    <div class="flex flex-col gap-y-1.5">
+      <h1>{title}</h1>
+      {items.map(([uuid, value], i) => {
+        const username = getUsername(room, uuid);
 
-          return (
-            <div class="flex items-center gap-x-1">
-              <h1 class="text-sm tabular-nums">{i + 1}.</h1>
-              <img
-                src={`https://avatar.vercel.sh/${getUsername(room, uuid)}`}
-                alt="profile picture"
-                width={18}
-                height={18}
-                class="flex-none rounded-full"
-              />
-              <h1 class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">
-                {username}
-              </h1>
-              <h1 class="justify-self-end text-sm text-light-green">{value}</h1>
-            </div>
-          );
-        })}
-      </div>
+        return (
+          <div class="flex items-center gap-x-1 text-sm">
+            <h1 class="tabular-nums">{i + 1}.</h1>
+            <img
+              src={`https://avatar.vercel.sh/${getUsername(room, uuid)}`}
+              alt="profile picture"
+              width={18}
+              height={18}
+              class="flex-none rounded-full"
+            />
+            <h1 class="min-w-4 flex-1 truncate">{username}</h1>
+            <h1 class="justify-self-end truncate text-light-green" title={value.toString()}>
+              {typeof value === "number" ? value.toFixed(2) : value}
+            </h1>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -288,11 +286,9 @@ function Practice() {
 
 function Status({ lobby }: { lobby: Accessor<LobbyState> }) {
   return (
-    <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden">
-      <div class="mr-3">
-        <Bomb />
-      </div>
-      <h1 class="text-outline -skew-x-6 text-[4.5vw] leading-tight text-[#050705]">
+    <div class="absolute bottom-0 right-0 flex flex-col items-end overflow-hidden text-[clamp(50px,_5vw,_80px)]">
+      <Bomb class="mr-3 h-min w-[3em]" />
+      <h1 class="text-outline -skew-x-6 text-[1em] leading-tight text-[#050705]">
         {lobby().startingCountdown
           ? `starting in ${lobby().startingCountdown}`
           : "waiting for players..."}

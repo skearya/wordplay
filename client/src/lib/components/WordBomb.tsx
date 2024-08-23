@@ -179,9 +179,7 @@ export function WordBomb({
         ref={bombOverlayElement}
         class="absolute rounded-xl border border-dark-green text-dark-green"
       >
-        <div class="absolute bottom-1.5 left-1.5 -translate-x-1/2 translate-y-1/2">
-          <SmallBomb />
-        </div>
+        <SmallBomb class="absolute bottom-1.5 left-1.5 -translate-x-1/2 translate-y-1/2" />
       </div>
       <Input
         ref={inputElement}
@@ -210,7 +208,7 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
       <div class="flex items-center gap-x-4">
         <img
           src={`https://avatar.vercel.sh/${client().username}`}
-          alt={`profile picture`}
+          alt="profile picture"
           height={100}
           width={100}
           class="rounded-full"

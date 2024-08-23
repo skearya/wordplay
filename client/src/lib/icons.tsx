@@ -1,6 +1,13 @@
-export function Link() {
+export function Link({ class: className }: { class?: string }) {
   return (
-    <svg width="35" height="35" viewBox="0 0 41 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      class={className}
+      width="35"
+      height="35"
+      viewBox="0 0 41 42"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M33.7204 7.45706C29.1394 2.76431 21.712 2.76431 17.131 7.45706L15.8996 8.71855C15.3992 9.23111 15.3992 10.0621 15.8996 10.5747C16.3999 11.0873 17.2111 11.0873 17.7115 10.5747L18.943 9.31322C22.5233 5.64558 28.3281 5.64558 31.9084 9.31322C35.4887 12.9808 35.4887 18.9273 31.9084 22.5949L30.677 23.8563C30.1767 24.3689 30.1767 25.2 30.677 25.7126C31.1774 26.2251 31.9885 26.2251 32.4889 25.7126L33.7204 24.451C38.3013 19.7584 38.3013 12.1498 33.7204 7.45706Z"
         fill="currentColor"
@@ -17,9 +24,16 @@ export function Link() {
   );
 }
 
-export function QuestionMark() {
+export function QuestionMark({ class: className }: { class?: string }) {
   return (
-    <svg width="35" height="35" viewBox="0 0 37 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      class={className}
+      width="35"
+      height="35"
+      viewBox="0 0 37 38"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"
@@ -30,9 +44,10 @@ export function QuestionMark() {
   );
 }
 
-export function Bomb() {
+export function Bomb({ class: className }: { class?: string }) {
   return (
     <svg
+      class={className}
       width="260"
       height="260"
       viewBox="0 0 260 260"
@@ -60,9 +75,16 @@ export function Bomb() {
   );
 }
 
-export function SmallBomb() {
+export function SmallBomb({ class: className }: { class?: string }) {
   return (
-    <svg width="51" height="51" viewBox="0 0 51 51" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      class={className}
+      width="51"
+      height="51"
+      viewBox="0 0 51 51"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M10.125 15.6082C12.8093 14.0554 15.9258 13.1666 19.25 13.1666C29.3291 13.1666 37.4999 21.3375 37.4999 31.4166C37.4999 41.4957 29.3291 49.6666 19.25 49.6666C9.17078 49.6666 1 41.4957 1 31.4166C1 28.0924 1.88872 24.9761 3.44153 22.2916"
         fill="#050705"
@@ -88,9 +110,16 @@ export function SmallBomb() {
   );
 }
 
-export function Heart() {
+export function Heart({ class: className }: { class?: string }) {
   return (
-    <svg width="25" height="21" viewBox="0 0 25 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      class={className}
+      width="25"
+      height="21"
+      viewBox="0 0 25 21"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M0 7.13885C0 13.0709 5.02429 16.2321 8.70216 19.0615C10 20.06 11.25 21 12.5 21C13.75 21 15 20.06 16.2979 19.0615C19.9757 16.2321 25 13.0709 25 7.13885C25 1.20675 18.1248 -3.00018 12.5 2.70287C6.8752 -3.00018 0 1.20675 0 7.13885Z"
         fill="#DA5858"
@@ -99,9 +128,16 @@ export function Heart() {
   );
 }
 
-export function LostHeart() {
+export function LostHeart({ class: className }: { class?: string }) {
   return (
-    <svg width="25" height="21" viewBox="0 0 25 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      class={className}
+      width="25"
+      height="21"
+      viewBox="0 0 25 21"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         opacity="0.2"
         d="M0 7.13885C0 13.0709 5.02429 16.2321 8.70216 19.0615C10 20.06 11.25 21 12.5 21C13.75 21 15 20.06 16.2979 19.0615C19.9757 16.2321 25 13.0709 25 7.13885C25 1.20675 18.1248 -3.00018 12.5 2.70287C6.8752 -3.00018 0 1.20675 0 7.13885Z"
