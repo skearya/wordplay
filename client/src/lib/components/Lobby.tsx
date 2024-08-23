@@ -35,7 +35,7 @@ export function Lobby({
       if (data.countdown_update) {
         setLobby(
           "startingCountdown",
-          data.countdown_update.type === "InProgress" ? data.countdown_update.time_left : undefined,
+          data.countdown_update.type === "InProgress" ? data.countdown_update.time_left : null,
         );
       }
     },

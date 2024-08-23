@@ -47,7 +47,7 @@ export type ServerMessage =
   | {
       type: "ReadyPlayers";
       ready: Array<Uuid>;
-      countdown_update?: CountdownState;
+      countdown_update: CountdownState | null;
     }
   | {
       type: "StartingCountdown";
@@ -55,12 +55,12 @@ export type ServerMessage =
     }
   | {
       type: "GameStarted";
-      rejoin_token?: string;
+      rejoin_token: string | null;
       game: Exclude<RoomStateInfo, { type: "Lobby" }>;
     }
   | {
       type: "GameEnded";
-      new_room_owner?: Uuid;
+      new_room_owner: Uuid | null;
       info: PostGameInfo;
     }
   // word bomb
@@ -76,7 +76,7 @@ export type ServerMessage =
     }
   | {
       type: "WordBombPrompt";
-      correct_guess?: string;
+      correct_guess: string | null;
       life_change: number;
       prompt: string;
       turn: Uuid;
@@ -108,14 +108,14 @@ export type RoomStateInfo =
   | {
       type: "Lobby";
       ready: Array<Uuid>;
-      starting_countdown?: number;
+      starting_countdown: number | null;
     }
   | {
       type: "WordBomb";
       players: Array<WordBombPlayerData>;
       turn: Uuid;
       prompt: string;
-      used_letters?: Array<string>;
+      used_letters: Array<string> | null;
     }
   | {
       type: "Anagrams";
@@ -158,7 +158,7 @@ type ConnectionUpdate =
     }
   | {
       type: "Disconnected";
-      new_room_owner?: Uuid;
+      new_room_owner: Uuid | null;
     };
 
 type CountdownState =

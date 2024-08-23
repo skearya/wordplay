@@ -123,7 +123,7 @@ export function WordBomb({
         }
       }
 
-      const guessIsCorrect = data.correct_guess !== undefined ? true : false;
+      const guessIsCorrect = data.correct_guess !== null;
 
       if (prevTurn === room().uuid) {
         animateInput(guessIsCorrect);

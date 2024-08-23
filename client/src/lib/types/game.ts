@@ -27,7 +27,7 @@ export type Room = {
 export type LobbyState = {
   type: "Lobby";
   ready: Array<Uuid>;
-  startingCountdown: number | undefined;
+  startingCountdown: number | null;
 };
 
 export type WordBombState = {
@@ -35,7 +35,7 @@ export type WordBombState = {
   players: Array<WordBombPlayerData>;
   turn: Uuid;
   prompt: string;
-  usedLetters: Set<string> | undefined;
+  usedLetters: Set<string> | null;
 };
 
 export type AnagramsState = {
