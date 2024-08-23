@@ -6,6 +6,7 @@ import { Heart, LostHeart, SmallBomb } from "~/lib/icons";
 import { Room, SendFn, State, WordBombState } from "~/lib/types/game";
 import { Uuid, WordBombPlayerData } from "~/lib/types/messages";
 import { getClient } from "~/lib/utils";
+import { Avatar } from "./ui/Avatar";
 
 const keyboard = [[..."qwertyuiop"], [..."asdfghjkl"], [..."zxcvbnm"]];
 const easing = "cubic-bezier(0.33, 1, 0.68, 1)";
@@ -206,13 +207,7 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
       class="flex flex-col items-center gap-y-2.5 text-xl transition-opacity"
     >
       <div class="flex items-center gap-x-4">
-        <img
-          src={`https://avatar.vercel.sh/${client().username}`}
-          alt="profile picture"
-          height={100}
-          width={100}
-          class="rounded-full"
-        />
+        <Avatar username={client().username} size={100} />
         <div class="flex flex-col gap-y-2">
           <h1>{client().username}</h1>
           <div class="flex gap-x-2">

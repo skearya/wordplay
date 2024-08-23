@@ -1,5 +1,6 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Match, Show, Switch, createResource, createSignal } from "solid-js";
+import { Avatar } from "~/lib/components/ui/Avatar";
 import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
 import { cloneElement } from "~/lib/utils";
@@ -227,14 +228,7 @@ function Room(props: { name: string; players: Array<string> }) {
       <h1 class="text-xl">{props.name}</h1>
       <div class="flex -space-x-2">
         {props.players.slice(0, 3).map((player) => (
-          <img
-            src={`https://avatar.vercel.sh/${player}`}
-            alt={player}
-            title={player}
-            width={38}
-            height={38}
-            class="rounded-full border-[3px] border-black"
-          />
+          <Avatar username={player} size={38} class="border-[3px] border-black" />
         ))}
         {props.players.length > 3 && (
           <div class="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-black">

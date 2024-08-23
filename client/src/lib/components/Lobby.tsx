@@ -8,6 +8,7 @@ import { Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo, Uuid } from "~/lib/types/messages";
 import { getUsername, Variant } from "../utils";
+import { Avatar } from "./ui/Avatar";
 
 export function Lobby({
   sendMsg,
@@ -101,7 +102,7 @@ function WordBombPostGameInfo({
 }
 
 function Winner({ room, winner }: { room: Room; winner: Uuid }) {
-  const username = getUsername(room, winner);
+  const username = getUsername(room, winner)!;
 
   return (
     <div
@@ -111,13 +112,7 @@ function Winner({ room, winner }: { room: Room; winner: Uuid }) {
       <h1 class="text-lg font-medium">winner!</h1>
       <div class="flex items-center gap-x-4">
         <h1 class="text-lg">{username}</h1>
-        <img
-          src={`https://avatar.vercel.sh/${username}`}
-          alt="profile picture"
-          width={50}
-          height={50}
-          class="rounded-full"
-        />
+        <Avatar username={username} size={50} />
       </div>
     </div>
   );
@@ -136,18 +131,12 @@ function Leaderboard({
     <div class="flex flex-col gap-y-1.5">
       <h1>{title}</h1>
       {items.map(([uuid, value], i) => {
-        const username = getUsername(room, uuid);
+        const username = getUsername(room, uuid)!;
 
         return (
           <div class="flex items-center gap-x-1 text-sm">
             <h1 class="tabular-nums">{i + 1}.</h1>
-            <img
-              src={`https://avatar.vercel.sh/${getUsername(room, uuid)}`}
-              alt="profile picture"
-              width={18}
-              height={18}
-              class="flex-none rounded-full"
-            />
+            <Avatar username={username} size={18} />
             <h1 class="min-w-4 flex-1 truncate">{username}</h1>
             <h1 class="justify-self-end truncate text-light-green" title={value.toString()}>
               {typeof value === "number" ? value.toFixed(2) : value}
@@ -212,13 +201,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
                   }}
                   class="flex items-center justify-between gap-x-4 rounded-lg border p-2 transition-colors"
                 >
-                  <img
-                    src={`https://avatar.vercel.sh/${client.username}`}
-                    alt="profile picture"
-                    height={55}
-                    width={55}
-                    class="rounded-full"
-                  />
+                  <Avatar username={client.username} size={55} />
                   <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">
                     {client.username}
                   </h1>

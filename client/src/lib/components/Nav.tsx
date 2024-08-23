@@ -2,6 +2,7 @@ import { Accessor, createSignal, onCleanup, Show } from "solid-js";
 import { useEvent } from "~/lib/events";
 import { Link } from "~/lib/icons";
 import { Room, SendFn } from "~/lib/types/game";
+import { Avatar } from "./ui/Avatar";
 
 export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) {
   const [ping, setPing] = createSignal(0);
@@ -28,14 +29,7 @@ export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Roo
           {room()
             .clients.slice(0, 3)
             .map((client) => (
-              <img
-                src={`https://avatar.vercel.sh/${client.username}`}
-                alt={client.username}
-                title={client.username}
-                height={38}
-                width={38}
-                class="rounded-full border-[3px] border-black"
-              />
+              <Avatar username={client.username} size={38} class="border-[3px] border-black" />
             ))}
           <Show when={room().clients.length > 3}>
             <div class="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-black">
