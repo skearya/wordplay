@@ -19,6 +19,10 @@ export function Chat({
   function startFadeOut(duration = 3500) {
     clearTimeout(fadeOutTimeout);
 
+    if (chatContentElement.matches(":hover") || document.activeElement == chatInputElement) {
+      return;
+    }
+
     const options = {
       easing: "ease-out",
       duration,
@@ -38,11 +42,9 @@ export function Chat({
     on(
       () => messages().length,
       () => {
-        chatContentElement.scrollTop = chatContentElement.scrollHeight;
         reappear();
-
-        clearTimeout(fadeOutTimeout);
-        fadeOutTimeout = setTimeout(startFadeOut, 1500);
+        chatContentElement.scrollTop = chatContentElement.scrollHeight;
+        setTimeout(startFadeOut, 1500);
       },
     ),
   );
