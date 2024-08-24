@@ -1,6 +1,7 @@
 import { useParams } from "@solidjs/router";
 import { ComponentProps, createSignal, ErrorBoundary, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
+import { Anagrams } from "~/lib/components/Anagrams";
 import { Chat } from "~/lib/components/Chat";
 import { error, ErrorDisplay, setError } from "~/lib/components/Error";
 import { Lobby } from "~/lib/components/Lobby";
@@ -230,7 +231,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
           <WordBomb sendMsg={sendMsg} room={() => room} state={() => state} setState={setState} />
         </Match>
         <Match when={state.type === "Anagrams"}>
-          <h1>anagrams unimplemented</h1>
+          <Anagrams sendMsg={sendMsg} room={() => room} state={() => state} setState={setState} />
         </Match>
       </Switch>
     </div>
