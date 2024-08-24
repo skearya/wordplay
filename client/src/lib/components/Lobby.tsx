@@ -153,11 +153,11 @@ function Leaderboard({
 
 function Stats({ minsElapsed, wordsUsed }: { minsElapsed: number; wordsUsed: number }) {
   return (
-    <div class="mt-auto flex text-center [&>h1>span]:text-lightest-green">
-      <h1 class="flex-1">
+    <div class="mt-auto flex justify-around text-center [&>h1>span]:text-lightest-green">
+      <h1>
         <span>{minsElapsed.toFixed(1)}</span> mins
       </h1>
-      <h1 class="flex-1">
+      <h1>
         <span>{wordsUsed}</span> words used
       </h1>
     </div>
