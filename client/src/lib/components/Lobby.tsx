@@ -1,4 +1,4 @@
-import { Accessor, For, Match, Show, Switch } from "solid-js";
+import { Accessor, For, JSX, Match, Show, Switch } from "solid-js";
 import { SetStoreFunction, unwrap } from "solid-js/store";
 import { Button } from "~/lib/components/ui/Button";
 import { Copy } from "~/lib/components/ui/Copy";
@@ -56,7 +56,12 @@ export function Lobby({
                 info={postGameInfo as Variant<PostGameInfo, "WordBomb">}
               />
             </Match>
-            <Match when={postGameInfo!.type === "Anagrams"}>we arent there yet</Match>
+            <Match when={postGameInfo!.type === "Anagrams"}>
+              <AnagramsPostGameInfo
+                room={unwrap(room())}
+                info={postGameInfo as Variant<PostGameInfo, "Anagrams">}
+              />
+            </Match>
           </Switch>
           <div class="w-[1px] self-stretch bg-dark-green/30"></div>
         </Show>
@@ -80,7 +85,7 @@ function WordBombPostGameInfo({
   info: Variant<PostGameInfo, "WordBomb">;
 }) {
   return (
-    <div class="flex w-96 flex-col gap-y-3.5">
+    <div class="flex w-96 flex-col gap-y-2.5">
       <Winner room={room} winner={info.winner} />
       <div class="grid grid-cols-2 gap-x-10 gap-y-2.5 overflow-y-auto">
         {(
@@ -96,10 +101,39 @@ function WordBombPostGameInfo({
             ["average word length", info.avg_word_lengths],
           ] as const
         ).map(([title, items]) => (
-          <>{items.length !== 0 && <Leaderboard room={room} title={title} items={items} />}</>
+          <>
+            {items.length !== 0 && <WordBombLeaderboard room={room} title={title} items={items} />}
+          </>
         ))}
       </div>
-      <Stats minsElapsed={info.mins_elapsed} wordsUsed={info.words_used} />
+      <Stats>
+        <h1>
+          <span>{info.mins_elapsed.toFixed(1)}</span> mins
+        </h1>
+        <h1>
+          <span>{info.words_used}</span> words used
+        </h1>
+      </Stats>
+    </div>
+  );
+}
+
+function AnagramsPostGameInfo({
+  room,
+  info,
+}: {
+  room: Room;
+  info: Variant<PostGameInfo, "Anagrams">;
+}) {
+  return (
+    <div class="flex w-64 flex-col gap-y-2">
+      <h1 class="text-xl">Leaderboard</h1>
+      <AnagramsLeaderboard room={room} leaderboard={info.leaderboard} />
+      <Stats>
+        <h1>
+          the original word was <span>{info.original_word}</span>
+        </h1>
+      </Stats>
     </div>
   );
 }
@@ -110,7 +144,7 @@ function Winner({ room, winner }: { room: Room; winner: Uuid }) {
   return (
     <div
       style="background-image: linear-gradient(135deg, #171717 6.52%, transparent 6.52%, transparent 50%, #171717 50%, #171717 56.52%, transparent 56.52%, transparent 100%); background-size: 23.00px 23.00px;"
-      class="flex min-w-72 items-center justify-between gap-x-2 rounded-lg border p-2.5"
+      class="flex items-center justify-between gap-x-2 rounded-lg border p-2.5"
     >
       <h1 class="text-lg font-medium">winner!</h1>
       <div class="flex items-center gap-x-4">
@@ -121,7 +155,7 @@ function Winner({ room, winner }: { room: Room; winner: Uuid }) {
   );
 }
 
-function Leaderboard({
+function WordBombLeaderboard({
   room,
   title,
   items,
@@ -151,15 +185,37 @@ function Leaderboard({
   );
 }
 
-function Stats({ minsElapsed, wordsUsed }: { minsElapsed: number; wordsUsed: number }) {
+function AnagramsLeaderboard({
+  room,
+  leaderboard,
+}: {
+  room: Room;
+  leaderboard: Array<[Uuid, score: number]>;
+}) {
+  return (
+    <div class="flex flex-col gap-y-2 overflow-y-auto">
+      {leaderboard
+        .sort((a, b) => b[1] - a[1])
+        .map(([uuid, score], i) => {
+          const username = getUsername(room, uuid)!;
+
+          return (
+            <div class="flex items-center gap-x-1.5">
+              <h1 class="tabular-nums">{i + 1}.</h1>
+              <Avatar username={username} size={25} />
+              <h1 class="min-w-4 flex-1 truncate">{username}</h1>
+              <h1 class="justify-self-end truncate text-light-green">{score}</h1>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+function Stats({ children }: { children: JSX.Element | Array<JSX.Element> }) {
   return (
     <div class="mt-auto flex justify-around text-center [&>h1>span]:text-lightest-green">
-      <h1>
-        <span>{minsElapsed.toFixed(1)}</span> mins
-      </h1>
-      <h1>
-        <span>{wordsUsed}</span> words used
-      </h1>
+      {children}
     </div>
   );
 }
