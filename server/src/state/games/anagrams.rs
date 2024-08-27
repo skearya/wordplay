@@ -35,6 +35,7 @@ pub enum GuessInfo {
     NotLongEnough,
     PromptMismatch,
     NotEnglish,
+    AlreadyUsed,
     Valid,
 }
 
@@ -56,14 +57,18 @@ impl Anagrams {
         } else if !GLOBAL.get().unwrap().is_valid(guess) {
             GuessInfo::NotEnglish
         } else {
-            self.players
+            if !self
+                .players
                 .iter_mut()
                 .find(|player| uuid == player.uuid)
                 .ok_or(AnagramsError::PlayerNotFound)?
                 .used_words
-                .insert(guess.to_string());
-
-            GuessInfo::Valid
+                .insert(guess.to_string())
+            {
+                GuessInfo::AlreadyUsed
+            } else {
+                GuessInfo::Valid
+            }
         };
 
         Ok(guess_info)

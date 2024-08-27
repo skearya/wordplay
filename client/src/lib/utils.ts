@@ -104,6 +104,8 @@ export function translateAnagramsGuessError(guessInfo: AnagramsGuessInfo) {
       return "word doesn't contain anagram";
     case "NotEnglish":
       return "word isn't valid english";
+    case "AlreadyUsed":
+      return "word already used";
   }
 }
 

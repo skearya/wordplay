@@ -201,4 +201,7 @@ export type AnagramsGuessInfo =
     }
   | {
       type: "NotEnglish";
+    }
+  | {
+      type: "AlreadyUsed";
     };
