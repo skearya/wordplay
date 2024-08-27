@@ -3,7 +3,13 @@ import { SetStoreFunction } from "solid-js/store";
 import { useEvents } from "../events";
 import { AnagramsState, Room, SendFn, State } from "../types/game";
 import { AnagramsPlayerData } from "../types/messages";
-import { colors, cubicEasing, getUsername, translateAnagramsGuessError } from "../utils";
+import {
+  calculateAnagramsPoints,
+  colors,
+  cubicEasing,
+  getUsername,
+  translateAnagramsGuessError,
+} from "../utils";
 import { Avatar } from "./ui/Avatar";
 import { Input } from "./ui/Input";
 
@@ -159,7 +165,7 @@ function Leaderboard({
       {players()
         .map(({ uuid, used_words }) => ({
           uuid,
-          score: used_words.reduce((acc, word) => acc + 50 * 2 ** (word.length - 2), 0),
+          score: used_words.reduce((acc, word) => acc + calculateAnagramsPoints(word), 0),
         }))
         .sort((a, b) => b.score - a.score)
         .map(({ uuid, score }, i) => {

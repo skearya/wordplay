@@ -35,7 +35,6 @@ pub enum GuessInfo {
     NotLongEnough,
     PromptMismatch,
     NotEnglish,
-    AlreadyUsed,
     Valid,
 }
 
@@ -47,7 +46,7 @@ pub struct PostGameInfo {
 
 impl Anagrams {
     pub fn check_guess(&mut self, uuid: Uuid, guess: &str) -> Result<GuessInfo, GameError> {
-        let guess_info = if guess.len() < 3 {
+        let guess_info = if guess.len() < 2 {
             GuessInfo::NotLongEnough
         } else if guess
             .chars()
@@ -56,12 +55,6 @@ impl Anagrams {
             GuessInfo::PromptMismatch
         } else if !GLOBAL.get().unwrap().is_valid(guess) {
             GuessInfo::NotEnglish
-        } else if self
-            .players
-            .iter()
-            .any(|player| player.used_words.contains(guess))
-        {
-            GuessInfo::AlreadyUsed
         } else {
             self.players
                 .iter_mut()
@@ -85,7 +78,8 @@ impl Anagrams {
                     player
                         .used_words
                         .iter()
-                        .fold(0, |acc, word| acc + 50 * 2_u32.pow((word.len() - 2) as u32)),
+                        .map(|word| calculate_points(word))
+                        .sum::<u32>(),
                 )
             })
             .sorted_by_vec(|a, b| b.1.cmp(&a.1))
@@ -151,4 +145,8 @@ impl AppState {
 
         Ok(())
     }
+}
+
+fn calculate_points(word: &str) -> u32 {
+    50 * 2_u32.pow(word.len() as u32 - 2)
 }

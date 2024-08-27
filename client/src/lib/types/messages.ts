@@ -90,6 +90,7 @@ export type ServerMessage =
       type: "AnagramsCorrectGuess";
       uuid: Uuid;
       guess: string;
+      points: number;
     };
 
 export type RoomInfo = {
@@ -200,7 +201,4 @@ export type AnagramsGuessInfo =
     }
   | {
       type: "NotEnglish";
-    }
-  | {
-      type: "AlreadyUsed";
     };

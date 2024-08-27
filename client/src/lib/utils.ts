@@ -94,6 +94,8 @@ export function getUsername(room: Room, uuid: Uuid): string | undefined {
   return room.clients.find((client) => client.uuid === uuid)?.username;
 }
 
+export const calculateAnagramsPoints = (word: string) => 50 * 2 ** (word.length - 2);
+
 export function translateAnagramsGuessError(guessInfo: AnagramsGuessInfo) {
   switch (guessInfo.type) {
     case "NotLongEnough":
@@ -102,8 +104,6 @@ export function translateAnagramsGuessError(guessInfo: AnagramsGuessInfo) {
       return "word doesn't contain anagram";
     case "NotEnglish":
       return "word isn't valid english";
-    case "AlreadyUsed":
-      return "word has been already used";
   }
 }
 
