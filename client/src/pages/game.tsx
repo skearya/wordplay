@@ -156,20 +156,25 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
 
   useEvents({
     Error: (data) => {
-      setMessages((messages) => [...messages, [data.content, ChatMessageType.Error]]);
+      setMessages((messages) => [
+        ...messages,
+        { type: ChatMessageType.Error, content: data.content },
+      ]);
     },
     RoomSettings: (data) => {
       const { type, ...settings } = data;
       setRoom("settings", settings);
     },
     ChatMessage: (data) => {
-      const message = `${getUsername(room, data.author)}: ${data.content}`;
-      setMessages((messages) => [...messages, [message, ChatMessageType.Client]]);
+      setMessages((messages) => [
+        ...messages,
+        { type: ChatMessageType.Client, uuid: data.author, content: data.content },
+      ]);
     },
     ConnectionUpdate: (data) => {
       if (data.state.type === "Connected" || data.state.type === "Reconnected") {
-        const message = `${data.state.username} has joined`;
-        setMessages((messages) => [...messages, [message, ChatMessageType.Server]]);
+        const content = `${data.state.username} has joined`;
+        setMessages((messages) => [...messages, { type: ChatMessageType.Info, content }]);
 
         const newClient = {
           uuid: data.uuid,
@@ -181,8 +186,8 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
           newClient,
         ]);
       } else {
-        const message = `${getUsername(room, data.uuid)} has left`;
-        setMessages((messages) => [...messages, [message, ChatMessageType.Server]]);
+        const content = `${getUsername(room, data.uuid)} has left`;
+        setMessages((messages) => [...messages, { type: ChatMessageType.Info, content }]);
 
         if (data.state.new_room_owner) {
           setRoom("owner", data.state.new_room_owner);
@@ -216,7 +221,7 @@ function Game({ uuid, room: roomInfo, sendMsg }: ServerMessageData<"Info"> & { s
   return (
     <div class="flex h-screen flex-col">
       <GameNav sendMsg={sendMsg} room={() => room} />
-      <Chat sendMsg={sendMsg} messages={messages} />
+      <Chat sendMsg={sendMsg} room={() => room} messages={messages} />
       <Switch>
         <Match when={state.type === "Lobby"}>
           <Lobby

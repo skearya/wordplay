@@ -1,6 +1,8 @@
 import { Room, State } from "~/lib/types/game";
 import { AnagramsGuessInfo, ClientInfo, RoomStateInfo, Uuid } from "~/lib/types/messages";
 
+export type Variant<T, U> = Extract<T, { type: U }>;
+
 export const cubicEasing = "cubic-bezier(0.33, 1, 0.68, 1)";
 
 export const colors = {
@@ -108,5 +110,3 @@ export function translateAnagramsGuessError(guessInfo: AnagramsGuessInfo) {
       return "word already used";
   }
 }
-
-export type Variant<T, U> = Extract<T, { type: U }>;

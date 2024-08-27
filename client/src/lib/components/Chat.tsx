@@ -1,12 +1,18 @@
 import { Accessor, createEffect, For, on, onCleanup, onMount } from "solid-js";
 import { Input } from "~/lib/components/ui/Input";
-import { ChatMessage, ChatMessageType, SendFn } from "~/lib/types/game";
+import { ChatMessage, ChatMessageType, Room, SendFn } from "~/lib/types/game";
+import { generateGradient } from "../avatar";
+import { getUsername } from "../utils";
+
+const avatarColorCache: { [username: string]: [from: string, to: string] } = {};
 
 export function Chat({
   sendMsg,
+  room,
   messages,
 }: {
   sendMsg: SendFn;
+  room: Accessor<Room>;
   messages: Accessor<Array<ChatMessage>>;
 }) {
   let chatElement!: HTMLDivElement;
@@ -95,14 +101,35 @@ export function Chat({
           server: and <kbd class="small-key">esc</kbd> to focus game input
         </li>
         <For each={messages()}>
-          {([content, type]) => {
-            switch (type) {
+          {(message) => {
+            switch (message.type) {
               case ChatMessageType.Client:
-                return <li>{content}</li>;
-              case ChatMessageType.Server:
-                return <li class="text-green">{`server: ${content}`}</li>;
+                const username = getUsername(room(), message.uuid)!;
+
+                let colors = avatarColorCache[username];
+                if (!colors) {
+                  const { fromColor, toColor } = generateGradient(username);
+                  colors = [fromColor, toColor];
+                  avatarColorCache[username] = colors;
+                }
+
+                return (
+                  <li>
+                    <span
+                      style={{
+                        "background-image": `linear-gradient(45deg, ${colors[0]}, ${colors[1]})`,
+                      }}
+                      class="bg-clip-text text-transparent"
+                    >
+                      {username}:
+                    </span>{" "}
+                    {message.content}
+                  </li>
+                );
+              case ChatMessageType.Info:
+                return <li class="text-green">{`server: ${message.content}`}</li>;
               case ChatMessageType.Error:
-                return <li class="text-red-400">{`error: ${content}`}</li>;
+                return <li class="text-red-400">{`error: ${message.content}`}</li>;
             }
           }}
         </For>

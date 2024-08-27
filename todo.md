@@ -1,6 +1,6 @@
 # current todo:
 
-- chat color based on pfp
+- send notification to new party leader
 
 - page transitions with solid-transition-group
 

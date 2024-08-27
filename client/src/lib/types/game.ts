@@ -10,12 +10,14 @@ import {
 export type SendFn = (message: ClientMessage) => void;
 
 export enum ChatMessageType {
-  Client,
-  Server,
+  Info,
   Error,
+  Client,
 }
 
-export type ChatMessage = [content: string, type: ChatMessageType];
+export type ChatMessage =
+  | { type: ChatMessageType.Info | ChatMessageType.Error; content: string }
+  | { type: ChatMessageType.Client; uuid: Uuid; content: string };
 
 export type Room = {
   uuid: Uuid;
