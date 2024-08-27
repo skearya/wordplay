@@ -80,14 +80,15 @@ export function Anagrams({
 
         [...data.guess].forEach((character) => pushCharIndex(character));
 
+        inputElement.value = "";
+        animateInput(true);
+
         indexes.map((i) => {
           letterElementMap[i]!.animate(
             { backgroundColor: [colors.green, "transparent"] },
             { easing: cubicEasing, duration: 600 },
           );
         });
-
-        animateInput(true);
       }
     },
   });

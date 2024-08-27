@@ -1,6 +1,6 @@
 # current todo:
 
-- show unready players
+- chat color based on pfp
 
 - page transitions with solid-transition-group
 
