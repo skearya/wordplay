@@ -163,13 +163,7 @@ function CreateOrJoinRoom() {
       roomInputElement.disabled = false;
     }
 
-    roomErrorElement.animate(
-      { opacity: [100, 0] },
-      {
-        easing: "ease",
-        duration: 3000,
-      },
-    );
+    roomErrorElement.animate({ opacity: [100, 0] }, { easing: "ease", duration: 3000 });
   }
 
   return (

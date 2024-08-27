@@ -36,7 +36,7 @@ export function Anagrams({
   };
 
   const animateError = () => {
-    guessErrorElement.animate({ opacity: ["100%", "0%"] }, { easing: cubicEasing, duration: 3000 });
+    guessErrorElement.animate({ opacity: ["100%", "0%"] }, { easing: "ease-in", duration: 3000 });
   };
 
   useEvents({
@@ -105,7 +105,7 @@ export function Anagrams({
 
   return (
     <main class="flex h-screen items-center justify-center">
-      <div class="relative flex gap-x-8 items-center">
+      <div class="relative flex items-center gap-x-8">
         <Leaderboard room={room} players={() => game().players} />
         <div class="w-[1px] self-stretch bg-dark-green/30"></div>
         <div class="flex font-mono text-[36px]">
@@ -137,7 +137,11 @@ export function Anagrams({
             .players.map(({ uuid }) => uuid)
             .includes(room().uuid)
         }
-        onEnter={(input) => sendMsg({ type: "AnagramsGuess", word: input.value })}
+        onEnter={(input) => {
+          if (input.value.length !== 0) {
+            sendMsg({ type: "AnagramsGuess", word: input.value });
+          }
+        }}
       />
     </main>
   );

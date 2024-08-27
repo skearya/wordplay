@@ -184,7 +184,11 @@ export function WordBomb({
         maxlength="35"
         disabled={game().turn !== room().uuid}
         onInput={(event) => sendMsg({ type: "WordBombInput", input: event.target.value })}
-        onEnter={(input) => sendMsg({ type: "WordBombGuess", word: input.value })}
+        onEnter={(input) => {
+          if (input.value.length !== 0) {
+            sendMsg({ type: "WordBombGuess", word: input.value });
+          }
+        }}
       />
       <Letters usedLetters={() => game().usedLetters!} />
     </main>
