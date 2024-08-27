@@ -53,18 +53,22 @@ export function Chat({
     startFadeOut(5000);
   });
 
-  function onDocumentKeydown(event: KeyboardEvent) {
-    if (document.activeElement?.tagName === "INPUT") return;
+  const controller = new AbortController();
 
-    if (event.key === "t") {
-      chatInputElement.focus();
-      event.preventDefault();
-    }
-  }
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (document.activeElement?.tagName === "INPUT") return;
 
-  document.addEventListener("keydown", onDocumentKeydown);
+      if (event.key === "t") {
+        chatInputElement.focus();
+        event.preventDefault();
+      }
+    },
+    { signal: controller.signal },
+  );
 
-  onCleanup(() => document.removeEventListener("keydown", onDocumentKeydown));
+  onCleanup(() => controller.abort());
 
   return (
     <div

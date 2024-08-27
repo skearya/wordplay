@@ -191,7 +191,7 @@ export type AnagramsPlayerData = {
   used_words: Array<string>;
 };
 
-type AnagramsGuessInfo =
+export type AnagramsGuessInfo =
   | {
       type: "NotLongEnough";
     }

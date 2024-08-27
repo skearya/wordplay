@@ -5,14 +5,10 @@ import { useEvents } from "~/lib/events";
 import { Heart, LostHeart, SmallBomb } from "~/lib/icons";
 import { Room, SendFn, State, WordBombState } from "~/lib/types/game";
 import { Uuid, WordBombPlayerData } from "~/lib/types/messages";
-import { getClient } from "~/lib/utils";
+import { colors, cubicEasing, getClient } from "~/lib/utils";
 import { Avatar } from "./ui/Avatar";
 
 const keyboard = [[..."qwertyuiop"], [..."asdfghjkl"], [..."zxcvbnm"]];
-const easing = "cubic-bezier(0.33, 1, 0.68, 1)";
-const green = "rgb(98 226 151)";
-const darkGreen = "rgb(71 93 80)";
-const red = "rgb(220 38 38)";
 
 export function WordBomb({
   sendMsg,
@@ -36,8 +32,8 @@ export function WordBomb({
 
   const animateInput = (correct: boolean) => {
     inputElement.animate(
-      { borderColor: [correct ? green : red, "rgb(255 255 255 / 0.1)"] },
-      { easing, duration: 800 },
+      { borderColor: [correct ? colors.green : colors.red, "rgb(255 255 255 / 0.1)"] },
+      { easing: cubicEasing, duration: 800 },
     );
   };
 
@@ -46,8 +42,8 @@ export function WordBomb({
 
     if (playerElement) {
       playerElement.animate(
-        { color: [correct ? green : red, "rgb(255 255 255)"] },
-        { easing, duration: 800 },
+        { color: [correct ? colors.green : colors.red, "rgb(255 255 255)"] },
+        { easing: cubicEasing, duration: 800 },
       );
     }
   };
@@ -73,12 +69,12 @@ export function WordBomb({
           {
             ...positionProps,
             ...(exploded && {
-              borderColor: [red, darkGreen],
-              backgroundColor: [red, "transparent"],
-              color: [red, darkGreen],
+              borderColor: [colors.red, colors.darkGreen],
+              backgroundColor: [colors.red, "transparent"],
+              color: [colors.red, colors.darkGreen],
             }),
           },
-          { easing, fill: "forwards", duration: 600 },
+          { easing: cubicEasing, fill: "forwards", duration: 600 },
         );
       }
     }
