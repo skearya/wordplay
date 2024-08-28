@@ -96,7 +96,7 @@ impl State {
 
 impl AppState {
     pub fn room_full(&self, room: &str) -> bool {
-        self.room(room).is_ok_and(|room| room.clients.len() >= 100)
+        self.room(room).is_ok_and(|room| room.clients.len() >= 8)
     }
 
     pub fn add_client(

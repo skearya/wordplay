@@ -225,7 +225,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
     <>
       <div class="flex items-baseline justify-between">
         <h1 class="text-xl">Ready Players</h1>
-        <h1 class="text-lg text-green">{100 - lobby().ready.length} slots left</h1>
+        <h1 class="text-lg text-green">{8 - lobby().ready.length} slots left</h1>
       </div>
       <Show
         when={room().clients.length !== 0}

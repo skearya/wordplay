@@ -3,6 +3,7 @@ import { Match, Show, Switch, createResource, createSignal } from "solid-js";
 import { Avatar } from "~/lib/components/ui/Avatar";
 import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
+import { Games } from "~/lib/types/messages";
 import { cloneElement } from "~/lib/utils";
 
 type Info = {
@@ -10,6 +11,7 @@ type Info = {
   public_rooms: Array<{
     name: string;
     players: Array<string>;
+    game: Games;
   }>;
 };
 
@@ -22,7 +24,7 @@ export default function Home() {
   return (
     <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-light-background p-5">
       <h1 class="text-3xl">wordplay</h1>
-      <div class="min-h-[1px] w-full bg-dark-green/50"></div>
+      <div class="h-[1px] w-full bg-dark-green/30"></div>
       <CreateOrJoinRoom />
       <Switch>
         <Match when={data.loading}>
@@ -167,7 +169,7 @@ function CreateOrJoinRoom() {
   }
 
   return (
-    <div class="flex gap-2">
+    <div class="flex gap-2.5">
       <Button
         ref={creatingElement}
         size="lg"
@@ -213,22 +215,25 @@ function CreateOrJoinRoom() {
   );
 }
 
-function Room(props: { name: string; players: Array<string> }) {
+function Room(props: { name: string; players: Array<string>; game: Games }) {
   return (
     <A
       href={`/game/${props.name}`}
-      class="relative flex items-center justify-between overflow-hidden rounded-lg border p-4 font-medium"
+      class="relative flex items-center justify-between overflow-hidden rounded-lg border p-4"
     >
-      <h1 class="text-xl">{props.name}</h1>
+      <div>
+        <h1 class="text-lg">{props.name}</h1>
+        <h1 class="text-sm text-light-green">
+          {props.game === "WordBomb" ? "Word Bomb" : "Anagrams"}
+        </h1>
+      </div>
       <div class="flex -space-x-2">
         {props.players.slice(0, 3).map((player) => (
           <Avatar username={player} size={38} class="border-[3px] border-black" />
         ))}
-        {props.players.length > 3 && (
-          <div class="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-black">
-            <h1>+{props.players.length - 3}</h1>
-          </div>
-        )}
+        <div class="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-black text-sm">
+          <h1>{props.players.length}/8</h1>
+        </div>
       </div>
     </A>
   );
