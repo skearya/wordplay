@@ -50,6 +50,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
             name="visibility"
             id="visibility"
             checked={room().settings.public}
+            disabled={room().owner !== room().uuid}
             onChange={(event) => {
               sendMsg({ type: "RoomSettings", ...room().settings, public: event.target.checked });
             }}
