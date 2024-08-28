@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-background text-foreground;
+  }
+
+  * {
+    @apply border-white/10 focus:outline-none focus-visible:border-green;
+  }
+
+  .small-key {
+    @apply inline-flex min-h-[20px] items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-1 font-mono text-sm text-neutral-200;
+  }
+}
+
+@layer utilities {
+  .text-outline {
+    text-shadow:
+      -1px -1px 0 #475d50,
+      0 -1px 0 #475d50,
+      1px -1px 0 #475d50,
+      1px 0 0 #475d50,
+      1px 1px 0 #475d50,
+      0 1px 0 #475d50,
+      -1px 1px 0 #475d50,
+      -1px 0 0 #475d50;
+  }
+
+  @keyframes fade-out {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .quick-fade-out {
+    animation: 300ms ease fade-out;
+  }
+
+  .quick-fade-in {
+    animation: 300ms ease reverse fade-out;
+  }
+
+  @keyframes late-fade-out {
+    90% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .fade-after-10 {
+    animation: 10s ease forwards late-fade-out;
+  }
+}

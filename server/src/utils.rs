@@ -1,4 +1,65 @@
-use std::cmp::Ordering;
+use crate::state::{messages::ServerMessage, room::Client};
+use axum::extract::ws::Message;
+use rand::{
+    distributions::{Alphanumeric, DistString},
+    thread_rng,
+};
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
+use uuid::Uuid;
+
+pub trait ClientUtils {
+    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)>;
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage);
+    fn broadcast(&self, message: ServerMessage);
+    fn broadcast_except(&self, message: ServerMessage, except: &[Uuid]);
+}
+
+impl ClientUtils for HashMap<Uuid, Client> {
+    fn connected(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
+        self.iter().filter(|client| client.1.socket.is_some())
+    }
+
+    fn send_each(&self, f: impl Fn(&Uuid, &Client) -> ServerMessage) {
+        for (uuid, client) in self.connected() {
+            client.send(f(uuid, client));
+        }
+    }
+
+    fn broadcast(&self, message: ServerMessage) {
+        let serialized: Message = message.into();
+
+        for (_uuid, client) in self.connected() {
+            client.tx.send(serialized.clone()).ok();
+        }
+    }
+
+    fn broadcast_except(&self, message: ServerMessage, except: &[Uuid]) {
+        let serialized: Message = message.into();
+
+        for (_uuid, client) in self
+            .connected()
+            .filter(|(uuid, _client)| !except.contains(uuid))
+        {
+            client.tx.send(serialized.clone()).ok();
+        }
+    }
+}
+
+pub trait UnixTime {
+    fn to_unix_timestamp(&self) -> u32;
+}
+
+impl UnixTime for SystemTime {
+    fn to_unix_timestamp(&self) -> u32 {
+        self.duration_since(UNIX_EPOCH)
+            .expect("we have time traveled to before 1970-01-01 00:00:00 UTC")
+            .as_secs() as u32
+    }
+}
 
 // https://docs.rs/itertools/0.9.0/src/itertools/lib.rs.html#2061
 pub trait Sorted: Iterator {
@@ -7,7 +68,7 @@ pub trait Sorted: Iterator {
         Self: Sized,
         F: FnMut(&Self::Item, &Self::Item) -> Ordering,
     {
-        let mut v = Vec::from_iter(self);
+        let mut v: Vec<_> = self.collect();
         v.sort_by(cmp);
         v
     }
@@ -15,10 +76,11 @@ pub trait Sorted: Iterator {
 
 impl<I: Iterator> Sorted for I {}
 
-pub fn filter_string(input: String) -> String {
-    input
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|char| char.is_alphabetic())
-        .collect()
+pub fn filter_string(input: &mut String) {
+    input.make_ascii_lowercase();
+    input.retain(char::is_alphabetic);
+}
+
+pub fn random_string(len: usize) -> String {
+    Alphanumeric.sample_string(&mut thread_rng(), len)
 }

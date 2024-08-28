@@ -1,16 +1,18 @@
 use crate::{
     global::GLOBAL,
-    messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
     state::{
+        error::Result,
         games::{
             anagrams::{self, Anagrams},
             word_bomb::{self, WordBomb},
         },
-        room::{check_for_new_room_owner, Client, ClientUtils, RoomSettings, State},
-        AppState, Room, SenderInfo,
+        messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
+        room::{check_for_new_room_owner, Client, RoomSettings, State},
+        Room, SenderInfo,
     },
+    utils::ClientUtils,
+    AppState,
 };
-use anyhow::{Context, Result};
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::{
@@ -72,7 +74,10 @@ impl Lobby {
     pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
         let timer = Arc::new(
             tokio::spawn(async move {
-                app_state.anagrams_timer(room).await.ok();
+                app_state
+                    .anagrams_timer(room)
+                    .await
+                    .inspect_err(|error| eprintln!("anagrams timer error: {error:#?}"))
             })
             .abort_handle(),
         );
@@ -94,9 +99,10 @@ impl Lobby {
 
 impl AppState {
     pub fn client_ready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let lobby = state.try_lobby()?;
+
         if !lobby.ready.insert(uuid) {
             return Ok(());
         }
@@ -112,17 +118,17 @@ impl AppState {
     }
 
     pub fn client_start_early(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.room_mut(room)?;
         let Room {
             clients,
             state,
             settings,
             owner,
-        } = lock.room_mut(room)?;
+        } = lock.value_mut();
         let lobby = state.try_lobby()?;
 
         if uuid == *owner && lobby.ready.len() >= 2 {
-            if let Some(countdown) = &lobby.countdown {
+            if let Some(countdown) = lobby.countdown.as_ref() {
                 countdown.timer_handle.abort();
             }
 
@@ -133,9 +139,10 @@ impl AppState {
     }
 
     pub fn client_unready(&self, SenderInfo { uuid, room }: SenderInfo) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let lobby = state.try_lobby()?;
+
         if !lobby.ready.remove(&uuid) {
             return Ok(());
         }
@@ -154,31 +161,29 @@ impl AppState {
         for _ in 0..10 {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let mut lock = self.inner.lock().unwrap();
+            let mut lock = self.room_mut(&room)?;
             let Room {
                 clients,
                 state,
                 settings,
                 ..
-            } = lock.room_mut(&room)?;
+            } = lock.value_mut();
             let lobby = state.try_lobby()?;
-            let countdown = lobby
-                .countdown
-                .as_mut()
-                .context("Somehow not counting down")?;
 
-            countdown.time_left -= 1;
+            if let Some(countdown) = lobby.countdown.as_mut() {
+                countdown.time_left -= 1;
 
-            if countdown.time_left == 0 {
-                if lobby.ready.len() < 2 {
-                    return Ok(());
+                if countdown.time_left == 0 {
+                    if lobby.ready.len() < 2 {
+                        return Ok(());
+                    }
+
+                    start_game(self.clone(), room.clone(), state, clients, settings)?;
+                } else {
+                    clients.broadcast(ServerMessage::StartingCountdown {
+                        time_left: countdown.time_left,
+                    });
                 }
-
-                start_game(self.clone(), room.clone(), state, clients, settings)?;
-            } else {
-                clients.broadcast(ServerMessage::StartingCountdown {
-                    time_left: countdown.time_left,
-                });
             }
         }
 
@@ -190,16 +195,16 @@ impl AppState {
         SenderInfo { uuid, room }: SenderInfo,
         settings_update: RoomSettings,
     ) -> Result<()> {
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.room_mut(room)?;
         let Room {
             clients,
             state,
             owner,
             settings,
-        } = lock.room_mut(room)?;
+        } = lock.value_mut();
 
-        if state.try_lobby().is_ok() && uuid == *owner {
-            *settings = settings_update.clone();
+        if state.try_lobby().is_ok() && *owner == uuid {
+            settings.clone_from(&settings_update);
             clients.broadcast(ServerMessage::RoomSettings(settings_update));
         }
 
@@ -223,7 +228,10 @@ pub fn check_for_countdown_update(
             lobby.countdown = Some(Countdown {
                 timer_handle: Arc::new(
                     tokio::spawn(async move {
-                        app_state.start_when_ready(room).await.ok();
+                        app_state
+                            .start_when_ready(room)
+                            .await
+                            .inspect_err(|error| eprintln!("countdown error: {error:#?}"))
                     })
                     .abort_handle(),
                 ),
@@ -257,7 +265,7 @@ fn start_game(
                         app_state
                             .word_bomb_timer(room, timer_len, prompt)
                             .await
-                            .ok();
+                            .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
                     })
                     .abort_handle(),
                 )
@@ -311,5 +319,5 @@ pub fn end_game(
         info,
     });
 
-    *state = State::Lobby(Lobby::new());
+    *state = State::default();
 }

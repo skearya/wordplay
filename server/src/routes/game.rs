@@ -1,16 +1,19 @@
-use crate::messages::ClientMessage;
-use crate::state::{AppState, SenderInfo};
+use crate::{
+    db,
+    state::{messages::ClientMessage, SenderInfo},
+    AppState,
+};
 use axum::{
     extract::{
-        ws::{close_code, CloseFrame, Message, WebSocket},
+        ws::{Message, WebSocket},
         Path, Query, State, WebSocketUpgrade,
     },
-    response::Response,
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
-use axum_extra::TypedHeader;
-use futures::{stream::StreamExt, SinkExt, TryFutureExt};
+use axum_extra::extract::CookieJar;
+use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
-use std::borrow::Cow;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -22,32 +25,43 @@ pub struct Params {
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
+    jar: CookieJar,
+    State(state): State<AppState>,
     Path(room): Path<String>,
     Query(params): Query<Params>,
-    State(state): State<AppState>,
-    user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> Response {
-    let user_agent = user_agent.map_or("unknown user agent".into(), |header| header.to_string());
+    let user = match jar.get("session") {
+        Some(id) => db::get_user_from_session(&state.db, id.value()).await.ok(),
+        None => None,
+    };
 
     println!(
-        "`{user_agent}` connected at {room}, {} total connections",
-        state.info().clients_connected + 1
+        "'{}' trying to connect to '{room}' | user: {user:?}",
+        params.username,
     );
 
-    ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
+    let err_msg = if params.username.len() > 20 {
+        Some("username too long (max 20 characters)")
+    } else if params.username.is_empty() {
+        Some("username cannot be empty")
+    } else if room.len() > 6 {
+        Some("invalid room name, must be less than 6 characters")
+    } else if !room.chars().all(|c| c.is_ascii_alphanumeric()) {
+        Some("invalid room name, must be alphanumeric")
+    } else if state.room_full(&room) {
+        Some("room full")
+    } else {
+        None
+    };
+
+    if let Some(msg) = err_msg {
+        (StatusCode::BAD_REQUEST, msg).into_response()
+    } else {
+        ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
+    }
 }
 
-async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, params: Params) {
-    if params.username.len() > 20 {
-        socket
-            .send(Message::Close(Some(CloseFrame {
-                code: close_code::ABNORMAL,
-                reason: Cow::from("Username too long (max 20 characters)"),
-            })))
-            .await
-            .ok();
-    }
-
+async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {
     let (mut sender, mut reciever) = socket.split();
     let (proxy, mut inbox) = mpsc::unbounded_channel::<Message>();
 
@@ -57,12 +71,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room: String, par
 
     let sending_task = tokio::spawn(async move {
         while let Some(msg) = inbox.recv().await {
-            sender
-                .send(msg.clone())
-                .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {e}, msg: {msg:#?}");
-                })
-                .await;
+            sender.send(msg).await.unwrap_or_else(|e| {
+                eprintln!("ws send error for {}: {e}", info.uuid);
+            });
         }
     });
 

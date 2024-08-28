@@ -1,10 +1,14 @@
 use crate::{
     global::GLOBAL,
-    messages::{self, ServerMessage},
-    state::{lobby::end_game, room::ClientUtils, AppState, Room, SenderInfo},
-    utils::Sorted,
+    state::{
+        error::{GameError, Result, WordBombError},
+        lobby::end_game,
+        messages::{self, ServerMessage},
+        Room, SenderInfo,
+    },
+    utils::{filter_string, ClientUtils, Sorted},
+    AppState,
 };
-use anyhow::{anyhow, Context, Result};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use std::{
@@ -58,79 +62,85 @@ pub struct PostGameInfo {
     winner: Uuid,
     mins_elapsed: f32,
     words_used: usize,
-    letters_typed: usize,
-    fastest_guesses: Vec<(Uuid, f32, String)>,
+    fastest_guesses: Vec<(Uuid, f32)>,
     longest_words: Vec<(Uuid, String)>,
     avg_wpms: Vec<(Uuid, f32)>,
     avg_word_lengths: Vec<(Uuid, f32)>,
 }
 
 impl WordBomb {
-    pub fn check_guess(&mut self, guess: &str) -> GuessInfo {
-        if !guess.contains(&self.prompt) {
-            return GuessInfo::PromptNotIn;
-        }
-        if !GLOBAL.get().unwrap().is_valid(guess) {
-            return GuessInfo::NotEnglish;
-        }
-        if self
+    pub fn check_guess(&mut self, guess: &str) -> Result<GuessInfo, GameError> {
+        let guess_info = if !guess.contains(&self.prompt) {
+            GuessInfo::PromptNotIn
+        } else if !GLOBAL.get().unwrap().is_valid(guess) {
+            GuessInfo::NotEnglish
+        } else if self
             .players
             .iter()
             .any(|player| player.used_words.iter().any(|(_, word)| word == guess))
         {
-            return GuessInfo::AlreadyUsed;
-        }
+            GuessInfo::AlreadyUsed
+        } else {
+            let current_player = self
+                .players
+                .iter_mut()
+                .find(|player| player.uuid == self.turn)
+                .ok_or(WordBombError::PlayerNotFound)?;
 
-        let current_player = self
-            .players
-            .iter_mut()
-            .find(|player| player.uuid == self.turn)
-            .unwrap();
+            current_player.used_words.push((
+                Instant::now().duration_since(self.timer.start),
+                guess.to_string(),
+            ));
 
-        current_player.used_words.push((
-            Instant::now().duration_since(self.timer.start),
-            guess.to_string(),
-        ));
+            current_player
+                .used_letters
+                .extend(guess.chars().filter(|c| c.is_alphabetic()));
 
-        current_player
-            .used_letters
-            .extend(guess.chars().filter(|char| char.is_alphabetic()));
+            let extra_life = ('a'..='z')
+                .filter(|c| !['x', 'z'].contains(c))
+                .all(|c| current_player.used_letters.contains(&c));
 
-        let extra_life = ('a'..='z')
-            .filter(|char| !['x', 'z'].contains(char))
-            .all(|char| current_player.used_letters.contains(&char));
+            if extra_life {
+                current_player.lives += 1;
+                current_player.used_letters.clear();
+            }
 
-        if extra_life {
-            current_player.lives += 1;
-            current_player.used_letters.clear();
-        }
+            self.timer.length = (self.timer.length
+                - Instant::now()
+                    .duration_since(self.timer.start)
+                    .as_secs_f32())
+            .max(6.0);
 
-        self.new_prompt();
-        self.update_turn();
-        self.update_timer_len();
+            self.new_prompt();
+            self.update_turn()?;
 
-        GuessInfo::Valid { extra_life }
+            GuessInfo::Valid { extra_life }
+        };
+
+        Ok(guess_info)
     }
 
-    pub fn player_timed_out(&mut self) {
+    pub fn player_timed_out(&mut self) -> Result<()> {
         self.timer.length = thread_rng().gen_range(10.0..=30.0);
 
-        if let Some(player) = self
+        self.missed_prompts.push(self.prompt.clone());
+
+        let player = self
             .players
             .iter_mut()
             .find(|player| player.uuid == self.turn)
-        {
-            player.lives -= 1;
-        }
+            .ok_or(WordBombError::PlayerNotFound)?;
 
-        self.missed_prompts.push(self.prompt.clone());
+        player.lives -= 1;
 
         self.prompt_uses += 1;
         if self.prompt_uses > 1 {
             self.new_prompt();
         }
 
-        self.update_turn();
+        self.update_turn()?;
+
+        Ok(())
     }
 
     pub fn alive_players(&self) -> Vec<&Player> {
@@ -141,6 +151,7 @@ impl WordBomb {
     }
 
     fn new_prompt(&mut self) {
+        self.prompt_uses = 0;
         self.prompt = loop {
             let new_prompt = GLOBAL.get().unwrap().random_prompt();
 
@@ -148,16 +159,18 @@ impl WordBomb {
                 break new_prompt.to_string();
             }
         };
-
-        self.prompt_uses = 0;
     }
 
-    fn update_turn(&mut self) {
+    fn update_turn(&mut self) -> Result<()> {
+        if self.alive_players().len() <= 1 {
+            return Err(WordBombError::NoPlayersAlive)?;
+        }
+
         let index = self
             .players
             .iter()
             .position(|player| player.uuid == self.turn)
-            .unwrap();
+            .ok_or(WordBombError::PlayerNotFound)?;
 
         let next_alive = self
             .players
@@ -165,17 +178,11 @@ impl WordBomb {
             .cycle()
             .skip(index + 1)
             .find(|player| player.lives > 0)
-            .unwrap();
+            .ok_or(WordBombError::PlayerNotFound)?;
 
         self.turn = next_alive.uuid;
-    }
 
-    fn update_timer_len(&mut self) {
-        self.timer.length = (self.timer.length
-            - Instant::now()
-                .duration_since(self.timer.start)
-                .as_secs_f32())
-        .max(6.0);
+        Ok(())
     }
 }
 
@@ -198,19 +205,20 @@ impl AppState {
         new_input: String,
     ) -> Result<()> {
         if new_input.len() > 35 {
-            return Err(anyhow!("input too long!"));
+            return Err(WordBombError::InputTooLong)?;
         }
 
-        let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let game = state.try_word_bomb()?;
+
         let player = game
             .players
             .iter_mut()
             .find(|player| player.uuid == uuid)
-            .context("Player not found")?;
+            .ok_or(WordBombError::PlayerNotFound)?;
 
-        player.input = new_input.clone();
+        player.input.clone_from(&new_input);
 
         clients.broadcast(ServerMessage::WordBombInput {
             uuid,
@@ -223,23 +231,26 @@ impl AppState {
     pub fn word_bomb_guess(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
-        guess: &str,
+        mut guess: String,
     ) -> Result<()> {
+        filter_string(&mut guess);
+
         if guess.len() > 35 {
-            return Err(anyhow!("guess too long!"));
+            return Err(WordBombError::GuessTooLong)?;
         }
 
-        let mut lock = self.inner.lock().unwrap();
-        let Room { clients, state, .. } = lock.room_mut(room)?;
+        let mut lock = self.room_mut(room)?;
+        let Room { clients, state, .. } = lock.value_mut();
         let game = state.try_word_bomb()?;
+
         if game.turn != uuid {
-            return Ok(());
+            return Err(WordBombError::OutOfTurn)?;
         }
 
-        match game.check_guess(guess) {
-            GuessInfo::Valid { extra_life } => {
+        match game.check_guess(&guess) {
+            Ok(GuessInfo::Valid { extra_life }) => {
                 clients.broadcast(ServerMessage::WordBombPrompt {
-                    correct_guess: Some(guess.to_string()),
+                    correct_guess: Some(guess),
                     life_change: extra_life.into(),
                     prompt: game.prompt.clone(),
                     turn: game.turn,
@@ -248,12 +259,10 @@ impl AppState {
                 game.timer.task.abort();
                 spawn_timeout_task(self.clone(), game, room.to_string());
             }
-            guess_info => {
-                clients.broadcast(ServerMessage::WordBombInvalidGuess {
-                    uuid,
-                    reason: guess_info,
-                });
+            Ok(reason) => {
+                clients.broadcast(ServerMessage::WordBombInvalidGuess { uuid, reason });
             }
+            Err(error) => return Err(error),
         };
 
         Ok(())
@@ -267,31 +276,33 @@ impl AppState {
     ) -> Result<()> {
         tokio::time::sleep(Duration::from_secs_f32(timer_len)).await;
 
-        let mut lock = self.inner.lock().unwrap();
+        let mut lock = self.room_mut(&room)?;
         let Room {
             clients,
             state,
             owner,
             ..
-        } = lock.room_mut(&room)?;
+        } = lock.value_mut();
         let game = state.try_word_bomb()?;
 
         if original_prompt == game.prompt {
-            game.player_timed_out();
+            match game.player_timed_out() {
+                Ok(()) => {
+                    clients.broadcast(ServerMessage::WordBombPrompt {
+                        correct_guess: None,
+                        life_change: -1,
+                        prompt: game.prompt.clone(),
+                        turn: game.turn,
+                    });
 
-            if game.alive_players().len() == 1 {
-                let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
+                    spawn_timeout_task(self.clone(), game, room);
+                }
+                Err(GameError::WordBomb(WordBombError::NoPlayersAlive)) => {
+                    let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
 
-                end_game(state, clients, owner, game_info);
-            } else {
-                clients.broadcast(ServerMessage::WordBombPrompt {
-                    correct_guess: None,
-                    life_change: -1,
-                    prompt: game.prompt.clone(),
-                    turn: game.turn,
-                });
-
-                spawn_timeout_task(self.clone(), game, room);
+                    end_game(state, clients, owner, game_info);
+                }
+                Err(error) => Err(error)?,
             }
         }
 
@@ -308,7 +319,7 @@ fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
             app_state
                 .word_bomb_timer(room, timer_len, current_prompt)
                 .await
-                .ok();
+                .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
         })
         .abort_handle(),
     );
@@ -323,33 +334,22 @@ fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
             .iter()
             .map(|player| player.used_words.len())
             .sum(),
-        letters_typed: game
-            .players
-            .iter()
-            .map(|player| {
-                player
-                    .used_words
-                    .iter()
-                    .map(|(_, word)| word.len())
-                    .sum::<usize>()
-            })
-            .sum(),
         fastest_guesses: game
             .players
             .iter()
-            .flat_map(|player| {
+            .filter_map(|player| {
                 player
                     .used_words
                     .iter()
-                    .map(|(duration, word)| (duration.as_secs_f32(), word))
-                    .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-                    .map(|(duration, word)| (player.uuid, duration, word.clone()))
+                    .map(|(duration, _)| duration.as_secs_f32())
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .map(|duration| (player.uuid, duration))
             })
             .sorted_by_vec(|a, b| a.1.partial_cmp(&b.1).unwrap()),
         longest_words: game
             .players
             .iter()
-            .flat_map(|player| {
+            .filter_map(|player| {
                 player
                     .used_words
                     .iter()
@@ -360,37 +360,35 @@ fn get_post_game_info(game: &mut WordBomb) -> PostGameInfo {
         avg_wpms: game
             .players
             .iter()
-            .filter_map(|player| {
-                (player.used_words.len() != 0).then(|| {
-                    (
-                        player.uuid,
-                        player
-                            .used_words
-                            .iter()
-                            .map(|(duration, word)| {
-                                (word.len() as f32 / 5.0) / (duration.as_secs_f32() / 60.0)
-                            })
-                            .sum::<f32>()
-                            / player.used_words.len() as f32,
-                    )
-                })
+            .filter(|player| !player.used_letters.is_empty())
+            .map(|player| {
+                (
+                    player.uuid,
+                    player
+                        .used_words
+                        .iter()
+                        .map(|(duration, word)| {
+                            (word.len() as f32 / 5.0) / (duration.as_secs_f32() / 60.0)
+                        })
+                        .sum::<f32>()
+                        / player.used_words.len() as f32,
+                )
             })
             .sorted_by_vec(|a, b| b.1.partial_cmp(&a.1).unwrap()),
         avg_word_lengths: game
             .players
             .iter()
-            .filter_map(|player| {
-                (player.used_words.len() != 0).then(|| {
-                    (
-                        player.uuid,
-                        player
-                            .used_words
-                            .iter()
-                            .map(|(_, word)| word.len() as f32)
-                            .sum::<f32>()
-                            / player.used_words.len() as f32,
-                    )
-                })
+            .filter(|player| !player.used_letters.is_empty())
+            .map(|player| {
+                (
+                    player.uuid,
+                    player
+                        .used_words
+                        .iter()
+                        .map(|(_, word)| word.len() as f32)
+                        .sum::<f32>()
+                        / player.used_words.len() as f32,
+                )
             })
             .sorted_by_vec(|a, b| b.1.partial_cmp(&a.1).unwrap()),
     }
