@@ -7,7 +7,7 @@ import {
   calculateAnagramsPoints,
   colors,
   cubicEasing,
-  getUsername,
+  getClient,
   translateAnagramsGuessError,
 } from "../utils";
 import { Avatar } from "./ui/Avatar";
@@ -170,13 +170,16 @@ function Leaderboard({
         }))
         .sort((a, b) => b.score - a.score)
         .map(({ uuid, score }, i) => {
-          const username = getUsername(room(), uuid)!;
+          const client = () => getClient(room(), uuid)!;
 
           return (
-            <div class="flex items-center gap-x-1.5">
+            <div
+              classList={{ "opacity-50": client().disconnected }}
+              class="flex items-center gap-x-1.5 transition-opacity"
+            >
               <h1 class="tabular-nums">{i + 1}.</h1>
-              <Avatar username={username} size={25} />
-              <h1 class="min-w-4 flex-1 truncate">{username}</h1>
+              <Avatar username={client().username} size={25} />
+              <h1 class="min-w-4 flex-1 truncate">{client().username}</h1>
               <h1 class="justify-self-end truncate text-light-green">{score}</h1>
             </div>
           );
