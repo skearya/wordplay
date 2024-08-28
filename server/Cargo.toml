@@ -10,20 +10,20 @@ axum = { version = "0.7.5", features = ["macros", "ws"] }
 axum-extra = { version = "0.9.3", features = ["typed-header", "cookie"] }
 futures = "0.3.30"
 headers = "0.4.0"
-tokio = { version = "1.36.0", features = ["full"] }
-uuid = { version = "1.7.0", features = ["v4", "fast-rng", "serde"] }
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.113"
+tokio = { version = "1.39.3", features = ["full"] }
+uuid = { version = "1.10.0", features = ["v4", "fast-rng", "serde"] }
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.127"
 dotenvy = "0.15.7"
 rand = "0.8.5"
 tower-http = { version = "0.5.2", features = ["cors"] }
-sqlx = { version = "0.7.4", features = [
+sqlx = { version = "0.8.1", features = [
     "runtime-tokio",
     "tls-native-tls",
     "sqlite",
 ] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 cookie = "0.18.1"
-thiserror = "1.0.61"
+thiserror = "1.0.63"
 dashmap = "6.0.1"
 governor = "0.6.3"

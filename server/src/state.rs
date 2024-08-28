@@ -59,7 +59,7 @@ impl AppState {
             .limiter
             .check_key(&sender.uuid)
             .map_err(|_| GameError::RateLimited)
-            .and_then(|_| match message {
+            .and_then(|()| match message {
                 ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
                 ClientMessage::RoomSettings(settings) => {
                     self.client_room_settings(sender, settings)

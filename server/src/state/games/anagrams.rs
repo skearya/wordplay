@@ -56,19 +56,17 @@ impl Anagrams {
             GuessInfo::PromptMismatch
         } else if !GLOBAL.get().unwrap().is_valid(guess) {
             GuessInfo::NotEnglish
+        } else if self
+            .players
+            .iter_mut()
+            .find(|player| uuid == player.uuid)
+            .ok_or(AnagramsError::PlayerNotFound)?
+            .used_words
+            .insert(guess.to_string())
+        {
+            GuessInfo::Valid
         } else {
-            if !self
-                .players
-                .iter_mut()
-                .find(|player| uuid == player.uuid)
-                .ok_or(AnagramsError::PlayerNotFound)?
-                .used_words
-                .insert(guess.to_string())
-            {
-                GuessInfo::AlreadyUsed
-            } else {
-                GuessInfo::Valid
-            }
+            GuessInfo::AlreadyUsed
         };
 
         Ok(guess_info)
