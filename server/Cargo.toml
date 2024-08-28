@@ -26,3 +26,4 @@ reqwest = { version = "0.12", features = ["json"] }
 cookie = "0.18.1"
 thiserror = "1.0.61"
 dashmap = "6.0.1"
+governor = "0.6.3"

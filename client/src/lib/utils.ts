@@ -110,3 +110,7 @@ export function translateAnagramsGuessError(guessInfo: AnagramsGuessInfo) {
       return "word already used";
   }
 }
+
+export function removeNonAlphanumeric(input: string) {
+  return input.replace(/[^a-zA-Z0-9]/g, "");
+}

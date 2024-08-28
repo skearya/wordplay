@@ -1,6 +1,7 @@
 import { ComponentProps } from "solid-js";
 import { tv, VariantProps } from "tailwind-variants";
 import { generateGradient } from "~/lib/avatar";
+import { removeNonAlphanumeric } from "~/lib/utils";
 
 const avatar = tv({
   base: "rounded-full",
@@ -15,7 +16,8 @@ type AvatarProps = ComponentProps<"img"> &
   };
 
 export function Avatar(props: AvatarProps) {
-  props["class"] = avatar(props);
+  props.class = avatar(props);
+  const filteredUsername = removeNonAlphanumeric(props.username);
 
   if (!props.url) {
     const { fromColor, toColor } = generateGradient(props.username);
@@ -31,13 +33,13 @@ export function Avatar(props: AvatarProps) {
       >
         <g>
           <defs>
-            <linearGradient id={props.username} x1="0" y1="0" x2="1" y2="1">
+            <linearGradient id={filteredUsername} x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stop-color={fromColor} />
               <stop offset="100%" stop-color={toColor} />
             </linearGradient>
           </defs>
           <rect
-            fill={`url(#${props.username})`}
+            fill={`url(#${filteredUsername})`}
             x="0"
             y="0"
             width={props.size}

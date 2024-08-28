@@ -9,16 +9,18 @@ use dashmap::{
     DashMap,
 };
 use error::{GameError, Result};
+use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
 use messages::ClientMessage;
 use room::Room;
 use sqlx::SqlitePool;
-use std::sync::Arc;
+use std::{num::NonZeroU32, sync::Arc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub db: SqlitePool,
     pub rooms: Arc<DashMap<String, Room>>,
+    pub limiter: Arc<DefaultKeyedRateLimiter<Uuid>>,
 }
 
 #[derive(Clone, Copy)]
@@ -32,6 +34,11 @@ impl AppState {
         Self {
             db,
             rooms: Arc::new(DashMap::new()),
+            // maybe generous? though typing can count as a message
+            limiter: Arc::new(RateLimiter::keyed(
+                Quota::per_second(NonZeroU32::new(8).unwrap())
+                    .allow_burst(NonZeroU32::new(24).unwrap()),
+            )),
         }
     }
 
@@ -48,17 +55,23 @@ impl AppState {
     }
 
     pub fn handle(&self, sender: SenderInfo, message: ClientMessage) {
-        let result = match message {
-            ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
-            ClientMessage::RoomSettings(settings) => self.client_room_settings(sender, settings),
-            ClientMessage::Ready => self.client_ready(sender),
-            ClientMessage::StartEarly => self.client_start_early(sender),
-            ClientMessage::Unready => self.client_unready(sender),
-            ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
-            ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
-            ClientMessage::WordBombGuess { word } => self.word_bomb_guess(sender, word),
-            ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, word),
-        };
+        let result = self
+            .limiter
+            .check_key(&sender.uuid)
+            .map_err(|_| GameError::RateLimited)
+            .and_then(|_| match message {
+                ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
+                ClientMessage::RoomSettings(settings) => {
+                    self.client_room_settings(sender, settings)
+                }
+                ClientMessage::Ready => self.client_ready(sender),
+                ClientMessage::StartEarly => self.client_start_early(sender),
+                ClientMessage::Unready => self.client_unready(sender),
+                ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
+                ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
+                ClientMessage::WordBombGuess { word } => self.word_bomb_guess(sender, word),
+                ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, word),
+            });
 
         if let Err(error) = result {
             eprintln!("error: {} caused {:#?}", sender.uuid, error);

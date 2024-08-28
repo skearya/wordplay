@@ -8,6 +8,8 @@ pub enum GameError {
     RoomNotFound { room: String },
     #[error("room was not in state `{state}` ")]
     InvalidState { state: &'static str },
+    #[error("rate limited, you're sending messages too fast")]
+    RateLimited,
     #[error(transparent)]
     Room(#[from] RoomError),
     #[error(transparent)]
