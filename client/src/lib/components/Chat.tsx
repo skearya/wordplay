@@ -4,8 +4,6 @@ import { ChatMessage, ChatMessageType, Room, SendFn } from "~/lib/types/game";
 import { generateGradient } from "../avatar";
 import { getUsername } from "../utils";
 
-const avatarColorCache: { [username: string]: [from: string, to: string] } = {};
-
 export function Chat({
   sendMsg,
   room,
@@ -105,19 +103,13 @@ export function Chat({
             switch (message.type) {
               case ChatMessageType.Client:
                 const username = getUsername(room(), message.uuid)!;
-
-                let colors = avatarColorCache[username];
-                if (!colors) {
-                  const { fromColor, toColor } = generateGradient(username);
-                  colors = [fromColor, toColor];
-                  avatarColorCache[username] = colors;
-                }
+                const { fromColor, toColor } = generateGradient(username);
 
                 return (
                   <li>
                     <span
                       style={{
-                        "background-image": `linear-gradient(45deg, ${colors[0]}, ${colors[1]})`,
+                        "background-image": `linear-gradient(45deg, ${fromColor}, ${toColor})`,
                       }}
                       class="bg-clip-text text-transparent"
                     >

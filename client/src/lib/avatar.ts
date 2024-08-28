@@ -3,7 +3,7 @@
 */
 import color from "tinycolor2";
 
-export function djb2(str: string) {
+function djb2(str: string) {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) + hash + str.charCodeAt(i);
@@ -11,12 +11,20 @@ export function djb2(str: string) {
   return hash;
 }
 
-export function generateGradient(username: string) {
-  const c1 = color({ h: djb2(username) % 360, s: 0.95, l: 0.5 });
-  const second = c1.triad()[1].toHexString();
+const avatarGradientCache: { [username: string]: ReturnType<typeof generateGradient> } = {};
 
-  return {
-    fromColor: c1.toHexString(),
-    toColor: second,
+export function generateGradient(username: string): { fromColor: string; toColor: string } {
+  if (avatarGradientCache[username]) {
+    return avatarGradientCache[username];
+  }
+
+  const first = color({ h: djb2(username) % 360, s: 0.95, l: 0.5 });
+  const second = first.triad()[1];
+
+  avatarGradientCache[username] = {
+    fromColor: first.toHexString(),
+    toColor: second.toHexString(),
   };
+
+  return avatarGradientCache[username];
 }
