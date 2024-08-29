@@ -3,6 +3,7 @@ import { Match, Show, Switch, createResource, createSignal } from "solid-js";
 import { Avatar } from "~/lib/components/ui/Avatar";
 import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
+import { GitHub } from "~/lib/icons";
 import { Games } from "~/lib/types/messages";
 import { cloneElement, url } from "~/lib/utils";
 
@@ -22,8 +23,16 @@ export default function Home() {
   });
 
   return (
-    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-2xl border border-b-0 bg-light-background p-5">
-      <h1 class="text-3xl">wordplay</h1>
+    <main class="mx-auto mt-16 flex h-[calc(100vh_-_4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-xl border border-b-0 bg-light-background p-4">
+      <div class="flex items-center gap-x-3.5">
+        <h1 class="text-3xl">wordplay</h1>
+        <a href="https://skeary.me" target="_blank" class="ml-auto text-[#c58ffe]">
+          skeary.me
+        </a>
+        <a href="https://github.com/skearya/wordplay" target="_blank" class="h-9 w-9">
+          <GitHub />
+        </a>
+      </div>
       <div class="h-[1px] w-full bg-dark-green/30"></div>
       <CreateOrJoinRoom />
       <Switch>
