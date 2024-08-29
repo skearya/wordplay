@@ -53,7 +53,7 @@ function JoinGame() {
   const roomName = useParams().name!;
   const [state, setState] = createSignal<JoinGameState>({ type: "waiting" });
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
-  const validUsername = () => username().length <= 20 && username() !== "";
+  const validUsername = () => username().length <= 12 && username() !== "";
 
   function join() {
     setState({ type: "connecting" });

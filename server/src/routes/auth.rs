@@ -201,6 +201,10 @@ async fn choose_username(
         return Err(AuthError::BadRequest);
     }
 
+    if input.username.len() < 3 {
+        return Err(AuthError::UsernameTooShort);
+    }
+
     if input.username.len() > 12 {
         return Err(AuthError::UsernameTooLong);
     }
@@ -260,6 +264,7 @@ struct AuthResponse {
 #[error("{self:#?}")]
 pub enum AuthError {
     BadRequest,
+    UsernameTooShort,
     UsernameTooLong,
     UsernameNotAlphanumeric,
     UsernameTaken,
@@ -271,6 +276,10 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             AuthError::BadRequest => (StatusCode::BAD_REQUEST, "state expired/missing, try again"),
+            AuthError::UsernameTooShort => (
+                StatusCode::BAD_REQUEST,
+                "username too short (min 3 characters)",
+            ),
             AuthError::UsernameTooLong => (
                 StatusCode::BAD_REQUEST,
                 "username too long (max 12 characters)",

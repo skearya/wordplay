@@ -5,15 +5,15 @@ use crate::{
 };
 use axum::{
     extract::{
-        ws::{Message, WebSocket},
+        ws::{close_code, CloseFrame, Message, WebSocket},
         Path, Query, State, WebSocketUpgrade,
     },
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use axum_extra::extract::CookieJar;
 use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
+use std::borrow::Cow;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -40,8 +40,8 @@ pub async fn ws_handler(
         params.username,
     );
 
-    let err_msg = if params.username.len() > 20 {
-        Some("username too long (max 20 characters)")
+    let error = if params.username.len() > 12 {
+        Some("username too long (max 12 characters)")
     } else if params.username.is_empty() {
         Some("username cannot be empty")
     } else if room.len() > 6 {
@@ -54,11 +54,23 @@ pub async fn ws_handler(
         None
     };
 
-    if let Some(msg) = err_msg {
-        (StatusCode::BAD_REQUEST, msg).into_response()
+    if let Some(reason) = error {
+        ws.on_upgrade(move |socket| send_error(socket, reason))
     } else {
         ws.on_upgrade(move |socket| handle_socket(socket, state, room, params))
     }
+}
+
+async fn send_error(mut socket: WebSocket, reason: &'static str) {
+    socket
+        .send(Message::Close(Some(CloseFrame {
+            code: close_code::ERROR,
+            reason: Cow::Borrowed(reason),
+        })))
+        .await
+        .ok();
+
+    socket.close().await.ok();
 }
 
 async fn handle_socket(socket: WebSocket, state: AppState, room: String, params: Params) {

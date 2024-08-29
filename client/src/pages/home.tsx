@@ -56,11 +56,11 @@ function CreateOrJoinRoom() {
   let roomInputElement!: HTMLInputElement;
   let roomErrorElement!: HTMLHeadingElement;
 
+  const navigate = useNavigate();
+
   let animationInProgress = false;
   const [joining, setJoining] = createSignal<"creating" | "joining" | false>(false);
   const [roomErrorMessage, setRoomErrorMessage] = createSignal("");
-
-  const navigate = useNavigate();
 
   const animationOptions = {
     easing: "ease",

@@ -25,7 +25,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/auth", auth::make_router(state.clone()))
         .route("/rooms/*room", get(game::ws_handler))
         .layer(
-            CorsLayer::new().allow_origin(dotenvy::var("PUBLIC_FRONTEND")?.parse::<HeaderValue>()?),
+            CorsLayer::new()
+                .allow_origin(dotenvy::var("PUBLIC_FRONTEND")?.parse::<HeaderValue>()?)
+                .allow_credentials(true),
         )
         .with_state(state);
 
