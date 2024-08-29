@@ -6,9 +6,11 @@ use sqlx::{
 use std::str::FromStr;
 
 pub async fn create_pool() -> Result<Pool<Sqlite>> {
-    let options = SqliteConnectOptions::from_str(&dotenvy::var("DATABASE_URL").unwrap())?
-        .create_if_missing(true)
-        .journal_mode(SqliteJournalMode::Wal);
+    let options = SqliteConnectOptions::from_str(
+        &dotenvy::var("DATABASE_URL").unwrap_or("sqlite:db.sqlite".to_string()),
+    )?
+    .create_if_missing(true)
+    .journal_mode(SqliteJournalMode::Wal);
 
     let pool = SqlitePool::connect_with(options).await?;
 

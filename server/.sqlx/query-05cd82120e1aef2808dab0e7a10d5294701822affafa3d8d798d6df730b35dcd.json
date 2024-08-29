@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from signup_sessions where signup_session_id is ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "signup_session_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "expires",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "discord_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "avatar_hash",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "05cd82120e1aef2808dab0e7a10d5294701822affafa3d8d798d6df730b35dcd"
+}

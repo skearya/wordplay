@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into signup_sessions (signup_session_id, expires, discord_id, avatar_hash) values (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "af8d30bbbc76c2719a6031bbc520c1ecabcedd968dec97af8676729691c20dea"
+}

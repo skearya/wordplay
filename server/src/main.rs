@@ -27,16 +27,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rooms/*room", get(game::ws_handler))
         .with_state(state);
 
+    /*
+       when running in debug, let vite's dev server through and serve vite's build output folder
+       if not in debug, serve static folder
+    */
     if cfg!(debug_assertions) {
-        app = app.layer(
-            CorsLayer::new()
-                .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
-                .allow_credentials(true),
-        )
+        app = app
+            .layer(
+                CorsLayer::new()
+                    .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
+                    .allow_credentials(true),
+            )
+            .fallback_service(
+                ServeDir::new("../client/dist")
+                    .not_found_service(ServeFile::new("../client/dist/index.html")),
+            );
     } else {
         app = app.fallback_service(
-            ServeDir::new("../client/dist")
-                .not_found_service(ServeFile::new("../client/dist/index.html")),
+            ServeDir::new("./static").not_found_service(ServeFile::new("./static/index.html")),
         );
     }
 

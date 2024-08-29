@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into users (discord_id, username, avatar_hash) values (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "407b3ddb17b0f0db9f4a59e2361510ced78ec48fb24f4fa3f82b7e43ca7423d4"
+}

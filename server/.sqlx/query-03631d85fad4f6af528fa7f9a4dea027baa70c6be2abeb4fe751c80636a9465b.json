@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from users where discord_id is ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "discord_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "avatar_hash",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "03631d85fad4f6af528fa7f9a4dea027baa70c6be2abeb4fe751c80636a9465b"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            delete from sessions where expires < unixepoch();\n            delete from signup_sessions where expires < unixepoch();\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "9d6ea4bf738380d8a9b2c242efe4f3061df9f31655e53873239e0b1413f9e203"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from signup_sessions where signup_session_id is ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "ba29cd7ee4b8951a6c1a3f7309ba288052b7a672927c11629f86e9497dcc6119"
+}

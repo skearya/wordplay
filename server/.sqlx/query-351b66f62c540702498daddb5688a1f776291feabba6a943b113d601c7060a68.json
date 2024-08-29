@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            select\n                users.*\n            from\n                users\n                inner join sessions using (discord_id)\n            where\n                sessions.session_id is ? and sessions.expires > unixepoch()\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "discord_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "avatar_hash",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "351b66f62c540702498daddb5688a1f776291feabba6a943b113d601c7060a68"
+}
