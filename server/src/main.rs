@@ -11,6 +11,7 @@ use routes::{api, auth, game};
 use state::AppState;
 use std::path::Path;
 use tower_http::cors::CorsLayer;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,16 +21,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::create_pool().await?;
     let state = AppState::new(db);
 
-    let app = Router::new()
+    let mut app = Router::new()
         .nest("/api", api::make_router())
         .nest("/auth", auth::make_router(state.clone()))
         .route("/rooms/*room", get(game::ws_handler))
-        .layer(
+        .with_state(state);
+
+    if cfg!(debug_assertions) {
+        app = app.layer(
             CorsLayer::new()
-                .allow_origin(dotenvy::var("PUBLIC_FRONTEND")?.parse::<HeaderValue>()?)
+                .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
                 .allow_credentials(true),
         )
-        .with_state(state);
+    } else {
+        app = app.fallback_service(
+            ServeDir::new("../client/dist")
+                .not_found_service(ServeFile::new("../client/dist/index.html")),
+        );
+    }
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3021").await?;
     println!("listening on {}", listener.local_addr()?);

@@ -169,10 +169,7 @@ async fn discord_callback(
                         .same_site(SameSite::Lax)
                         .max_age(cookie::time::Duration::hours(1)),
                 ),
-                Redirect::to(&format!(
-                    "{}/choose-username?suggested={username}",
-                    dotenvy::var("PUBLIC_FRONTEND").unwrap()
-                )),
+                Redirect::to(&format!("/choose-username?suggested={username}")),
             )
                 .into_response())
         }

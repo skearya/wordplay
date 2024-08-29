@@ -18,6 +18,7 @@ import {
   getRejoinToken,
   getUsername,
   saveRejoinToken,
+  url,
   Variant,
 } from "~/lib/utils";
 
@@ -66,12 +67,7 @@ function JoinGame() {
       ...(rejoinToken && { rejoin_token: rejoinToken }),
     });
 
-    const socket = new WebSocket(
-      `${(import.meta.env.PUBLIC_SERVER as string).replace(
-        "http",
-        "ws",
-      )}/rooms/${roomName}?${params}`,
-    );
+    const socket = new WebSocket(url(`/rooms/${roomName}?${params}`));
 
     socket.addEventListener("message", (event) => {
       callEventListeners(JSON.parse(event.data));

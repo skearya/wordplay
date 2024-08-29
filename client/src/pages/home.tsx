@@ -4,7 +4,7 @@ import { Avatar } from "~/lib/components/ui/Avatar";
 import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
 import { Games } from "~/lib/types/messages";
-import { cloneElement } from "~/lib/utils";
+import { cloneElement, url } from "~/lib/utils";
 
 type Info = {
   clients_connected: number;
@@ -17,7 +17,7 @@ type Info = {
 
 export default function Home() {
   const [data] = createResource<Info>(async () => {
-    const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/api/info`);
+    const res = await fetch(url("/api/info"));
     return await res.json();
   });
 
@@ -150,9 +150,7 @@ function CreateOrJoinRoom() {
     } else {
       roomInputElement.disabled = true;
 
-      const res = await fetch(
-        `${import.meta.env.PUBLIC_SERVER}/api/room-available/${roomInputElement.value}`,
-      );
+      const res = await fetch(`/api/room-available/${roomInputElement.value}`);
       const available = (await res.text()) === "true";
 
       if ((available && joining() === "creating") || (!available && joining() == "joining")) {

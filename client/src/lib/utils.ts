@@ -3,6 +3,8 @@ import { AnagramsGuessInfo, ClientInfo, RoomStateInfo, Uuid } from "~/lib/types/
 
 export type Variant<T, U> = Extract<T, { type: U }>;
 
+export const url = (path: string) => `${import.meta.env.DEV ? "http://localhost:3021" : ""}${path}`;
+
 export const cubicEasing = "cubic-bezier(0.33, 1, 0.68, 1)";
 
 export const colors = {

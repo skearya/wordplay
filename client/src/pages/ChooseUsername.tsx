@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import { Button } from "~/lib/components/ui/Button";
 import { Input } from "~/lib/components/ui/Input";
+import { url } from "~/lib/utils";
 
 type ChooseUsernameResponse = {
   type: "success" | "error";
@@ -19,7 +20,7 @@ export default function ChooseUsername() {
   async function createAccount() {
     setLoading(true);
 
-    const res = await fetch(`${import.meta.env.PUBLIC_SERVER}/auth/choose-username`, {
+    const res = await fetch(url("/auth/choose-username"), {
       method: "post",
       credentials: "include",
       body: new URLSearchParams({
