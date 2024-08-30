@@ -71,8 +71,8 @@ export function Lobby({
         </div>
       </div>
       <Status lobby={lobby} />
-      <Practice />
       <Settings sendMsg={sendMsg} room={room} />
+      {/* <Practice /> */}
     </main>
   );
 }
