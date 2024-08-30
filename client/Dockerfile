@@ -4,4 +4,7 @@ WORKDIR /frontend
 ENV NODE_ENV=production
 COPY . .
 RUN npm ci
-RUN npm run build -- --outDir /frontend-build --emptyOutDir
+RUN npm run build
+
+FROM alpine AS copier
+COPY --from=frontend-builder /frontend/dist /frontend-build
