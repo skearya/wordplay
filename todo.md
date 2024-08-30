@@ -1,5 +1,7 @@
 # current todo:
 
+- more leniency on usernames possibly containing profanity
+
 - send notification to new party leader
 
 - page transitions with solid-transition-group

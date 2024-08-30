@@ -85,18 +85,18 @@ export function Chat({
         ref={chatContentElement}
         class="list-item h-48 overflow-y-auto overflow-x-hidden text-wrap"
       >
-        <li class="text-green">server: welcome to wordplay beta</li>
+        <li class="text-green">server: welcome to wordplay beta! expect frequent downtime</li>
         <li class="text-green">
-          server: leave issues/feedback on{" "}
+          server: code/issues/feedback on{" "}
           <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200">
             github
           </a>
         </li>
         <li class="text-green">
-          server: use <kbd class="small-key">t</kbd> to open chat
+          server: <kbd class="small-key">t</kbd> to open chat
         </li>
         <li class="text-green">
-          server: and <kbd class="small-key">esc</kbd> to focus game input
+          server: <kbd class="small-key">esc</kbd> to focus game input
         </li>
         <For each={messages()}>
           {(message) => {

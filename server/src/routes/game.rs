@@ -12,6 +12,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use futures::{stream::StreamExt, SinkExt};
+use rustrict::CensorStr;
 use serde::Deserialize;
 use std::borrow::Cow;
 use tokio::sync::mpsc;
@@ -30,15 +31,17 @@ pub async fn ws_handler(
     Path(room): Path<String>,
     Query(params): Query<Params>,
 ) -> Response {
-    let user = match jar.get("session") {
-        Some(id) => db::get_user_from_session(&state.db, id.value()).await.ok(),
-        None => None,
-    };
+    if cfg!(debug_assertions) {
+        let user = match jar.get("session") {
+            Some(id) => db::get_user_from_session(&state.db, id.value()).await.ok(),
+            None => None,
+        };
 
-    println!(
-        "'{}' trying to connect to '{room}' | user: {user:?}",
-        params.username,
-    );
+        println!(
+            "'{}' trying to connect to '{room}' | user: {user:?}",
+            params.username,
+        );
+    }
 
     let error = if params.username.len() > 12 {
         Some("username too long (max 12 characters)")
@@ -48,6 +51,10 @@ pub async fn ws_handler(
         Some("invalid room name, must be less than 6 characters")
     } else if !room.chars().all(|c| c.is_ascii_alphanumeric()) {
         Some("invalid room name, must be alphanumeric")
+    } else if params.username.is_inappropriate() {
+        Some("username likely contains innappropriate content")
+    } else if room.is_inappropriate() {
+        Some("room likely contains innappropriate content")
     } else if state.room_full(&room) {
         Some("room full")
     } else {

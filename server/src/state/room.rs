@@ -12,6 +12,7 @@ use crate::{
 };
 use axum::extract::ws::{close_code, CloseFrame, Message};
 use rand::{seq::IteratorRandom, thread_rng};
+use rustrict::CensorStr;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashMap};
 use tokio::sync::mpsc::UnboundedSender;
@@ -276,14 +277,20 @@ impl AppState {
     pub fn client_chat_message(
         &self,
         SenderInfo { uuid, room }: SenderInfo,
-        content: String,
+        mut content: String,
     ) -> Result<()> {
         if content.len() > 250 {
             return Err(RoomError::ChatMessageTooLong)?;
         }
 
         let lock = self.room(room)?;
-        let Room { clients, .. } = lock.value();
+        let Room {
+            settings, clients, ..
+        } = lock.value();
+
+        if settings.public {
+            content = content.censor();
+        }
 
         clients.broadcast(ServerMessage::ChatMessage {
             author: uuid,
