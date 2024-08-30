@@ -1,5 +1,13 @@
 import { useParams } from "@solidjs/router";
-import { ComponentProps, createSignal, ErrorBoundary, Match, Show, Switch } from "solid-js";
+import {
+  ComponentProps,
+  createSignal,
+  ErrorBoundary,
+  Match,
+  onCleanup,
+  Show,
+  Switch,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { Anagrams } from "~/lib/components/Anagrams";
 import { Chat } from "~/lib/components/Chat";
@@ -51,6 +59,9 @@ type JoinGameState =
 function JoinGame() {
   let rootElement!: HTMLElement;
 
+  let socket: WebSocket | undefined;
+  const socketCloseListener = new AbortController();
+
   const roomName = useParams().name!;
   const [state, setState] = createSignal<JoinGameState>({ type: "waiting" });
   const [username, setUsername] = createSignal(localStorage.getItem("username") ?? "");
@@ -67,7 +78,7 @@ function JoinGame() {
       ...(rejoinToken && { rejoin_token: rejoinToken }),
     });
 
-    const socket = new WebSocket(url(`/api/room/${roomName}?${params}`));
+    socket = new WebSocket(url(`/api/room/${roomName}?${params}`));
 
     socket.addEventListener("message", (event) => {
       callEventListeners(JSON.parse(event.data));
@@ -80,7 +91,7 @@ function JoinGame() {
 
         const gameInfo = {
           ...data,
-          sendMsg: (message: ClientMessage) => socket.send(JSON.stringify(message)),
+          sendMsg: (message: ClientMessage) => socket?.send(JSON.stringify(message)),
         };
 
         rootElement.classList.add("quick-fade-out");
@@ -91,23 +102,36 @@ function JoinGame() {
       false,
     );
 
-    socket.addEventListener("close", (event) => {
-      setError(
-        new GameError({
-          type: "socket closed",
-          message: event.reason || "connection closed",
-        }),
-      );
-    });
+    socket.addEventListener(
+      "close",
+      (event) => {
+        setError(
+          new GameError({
+            type: "socket closed",
+            message: event.reason ?? "connection closed",
+          }),
+        );
+      },
+      { signal: socketCloseListener.signal },
+    );
   }
+
+  onCleanup(() => {
+    socketCloseListener.abort();
+    socket?.close();
+  });
 
   return (
     <Show
       when={state().type === "ready"}
       fallback={
         <main ref={rootElement} class="flex h-screen flex-col items-center justify-center">
-          <div class="flex min-w-64 flex-col gap-y-2.5">
+          <div class="flex flex-col items-center gap-y-2.5">
+            <h1 class="mb-1 text-lg">
+              joining room <span class="text-green">{roomName}!</span>
+            </h1>
             <Input
+              class="min-w-64"
               maxlength="20"
               placeholder="username"
               disabled={state().type !== "waiting"}
@@ -122,6 +146,7 @@ function JoinGame() {
             />
             <Button
               size="lg"
+              class="min-w-64"
               disabled={!validUsername() || state().type !== "waiting"}
               onClick={join}
             >

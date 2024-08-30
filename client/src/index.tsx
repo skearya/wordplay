@@ -15,3 +15,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 }
 
 render(() => <Router>{routes}</Router>, root!);
+
+if (window.innerWidth <= 1200) {
+  alert("wordplay is not optimized for small screens yet, good luck...");
+}
