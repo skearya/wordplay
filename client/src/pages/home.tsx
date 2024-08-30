@@ -225,7 +225,7 @@ function CreateOrJoinRoom() {
 function Room(props: { name: string; players: Array<string>; game: Games }) {
   return (
     <A
-      href={`/game/${props.name}`}
+      href={`/room/${props.name}`}
       class="relative flex items-center justify-between overflow-hidden rounded-lg border p-4"
     >
       <div>
