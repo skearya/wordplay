@@ -20,7 +20,7 @@ export default function ChooseUsername() {
   async function createAccount() {
     setLoading(true);
 
-    const res = await fetch(url("/auth/choose-username"), {
+    const res = await fetch(url("/api/auth/choose-username"), {
       method: "post",
       credentials: "include",
       body: new URLSearchParams({

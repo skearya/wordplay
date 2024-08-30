@@ -7,11 +7,10 @@ mod utils;
 use axum::http::HeaderValue;
 use axum::{routing::get, Router};
 use global::{GlobalData, GLOBAL};
-use routes::{api, auth, game};
+use routes::{auth, game, info};
 use state::AppState;
 use std::path::Path;
 use tower_http::cors::CorsLayer;
-use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,31 +20,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::create_pool().await?;
     let state = AppState::new(db);
 
-    let mut app = Router::new()
-        .nest("/api", api::make_router())
-        .nest("/auth", auth::make_router(state.clone()))
-        .route("/rooms/*room", get(game::ws_handler))
-        .with_state(state);
+    let mut app = Router::new().nest(
+        "/api",
+        Router::new()
+            .nest("/info", info::make_router())
+            .nest("/auth", auth::make_router(state.clone()))
+            .route("/room/*room", get(game::ws_handler))
+            .with_state(state),
+    );
 
-    /*
-       when running in debug, let vite's dev server through and serve vite's build output folder
-       if not in debug, serve static folder
-    */
     if cfg!(debug_assertions) {
-        app = app
-            .layer(
-                CorsLayer::new()
-                    .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
-                    .allow_credentials(true),
-            )
-            .fallback_service(
-                ServeDir::new("../client/dist")
-                    .not_found_service(ServeFile::new("../client/dist/index.html")),
-            );
-    } else {
-        app = app.fallback_service(
-            ServeDir::new("./static").not_found_service(ServeFile::new("./static/index.html")),
-        );
+        app = app.layer(
+            CorsLayer::new()
+                .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
+                .allow_credentials(true),
+        )
     }
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3021").await?;

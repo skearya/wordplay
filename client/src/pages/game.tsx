@@ -67,7 +67,7 @@ function JoinGame() {
       ...(rejoinToken && { rejoin_token: rejoinToken }),
     });
 
-    const socket = new WebSocket(url(`/rooms/${roomName}?${params}`));
+    const socket = new WebSocket(url(`/api/room/${roomName}?${params}`));
 
     socket.addEventListener("message", (event) => {
       callEventListeners(JSON.parse(event.data));

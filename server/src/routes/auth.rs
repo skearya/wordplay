@@ -44,7 +44,7 @@ async fn check_if_already_authenticated(
 async fn discord_redirect(jar: CookieJar) -> impl IntoResponse {
     let state = random_string(24);
     let redirect_url = format!(
-        "https://discord.com/oauth2/authorize?client_id={}&response_type=code&redirect_uri={}/auth/discord-callback&scope=identify&state={}",
+        "https://discord.com/oauth2/authorize?client_id={}&response_type=code&redirect_uri={}/api/auth/discord-callback&scope=identify&state={}",
         dotenvy::var("DISCORD_CLIENT_ID").unwrap(),
         dotenvy::var("PUBLIC_SERVER").unwrap(),
         state
@@ -99,7 +99,7 @@ async fn discord_callback(
         (
             "redirect_uri",
             &format!(
-                "{}/auth/discord-callback",
+                "{}/api/auth/discord-callback",
                 dotenvy::var("PUBLIC_SERVER").unwrap()
             ),
         ),

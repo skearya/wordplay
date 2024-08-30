@@ -8,7 +8,7 @@ use serde::Serialize;
 
 pub fn make_router() -> Router<AppState> {
     Router::new()
-        .route("/info", get(info))
+        .route("/", get(info))
         .route("/room-available/:room_name", get(room_available))
 }
 

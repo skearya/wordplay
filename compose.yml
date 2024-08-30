@@ -1,0 +1,35 @@
+services:
+  frontend-builder:
+    build:
+      context: ./client
+    volumes:
+      - frontend-build:/frontend-build
+  server:
+    build:
+      context: ./server
+    restart: unless-stopped
+    env_file:
+      - path: ./.env
+        required: true
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - frontend-build:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      server:
+        condition: service_started
+      frontend-builder:
+        condition: service_completed_successfully
+
+volumes:
+  frontend-build:
+  caddy_data:
+  caddy_config:

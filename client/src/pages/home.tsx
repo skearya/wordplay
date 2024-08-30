@@ -159,7 +159,7 @@ function CreateOrJoinRoom() {
     } else {
       roomInputElement.disabled = true;
 
-      const res = await fetch(`/api/room-available/${roomInputElement.value}`);
+      const res = await fetch(url(`/api/info/room-available/${roomInputElement.value}`));
       const available = (await res.text()) === "true";
 
       if ((available && joining() === "creating") || (!available && joining() == "joining")) {
