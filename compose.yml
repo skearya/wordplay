@@ -1,12 +1,10 @@
 services:
   frontend-builder:
-    build:
-      context: ./client
+    image: "ghcr.io/skearya/wordplay-frontend-builder:latest"
     volumes:
       - frontend-build:/frontend-build
   server:
-    build:
-      context: ./server
+    image: "ghcr.io/skearya/wordplay-server:latest"
     restart: unless-stopped
     env_file:
       - path: ./.env
