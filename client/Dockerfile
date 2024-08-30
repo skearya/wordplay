@@ -7,4 +7,5 @@ RUN npm ci
 RUN npm run build
 
 FROM alpine AS copier
+RUN rm -rf /frontend-build
 COPY --from=frontend-builder /frontend/dist /frontend-build
