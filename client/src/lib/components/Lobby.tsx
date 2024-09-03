@@ -1,13 +1,24 @@
-import { Accessor, For, JSX, Match, Show, Switch } from "solid-js";
+import {
+  Accessor,
+  createEffect,
+  createSignal,
+  For,
+  JSX,
+  Match,
+  on,
+  onCleanup,
+  Show,
+  Switch,
+} from "solid-js";
 import { SetStoreFunction, unwrap } from "solid-js/store";
 import { Button } from "~/lib/components/ui/Button";
 import { Copy } from "~/lib/components/ui/Copy";
 import { Input } from "~/lib/components/ui/Input";
 import { useEvents } from "~/lib/events";
-import { Bomb } from "~/lib/icons";
+import { Anagrams, Bomb } from "~/lib/icons";
 import { LobbyState, Room, SendFn, State } from "~/lib/types/game";
 import { PostGameInfo, Uuid } from "~/lib/types/messages";
-import { getUsername, Variant } from "../utils";
+import { colors, cubicEasing, getUsername, Variant } from "../utils";
 import { Settings } from "./Settings";
 import { Avatar } from "./ui/Avatar";
 
@@ -70,9 +81,9 @@ export function Lobby({
           <JoinButtons sendMsg={sendMsg} room={room} lobby={lobby} />
         </div>
       </div>
-      <Status lobby={lobby} />
       <Settings sendMsg={sendMsg} room={room} />
-      {/* <Practice /> */}
+      <Practice sendMsg={sendMsg} room={room} />
+      <Status room={room} lobby={lobby} />
     </main>
   );
 }
@@ -294,32 +305,141 @@ function JoinButtons({
   );
 }
 
-function Practice() {
+function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) {
+  let practiceInputElement!: HTMLInputElement;
+  let progressElement!: HTMLDivElement;
+
+  let stoppedEarly = false;
+  let cancelAnimation: (() => void) | undefined;
+
+  let usedAnagrams: Set<string> = new Set();
+  const [practiceSet, setPracticeSet] = createSignal<Array<string>>([]);
+
+  const progress = () => {
+    stoppedEarly = false;
+    setPracticeSet(([, ...rest]) => setPracticeSet(rest));
+    usedAnagrams.clear();
+    practiceInputElement.value = "";
+
+    startTimer();
+  };
+
+  const animateInput = (correct: boolean) => {
+    practiceInputElement.animate(
+      { borderColor: [correct ? colors.green : colors.red, "rgb(255 255 255 / 0.1)"] },
+      { easing: cubicEasing, duration: 800 },
+    );
+  };
+
+  const startTimer = () => {
+    stopTimer();
+
+    const animation = progressElement.animate(
+      { width: stoppedEarly ? "0%" : ["100%", "0%"] },
+      { easing: "linear", duration: room().settings.game === "WordBomb" ? 10000 : 15000 },
+    );
+
+    cancelAnimation = () => {
+      animation.commitStyles();
+      animation.cancel();
+    };
+
+    animation.addEventListener("finish", () => {
+      progress();
+      animateInput(false);
+    });
+  };
+
+  const stopTimer = () => {
+    if (cancelAnimation) {
+      cancelAnimation();
+    }
+  };
+
+  useEvents({
+    PracticeSet: (data) => setPracticeSet(data.set),
+    PracticeResult: (data) => {
+      if (data.correct && room().settings.game === "WordBomb") {
+        progress();
+      }
+
+      animateInput(data.correct);
+    },
+  });
+
+  createEffect(() => {
+    sendMsg({ type: "PracticeRequest", game: room().settings.game });
+  });
+
+  createEffect(
+    on(
+      practiceSet,
+      () => {
+        if (practiceSet().length === 0) {
+          sendMsg({ type: "PracticeRequest", game: room().settings.game });
+        }
+      },
+      { defer: true },
+    ),
+  );
+
+  onCleanup(stopTimer);
+
   return (
-    <div class="absolute right-4 top-1/2 -z-10 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+    <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-light-green">practice</h3>
         <div
           style="background: linear-gradient(244.26deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
-          class="rounded-lg px-2.5 py-0.5 font-mono text-lg"
+          class="rounded-lg px-2 py-0.5 font-mono text-lg"
         >
-          UTS
+          {practiceSet()[0] ?? "..."}
         </div>
       </div>
-      <div
-        style="background: linear-gradient(to right, #26D16C 70%, transparent 30%)"
-        class="h-[1px] w-full"
-      ></div>
-      <Input size="sm" placeholder="word" class="bg-transparent" />
+      <div ref={progressElement} class="h-[1.5px] w-full rounded-full bg-green"></div>
+      <Input
+        ref={practiceInputElement}
+        size="sm"
+        placeholder="word"
+        class="bg-transparent focus-visible:border-white/10"
+        disabled={practiceSet().length === 0}
+        onFocus={startTimer}
+        onBlur={() => {
+          stoppedEarly = true;
+          stopTimer();
+        }}
+        onEnter={(input) => {
+          if (usedAnagrams.has(input.value)) {
+            animateInput(false);
+            return;
+          } else {
+            usedAnagrams.add(input.value);
+          }
+
+          sendMsg({
+            type: "PracticeSubmission",
+            game: room().settings.game,
+            prompt: practiceSet()[0]!,
+            input: input.value,
+          });
+        }}
+      />
     </div>
   );
 }
 
-function Status({ lobby }: { lobby: Accessor<LobbyState> }) {
+function Status({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
     <div class="absolute bottom-0 right-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,_5vw,_80px)]">
-      <Bomb class="mr-3 h-min w-[3em]" />
-      <h1 class="text-outline -skew-x-6 text-[1em] leading-tight text-[#050705]">
+      <Switch>
+        <Match when={room().settings.game === "WordBomb"}>
+          <Bomb class="mr-3.5 h-min w-[3em]" />
+        </Match>
+        <Match when={room().settings.game === "Anagrams"}>
+          <Anagrams class="mr-5 h-min w-[5em]" />
+        </Match>
+      </Switch>
+      <h1 class="text-outline -skew-x-6 text-[1em] leading-tight text-background">
         {lobby().startingCountdown
           ? `starting in ${lobby().startingCountdown}`
           : "waiting for players..."}

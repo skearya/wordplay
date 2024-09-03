@@ -16,15 +16,33 @@ pub enum Games {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
-    Ping { timestamp: u64 },
+    Ping {
+        timestamp: u64,
+    },
     Ready,
     StartEarly,
     Unready,
+    ChatMessage {
+        content: String,
+    },
+    PracticeRequest {
+        game: Games,
+    },
+    PracticeSubmission {
+        game: Games,
+        prompt: String,
+        input: String,
+    },
     RoomSettings(RoomSettings),
-    ChatMessage { content: String },
-    WordBombInput { input: String },
-    WordBombGuess { word: String },
-    AnagramsGuess { word: String },
+    WordBombInput {
+        input: String,
+    },
+    WordBombGuess {
+        word: String,
+    },
+    AnagramsGuess {
+        word: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -41,14 +59,13 @@ pub enum ServerMessage {
     Error {
         content: String,
     },
-    RoomSettings(RoomSettings),
-    ChatMessage {
-        author: Uuid,
-        content: String,
-    },
     ConnectionUpdate {
         uuid: Uuid,
         state: ConnectionUpdate,
+    },
+    ChatMessage {
+        author: Uuid,
+        content: String,
     },
     ReadyPlayers {
         ready: Vec<Uuid>,
@@ -57,6 +74,13 @@ pub enum ServerMessage {
     StartingCountdown {
         time_left: u8,
     },
+    PracticeSet {
+        set: Vec<String>,
+    },
+    PracticeResult {
+        correct: bool,
+    },
+    RoomSettings(RoomSettings),
     GameStarted {
         rejoin_token: Option<Uuid>,
         game: RoomStateInfo,

@@ -190,6 +190,53 @@ impl AppState {
         Ok(())
     }
 
+    pub fn client_practice_request(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        game: Games,
+    ) -> Result<()> {
+        let lock = self.room(room)?;
+        let Room { clients, .. } = lock.value();
+
+        let global = GLOBAL.get().unwrap();
+        let set: Vec<String> = match game {
+            Games::WordBomb => (0..50)
+                .map(|_| global.random_prompt().to_string())
+                .collect(),
+            Games::Anagrams => (0..50).map(|_| global.random_anagram().1).collect(),
+        };
+
+        clients[&uuid].send(ServerMessage::PracticeSet { set });
+
+        Ok(())
+    }
+
+    pub fn client_practice_submission(
+        &self,
+        SenderInfo { uuid, room }: SenderInfo,
+        game: Games,
+        prompt: String,
+        input: String,
+    ) -> Result<()> {
+        let lock = self.room(room)?;
+        let Room { clients, .. } = lock.value();
+
+        let correct = match game {
+            Games::WordBomb => input.contains(&prompt) && GLOBAL.get().unwrap().is_valid(&input),
+            Games::Anagrams => {
+                input.len() >= 2
+                    && !input
+                        .chars()
+                        .any(|ch| input.matches(ch).count() > prompt.matches(ch).count())
+                    && GLOBAL.get().unwrap().is_valid(&input)
+            }
+        };
+
+        clients[&uuid].send(ServerMessage::PracticeResult { correct });
+
+        Ok(())
+    }
+
     pub fn client_room_settings(
         &self,
         SenderInfo { uuid, room }: SenderInfo,

@@ -12,6 +12,7 @@ qol:
 
 future:
 
+- singleplayer
 - future word games:
   - greentea
 - difficulty settings in wordbomb / anagrams

@@ -3,17 +3,16 @@ export type Uuid = string;
 export type Games = "WordBomb" | "Anagrams";
 
 export type ClientMessage =
-  // lobby / generic
   | { type: "Ping"; timestamp: number }
   | { type: "Ready" }
   | { type: "StartEarly" }
   | { type: "Unready" }
-  | ({ type: "RoomSettings" } & RoomSettings)
   | { type: "ChatMessage"; content: string }
-  // word bomb
+  | { type: "PracticeRequest"; game: Games }
+  | { type: "PracticeSubmission"; game: Games; prompt: string; input: string }
+  | ({ type: "RoomSettings" } & RoomSettings)
   | { type: "WordBombInput"; input: string }
   | { type: "WordBombGuess"; word: string }
-  // anagrams
   | { type: "AnagramsGuess"; word: string };
 
 export type ServerMessage =
@@ -31,18 +30,15 @@ export type ServerMessage =
       type: "Error";
       content: string;
     }
-  | ({
-      type: "RoomSettings";
-    } & RoomSettings)
-  | {
-      type: "ChatMessage";
-      author: Uuid;
-      content: string;
-    }
   | {
       type: "ConnectionUpdate";
       uuid: Uuid;
       state: ConnectionUpdate;
+    }
+  | {
+      type: "ChatMessage";
+      author: Uuid;
+      content: string;
     }
   | {
       type: "ReadyPlayers";
@@ -53,6 +49,17 @@ export type ServerMessage =
       type: "StartingCountdown";
       time_left: number;
     }
+  | {
+      type: "PracticeSet";
+      set: Array<string>;
+    }
+  | {
+      type: "PracticeResult";
+      correct: boolean;
+    }
+  | ({
+      type: "RoomSettings";
+    } & RoomSettings)
   | {
       type: "GameStarted";
       rejoin_token: string | null;

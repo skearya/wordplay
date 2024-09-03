@@ -61,12 +61,20 @@ impl AppState {
             .map_err(|_| GameError::RateLimited)
             .and_then(|()| match message {
                 ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
-                ClientMessage::RoomSettings(settings) => {
-                    self.client_room_settings(sender, settings)
-                }
                 ClientMessage::Ready => self.client_ready(sender),
                 ClientMessage::StartEarly => self.client_start_early(sender),
                 ClientMessage::Unready => self.client_unready(sender),
+                ClientMessage::PracticeRequest { game } => {
+                    self.client_practice_request(sender, game)
+                }
+                ClientMessage::PracticeSubmission {
+                    game,
+                    prompt,
+                    input,
+                } => self.client_practice_submission(sender, game, prompt, input),
+                ClientMessage::RoomSettings(settings) => {
+                    self.client_room_settings(sender, settings)
+                }
                 ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
                 ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
                 ClientMessage::WordBombGuess { word } => self.word_bomb_guess(sender, word),
