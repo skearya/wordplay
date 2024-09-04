@@ -146,6 +146,7 @@ export type PostGameInfo =
       type: "Anagrams";
       original_word: string;
       leaderboard: Array<[Uuid, number]>;
+      used_words: Array<[Uuid, Array<string>]>;
     };
 
 export type ClientInfo = {

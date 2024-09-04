@@ -71,7 +71,7 @@ impl AppState {
                     game,
                     prompt,
                     input,
-                } => self.client_practice_submission(sender, game, prompt, input),
+                } => self.client_practice_submission(sender, game, &prompt, &input),
                 ClientMessage::RoomSettings(settings) => {
                     self.client_room_settings(sender, settings)
                 }

@@ -1,4 +1,4 @@
-import { Accessor, createSignal, onCleanup, onMount } from "solid-js";
+import { Accessor, createSignal, For, onCleanup, onMount } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
 import { useEvents } from "../events";
 import { AnagramsState, Room, SendFn, State } from "../types/game";
@@ -163,13 +163,15 @@ function Leaderboard({
 }) {
   return (
     <div class="flex w-64 flex-col gap-y-1.5 text-lg">
-      {players()
-        .map(({ uuid, used_words }) => ({
-          uuid,
-          score: used_words.reduce((acc, word) => acc + calculateAnagramsPoints(word), 0),
-        }))
-        .sort((a, b) => b.score - a.score)
-        .map(({ uuid, score }, i) => {
+      <For
+        each={players()
+          .map(({ uuid, used_words }) => ({
+            uuid,
+            score: used_words.reduce((acc, word) => acc + calculateAnagramsPoints(word), 0),
+          }))
+          .sort((a, b) => b.score - a.score)}
+      >
+        {({ uuid, score }, i) => {
           const client = () => getClient(room(), uuid)!;
 
           return (
@@ -177,13 +179,14 @@ function Leaderboard({
               classList={{ "opacity-50": client().disconnected }}
               class="flex items-center gap-x-1.5 transition-opacity"
             >
-              <h1 class="tabular-nums">{i + 1}.</h1>
+              <h1 class="tabular-nums">{i() + 1}.</h1>
               <Avatar username={client().username} size={25} />
               <h1 class="min-w-4 flex-1 truncate">{client().username}</h1>
               <h1 class="justify-self-end truncate text-light-green">{score}</h1>
             </div>
           );
-        })}
+        }}
+      </For>
     </div>
   );
 }

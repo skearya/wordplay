@@ -139,7 +139,7 @@ function AnagramsPostGameInfo({
   return (
     <div class="flex w-64 flex-col gap-y-2">
       <h1 class="text-xl">Leaderboard</h1>
-      <AnagramsLeaderboard room={room} leaderboard={info.leaderboard} />
+      <AnagramsLeaderboard room={room} info={info} />
       <Stats>
         <h1>
           the original word was <span>{info.original_word}</span>
@@ -198,27 +198,29 @@ function WordBombLeaderboard({
 
 function AnagramsLeaderboard({
   room,
-  leaderboard,
+  info,
 }: {
   room: Room;
-  leaderboard: Array<[Uuid, score: number]>;
+  info: Variant<PostGameInfo, "Anagrams">;
 }) {
   return (
-    <div class="flex flex-col gap-y-2 overflow-y-auto">
-      {leaderboard
-        .sort((a, b) => b[1] - a[1])
-        .map(([uuid, score], i) => {
-          const username = getUsername(room, uuid)!;
+    <div class="flex flex-1 flex-col gap-y-1.5 overflow-y-auto">
+      {info.leaderboard.map(([uuid, score], i) => {
+        const username = getUsername(room, uuid)!;
+        const usedWords = info.used_words.find((player) => player[0] === uuid)![1].join(", ");
 
-          return (
+        return (
+          <div class="flex flex-col gap-y-0.5">
             <div class="flex items-center gap-x-1.5">
               <h1 class="tabular-nums">{i + 1}.</h1>
               <Avatar username={username} size={25} />
               <h1 class="min-w-4 flex-1 truncate">{username}</h1>
-              <h1 class="justify-self-end truncate text-light-green">{score}</h1>
+              <h1 class="justify-self-end truncate text-lightest-green">{score}</h1>
             </div>
-          );
-        })}
+            <p class="text-light-green">{usedWords}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }

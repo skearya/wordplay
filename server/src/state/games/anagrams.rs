@@ -43,6 +43,7 @@ pub enum GuessInfo {
 pub struct PostGameInfo {
     original_word: String,
     leaderboard: Vec<(Uuid, u32)>,
+    used_words: Vec<(Uuid, HashSet<String>)>,
 }
 
 impl Anagrams {
@@ -70,22 +71,6 @@ impl Anagrams {
         };
 
         Ok(guess_info)
-    }
-
-    pub fn leaderboard(&self) -> Vec<(Uuid, u32)> {
-        self.players
-            .iter()
-            .map(|player| {
-                (
-                    player.uuid,
-                    player
-                        .used_words
-                        .iter()
-                        .map(|word| calculate_points(word))
-                        .sum::<u32>(),
-                )
-            })
-            .sorted_by_vec(|a, b| b.1.cmp(&a.1))
     }
 }
 
@@ -139,11 +124,7 @@ impl AppState {
         } = lock.value_mut();
         let game = state.try_anagrams()?;
 
-        let game_info = messages::PostGameInfo::Anagrams(PostGameInfo {
-            original_word: game.original.clone(),
-            leaderboard: game.leaderboard(),
-        });
-
+        let game_info = messages::PostGameInfo::Anagrams(get_post_game_info(game));
         end_game(state, clients, owner, game_info);
 
         Ok(())
@@ -152,4 +133,29 @@ impl AppState {
 
 fn calculate_points(word: &str) -> u32 {
     50 * 2_u32.pow(word.len() as u32 - 2)
+}
+
+fn get_post_game_info(game: &mut Anagrams) -> PostGameInfo {
+    PostGameInfo {
+        original_word: game.original.clone(),
+        leaderboard: game
+            .players
+            .iter()
+            .map(|player| {
+                (
+                    player.uuid,
+                    player
+                        .used_words
+                        .iter()
+                        .map(|word| calculate_points(word))
+                        .sum::<u32>(),
+                )
+            })
+            .sorted_by_vec(|a, b| b.1.cmp(&a.1)),
+        used_words: game
+            .players
+            .iter()
+            .map(|player| (player.uuid, player.used_words.clone()))
+            .collect(),
+    }
 }

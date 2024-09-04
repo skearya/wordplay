@@ -299,7 +299,6 @@ impl AppState {
                 }
                 Err(GameError::WordBomb(WordBombError::NoPlayersAlive)) => {
                     let game_info = messages::PostGameInfo::WordBomb(get_post_game_info(game));
-
                     end_game(state, clients, owner, game_info);
                 }
                 Err(error) => Err(error)?,

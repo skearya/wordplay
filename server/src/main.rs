@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             CorsLayer::new()
                 .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
                 .allow_credentials(true),
-        )
+        );
     }
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3021").await?;

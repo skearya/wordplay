@@ -215,20 +215,20 @@ impl AppState {
         &self,
         SenderInfo { uuid, room }: SenderInfo,
         game: Games,
-        prompt: String,
-        input: String,
+        prompt: &str,
+        input: &str,
     ) -> Result<()> {
         let lock = self.room(room)?;
         let Room { clients, .. } = lock.value();
 
         let correct = match game {
-            Games::WordBomb => input.contains(&prompt) && GLOBAL.get().unwrap().is_valid(&input),
+            Games::WordBomb => input.contains(prompt) && GLOBAL.get().unwrap().is_valid(input),
             Games::Anagrams => {
                 input.len() >= 2
                     && !input
                         .chars()
                         .any(|ch| input.matches(ch).count() > prompt.matches(ch).count())
-                    && GLOBAL.get().unwrap().is_valid(&input)
+                    && GLOBAL.get().unwrap().is_valid(input)
             }
         };
 

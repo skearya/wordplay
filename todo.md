@@ -1,6 +1,7 @@
 important:
 
 - client and server version checking
+- server db doesn't get saved between container updates (use volume)
 
 qol:
 
