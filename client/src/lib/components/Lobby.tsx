@@ -309,19 +309,19 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
   let practiceInputElement!: HTMLInputElement;
   let progressElement!: HTMLDivElement;
 
-  let stoppedEarly = false;
-  let cancelAnimation: (() => void) | undefined;
-
-  let usedAnagrams: Set<string> = new Set();
+  let timerAnimation: Animation | undefined;
+  let usedAnagrams: Array<string> = [];
   const [practiceSet, setPracticeSet] = createSignal<Array<string>>([]);
 
   const progress = () => {
-    stoppedEarly = false;
     setPracticeSet(([, ...rest]) => setPracticeSet(rest));
-    usedAnagrams.clear();
-    practiceInputElement.value = "";
+
+    if (room().settings.game === "Anagrams") {
+      usedAnagrams = [];
+    }
 
     startTimer();
+    practiceInputElement.value = "";
   };
 
   const animateInput = (correct: boolean) => {
@@ -331,29 +331,20 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
     );
   };
 
-  const startTimer = () => {
-    stopTimer();
+  const startTimer = (resume?: boolean) => {
+    if (resume && timerAnimation) {
+      timerAnimation?.play();
+      return;
+    }
 
-    const animation = progressElement.animate(
-      { width: stoppedEarly ? "0%" : ["100%", "0%"] },
+    timerAnimation?.cancel();
+
+    timerAnimation = progressElement.animate(
+      { width: ["100%", "0%"] },
       { easing: "linear", duration: room().settings.game === "WordBomb" ? 10000 : 15000 },
     );
 
-    cancelAnimation = () => {
-      animation.commitStyles();
-      animation.cancel();
-    };
-
-    animation.addEventListener("finish", () => {
-      progress();
-      animateInput(false);
-    });
-  };
-
-  const stopTimer = () => {
-    if (cancelAnimation) {
-      cancelAnimation();
-    }
+    timerAnimation.addEventListener("finish", progress);
   };
 
   useEvents({
@@ -369,6 +360,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
 
   createEffect(() => {
     sendMsg({ type: "PracticeRequest", game: room().settings.game });
+    timerAnimation?.cancel();
   });
 
   createEffect(
@@ -383,7 +375,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
     ),
   );
 
-  onCleanup(stopTimer);
+  onCleanup(() => timerAnimation?.cancel());
 
   return (
     <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
@@ -400,20 +392,25 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
       <Input
         ref={practiceInputElement}
         size="sm"
-        placeholder="word"
+        placeholder="focus to start"
         class="bg-transparent focus-visible:border-white/10"
         disabled={practiceSet().length === 0}
-        onFocus={startTimer}
+        onFocus={() => {
+          startTimer(true);
+          practiceInputElement.placeholder = "word";
+        }}
         onBlur={() => {
-          stoppedEarly = true;
-          stopTimer();
+          timerAnimation?.pause();
+          practiceInputElement.placeholder = "focus to continue";
         }}
         onEnter={(input) => {
-          if (usedAnagrams.has(input.value)) {
-            animateInput(false);
-            return;
-          } else {
-            usedAnagrams.add(input.value);
+          if (room().settings.game === "Anagrams") {
+            if (usedAnagrams.includes(input.value)) {
+              animateInput(false);
+              return;
+            } else {
+              usedAnagrams.push(input.value);
+            }
           }
 
           sendMsg({
