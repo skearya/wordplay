@@ -1,6 +1,8 @@
 # wordplay - multiplayer word games
 https://wordplay.lol/
 
+https://github.com/user-attachments/assets/3930b114-4b43-43e8-911e-b6a50c217f75
+
 ## features
 - pretty & fast!
 - word bomb
@@ -24,7 +26,7 @@ https://wordplay.lol/
 - `/prompt_gen` (script for generating word bomb prompts)
   - [Rust](https://www.rust-lang.org/)
 
-[Docker](https://docs.docker.com/) / [Docker Compose](https://docs.docker.com/compose/) is used to build and manage deployments
+[Docker](https://docs.docker.com/) / [Docker Compose](https://docs.docker.com/compose/) used to build and manage deployments
 
 ## special thanks
 - avatar generation is taken from [vercel/avatar](https://github.com/vercel/avatar)
