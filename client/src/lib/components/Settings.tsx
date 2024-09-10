@@ -6,6 +6,7 @@ import { Button } from "./ui/Button";
 import { Select } from "./ui/Select";
 
 export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) {
+  let gameElement!: HTMLSelectElement;
   let wordBombDifficultyElement!: HTMLSelectElement;
 
   const [visible, setVisible] = createSignal(false);
@@ -13,6 +14,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
 
   // https://github.com/solidjs/solid/issues/1754
   onMount(() => {
+    gameElement.value = room().settings.game.toString();
     wordBombDifficultyElement.value = room().settings.word_bomb.min_wpm.toString();
   });
 
@@ -27,6 +29,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
           <div class="flex items-center justify-between">
             <label for="game">game</label>
             <Select
+              ref={gameElement}
               size="xs"
               name="game"
               id="game"
