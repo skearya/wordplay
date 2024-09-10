@@ -110,6 +110,11 @@ export type RoomInfo = {
 export type RoomSettings = {
   public: boolean;
   game: Games;
+  word_bomb: WordBombSettings;
+};
+
+type WordBombSettings = {
+  min_wpm: number;
 };
 
 export type RoomStateInfo =

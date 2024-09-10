@@ -8,6 +8,7 @@ const input = tv({
       primary: "bg-light-background text-foreground",
     },
     size: {
+      xs: "px-1.5 py-1 text-sm",
       sm: "px-2.5 py-2",
       md: "px-3 py-2.5",
       lg: "rounded-xl px-3.5 py-3 text-lg",

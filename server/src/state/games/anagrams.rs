@@ -55,7 +55,7 @@ impl Anagrams {
             .any(|ch| guess.matches(ch).count() > self.anagram.matches(ch).count())
         {
             GuessInfo::PromptMismatch
-        } else if !GLOBAL.get().unwrap().is_valid(guess) {
+        } else if !GLOBAL.is_valid(guess) {
             GuessInfo::NotEnglish
         } else if self
             .players

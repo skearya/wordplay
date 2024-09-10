@@ -10,7 +10,7 @@ use crate::{
     AppState,
 };
 use rand::{thread_rng, Rng};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     sync::Arc,
@@ -19,13 +19,19 @@ use std::{
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WordBombSettings {
+    pub min_wpm: usize,
+}
+
 #[derive(Debug)]
 pub struct WordBomb {
+    pub settings: WordBombSettings,
     pub started_at: Instant,
     pub timer: Timer,
-    pub prompt: String,
+    pub prompt: &'static str,
     pub prompt_uses: u8,
-    pub missed_prompts: Vec<String>,
+    pub missed_prompts: Vec<&'static str>,
     pub players: Vec<Player>,
     pub turn: Uuid,
 }
@@ -70,9 +76,9 @@ pub struct PostGameInfo {
 
 impl WordBomb {
     pub fn check_guess(&mut self, guess: &str) -> Result<GuessInfo, GameError> {
-        let guess_info = if !guess.contains(&self.prompt) {
+        let guess_info = if !guess.contains(self.prompt) {
             GuessInfo::PromptNotIn
-        } else if !GLOBAL.get().unwrap().is_valid(guess) {
+        } else if !GLOBAL.is_valid(guess) {
             GuessInfo::NotEnglish
         } else if self
             .players
@@ -123,7 +129,7 @@ impl WordBomb {
     pub fn player_timed_out(&mut self) -> Result<()> {
         self.timer.length = thread_rng().gen_range(10.0..=30.0);
 
-        self.missed_prompts.push(self.prompt.clone());
+        self.missed_prompts.push(self.prompt);
 
         let player = self
             .players
@@ -152,13 +158,15 @@ impl WordBomb {
 
     fn new_prompt(&mut self) {
         self.prompt_uses = 0;
-        self.prompt = loop {
-            let new_prompt = GLOBAL.get().unwrap().random_prompt();
+
+        for _ in 0..10 {
+            let new_prompt = GLOBAL.prompts.random_prompt(self.settings.min_wpm);
 
             if new_prompt != self.prompt {
-                break new_prompt.to_string();
+                self.prompt = new_prompt;
+                break;
             }
-        };
+        }
     }
 
     fn update_turn(&mut self) -> Result<()> {
@@ -252,7 +260,7 @@ impl AppState {
                 clients.broadcast(ServerMessage::WordBombPrompt {
                     correct_guess: Some(guess),
                     life_change: extra_life.into(),
-                    prompt: game.prompt.clone(),
+                    prompt: game.prompt.to_string(),
                     turn: game.turn,
                 });
 
@@ -272,7 +280,7 @@ impl AppState {
         &self,
         room: String,
         timer_len: f32,
-        original_prompt: String,
+        original_prompt: &str,
     ) -> Result<()> {
         tokio::time::sleep(Duration::from_secs_f32(timer_len)).await;
 
@@ -291,7 +299,7 @@ impl AppState {
                     clients.broadcast(ServerMessage::WordBombPrompt {
                         correct_guess: None,
                         life_change: -1,
-                        prompt: game.prompt.clone(),
+                        prompt: game.prompt.to_string(),
                         turn: game.turn,
                     });
 
@@ -311,7 +319,7 @@ impl AppState {
 
 fn spawn_timeout_task(app_state: AppState, game: &mut WordBomb, room: String) {
     let timer_len = game.timer.length;
-    let current_prompt = game.prompt.clone();
+    let current_prompt = game.prompt;
 
     game.timer.task = Arc::new(
         tokio::spawn(async move {

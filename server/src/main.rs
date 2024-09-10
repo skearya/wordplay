@@ -6,15 +6,16 @@ mod utils;
 
 use axum::http::HeaderValue;
 use axum::{routing::get, Router};
-use global::{GlobalData, GLOBAL};
+use global::GLOBAL;
 use routes::{auth, game, info};
 use state::AppState;
 use std::path::Path;
+use std::sync::LazyLock;
 use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    GLOBAL.set(GlobalData::new()).unwrap();
+    LazyLock::force(&GLOBAL);
     dotenvy::from_path(Path::new("../.env")).ok();
 
     let db = db::create_pool().await?;

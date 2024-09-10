@@ -2,8 +2,6 @@ use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::{fs, str};
 
-const MIN_WPP: u32 = 500;
-
 fn main() {
     let words: Vec<&str> = include_str!("../../server/src/static/words_alpha.txt")
         .lines()
@@ -15,29 +13,35 @@ fn main() {
         .flatten()
         .collect();
 
-    let prompt_counts: HashMap<&&str, u32> = prompts
+    // Vec<(prompt, amount of times its in other words)>
+    let prompt_counts: Vec<(&str, usize)> = prompts
         .par_iter()
-        .map(|prompt| {
+        .map(|&prompt| {
             (
                 prompt,
-                words.iter().fold(
-                    0,
-                    |acc, word| if word.contains(prompt) { acc + 1 } else { acc },
-                ),
+                words.iter().filter(|word| word.contains(prompt)).count(),
             )
         })
         .collect();
 
-    fs::write(
-        "../server/src/static/prompts.txt",
-        prompt_counts
-            .iter()
-            .filter(|(_, &count)| count >= MIN_WPP)
-            .map(|(&&word, _)| word)
-            .collect::<Vec<&str>>()
-            .join(","),
-    )
-    .expect("failed to write to file");
+    // HashMap<amount of times prompt used in other words, prompts>
+    let mut prompt_counts_map: HashMap<usize, Vec<&str>> = HashMap::new();
+
+    for (prompt, count) in prompt_counts {
+        prompt_counts_map.entry(count).or_default().push(prompt);
+    }
+
+    // Vec<(amount of times prompt used in other words, prompts)> | collected to vec for sorting
+    let mut prompt_counts: Vec<(usize, Vec<&str>)> = prompt_counts_map.into_iter().collect();
+    prompt_counts.sort_by_key(|pair| pair.0);
+
+    let lines: String = prompt_counts
+        .into_iter()
+        .map(|(count, words)| format!("{count}:{}", words.join(",")))
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    fs::write("../server/src/static/prompts.txt", lines).expect("failed to write to file");
 }
 
 fn get_all_slices(word: &str) -> Option<Vec<&str>> {

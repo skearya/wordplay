@@ -1,14 +1,15 @@
 important:
 
 - client and server version checking
-- server db doesn't get saved between container updates (use volume)
+- custom avatars
+- server db doesn't get saved between container updates (use docker volume)
+- word bomb fastest guess may be very wrong sometimes
 
 qol:
 
-- lobby practice
 - make chat resizable
+- remove some letters from word bomb extra life thing by default (x, z)
 - back button after create/join game in homepage
-- show words used in anagrams post game
 - store and display previous winners
 
 future:
@@ -16,8 +17,7 @@ future:
 - singleplayer
 - future word games:
   - greentea
-- difficulty settings in wordbomb / anagrams
-- remove some letters from word bomb extra life thing by default
+- difficulty settings in anagrams, more customisable word bomb settings
 - sound effects (never happening)
 - gamemodes with powerups...?
 

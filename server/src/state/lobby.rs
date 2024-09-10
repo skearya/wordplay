@@ -4,7 +4,7 @@ use crate::{
         error::Result,
         games::{
             anagrams::{self, Anagrams},
-            word_bomb::{self, WordBomb},
+            word_bomb::{self, WordBomb, WordBombSettings},
         },
         messages::{CountdownState, Games, PostGameInfo, RoomStateInfo, ServerMessage},
         room::{check_for_new_room_owner, Client, RoomSettings, State},
@@ -45,10 +45,12 @@ impl Lobby {
 
     pub fn start_word_bomb(
         &self,
-        timeout_task_handle: impl FnOnce(String, f32) -> Arc<AbortHandle>,
+        app_state: AppState,
+        room: String,
+        settings: WordBombSettings,
     ) -> State {
         let timer_len = thread_rng().gen_range(10.0..=30.0);
-        let prompt = GLOBAL.get().unwrap().random_prompt().to_string();
+        let prompt = GLOBAL.prompts.random_prompt(settings.min_wpm);
         let mut players: Vec<word_bomb::Player> = self
             .ready
             .iter()
@@ -56,10 +58,21 @@ impl Lobby {
             .collect();
         players.shuffle(&mut thread_rng());
 
+        let task = Arc::new(
+            tokio::spawn(async move {
+                app_state
+                    .word_bomb_timer(room, timer_len, prompt)
+                    .await
+                    .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
+            })
+            .abort_handle(),
+        );
+
         State::WordBomb(WordBomb {
+            settings,
             started_at: Instant::now(),
             timer: word_bomb::Timer {
-                task: timeout_task_handle(prompt.clone(), timer_len),
+                task,
                 start: Instant::now(),
                 length: timer_len,
             },
@@ -72,6 +85,8 @@ impl Lobby {
     }
 
     pub fn start_anagrams(&self, app_state: AppState, room: String) -> State {
+        let (original, anagram) = GLOBAL.random_anagram();
+
         let timer = Arc::new(
             tokio::spawn(async move {
                 app_state
@@ -81,8 +96,6 @@ impl Lobby {
             })
             .abort_handle(),
         );
-
-        let (original, anagram) = GLOBAL.get().unwrap().random_anagram();
 
         State::Anagrams(Anagrams {
             timer,
@@ -196,14 +209,20 @@ impl AppState {
         game: Games,
     ) -> Result<()> {
         let lock = self.room(room)?;
-        let Room { clients, .. } = lock.value();
+        let Room {
+            clients, settings, ..
+        } = lock.value();
 
-        let global = GLOBAL.get().unwrap();
         let set: Vec<String> = match game {
             Games::WordBomb => (0..50)
-                .map(|_| global.random_prompt().to_string())
+                .map(|_| {
+                    GLOBAL
+                        .prompts
+                        .random_prompt(settings.word_bomb.min_wpm)
+                        .to_string()
+                })
                 .collect(),
-            Games::Anagrams => (0..50).map(|_| global.random_anagram().1).collect(),
+            Games::Anagrams => (0..50).map(|_| GLOBAL.random_anagram().1).collect(),
         };
 
         clients[&uuid].send(ServerMessage::PracticeSet { set });
@@ -222,13 +241,13 @@ impl AppState {
         let Room { clients, .. } = lock.value();
 
         let correct = match game {
-            Games::WordBomb => input.contains(prompt) && GLOBAL.get().unwrap().is_valid(input),
+            Games::WordBomb => input.contains(prompt) && GLOBAL.is_valid(input),
             Games::Anagrams => {
                 input.len() >= 2
                     && !input
                         .chars()
                         .any(|ch| input.matches(ch).count() > prompt.matches(ch).count())
-                    && GLOBAL.get().unwrap().is_valid(input)
+                    && GLOBAL.is_valid(input)
             }
         };
 
@@ -306,24 +325,14 @@ fn start_game(
 
     let game = match settings.game {
         Games::WordBomb => {
-            *state = lobby.start_word_bomb(|prompt, timer_len| {
-                Arc::new(
-                    tokio::spawn(async move {
-                        app_state
-                            .word_bomb_timer(room, timer_len, prompt)
-                            .await
-                            .inspect_err(|error| eprintln!("word bomb timer error: {error:#?}"))
-                    })
-                    .abort_handle(),
-                )
-            });
+            *state = lobby.start_word_bomb(app_state, room, settings.word_bomb.clone());
 
             let game = state.try_word_bomb()?;
 
             RoomStateInfo::WordBomb {
                 turn: game.turn,
                 players: game.players.clone(),
-                prompt: game.prompt.clone(),
+                prompt: game.prompt.to_string(),
                 used_letters: None,
             }
         }

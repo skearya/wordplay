@@ -2,7 +2,10 @@ use crate::{
     routes::game::Params,
     state::{
         error::{GameError, Result, RoomError},
-        games::{anagrams::Anagrams, word_bomb::WordBomb},
+        games::{
+            anagrams::Anagrams,
+            word_bomb::{WordBomb, WordBombSettings},
+        },
         lobby::{check_for_countdown_update, Lobby},
         messages::{ClientInfo, ConnectionUpdate, Games, RoomInfo, RoomStateInfo, ServerMessage},
         SenderInfo,
@@ -28,8 +31,9 @@ pub struct Room {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoomSettings {
-    pub public: bool,
     pub game: Games,
+    pub public: bool,
+    pub word_bomb: WordBombSettings,
 }
 
 impl Default for RoomSettings {
@@ -37,6 +41,7 @@ impl Default for RoomSettings {
         Self {
             public: false,
             game: Games::WordBomb,
+            word_bomb: WordBombSettings { min_wpm: 500 },
         }
     }
 }
@@ -328,7 +333,7 @@ fn room_state_info(state: &State, uuid: Uuid) -> RoomStateInfo {
         State::WordBomb(game) => RoomStateInfo::WordBomb {
             players: game.players.clone(),
             turn: game.turn,
-            prompt: game.prompt.clone(),
+            prompt: game.prompt.to_string(),
             used_letters: game
                 .players
                 .iter()
