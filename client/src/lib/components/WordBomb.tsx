@@ -101,7 +101,6 @@ export function WordBomb({
       const prevTurn = game().turn;
 
       setGame({ prompt: data.prompt, turn: data.turn });
-
       setGame(
         "players",
         (player) => player.uuid === prevTurn,
@@ -160,14 +159,14 @@ export function WordBomb({
   onCleanup(() => controller.abort());
 
   return (
-    <main class="flex h-full flex-col justify-start">
+    <main class="flex h-full flex-col justify-start overflow-hidden">
       <div
         style="background: linear-gradient(185deg, rgba(38, 209, 108, 0.5) 7.28%, rgba(76, 118, 93, 0.1) 82.41%);"
         class="flex h-24 w-full items-center justify-center font-mono text-[34px]"
       >
         {game().prompt}
       </div>
-      <div class="flex h-full w-full items-center justify-around">
+      <div class="flex h-full w-full flex-wrap items-center justify-around gap-x-12 gap-y-4 overflow-y-auto p-8">
         <For each={game().players}>{(player) => <Player room={room} player={player} />}</For>
       </div>
       <div

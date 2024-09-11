@@ -162,7 +162,7 @@ function Leaderboard({
   players: Accessor<Array<AnagramsPlayerData>>;
 }) {
   return (
-    <div class="flex w-64 flex-col gap-y-1.5 text-lg">
+    <div class="flex max-h-96 w-64 flex-col gap-y-1.5 overflow-y-auto text-lg">
       <For
         each={players()
           .map(({ uuid, used_words }) => ({
