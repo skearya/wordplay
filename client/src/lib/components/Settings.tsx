@@ -23,7 +23,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
       classList={{ "-translate-x-full": !visible() }}
       class="fixed left-0 top-1/2 z-50 -translate-y-1/2 transition-transform"
     >
-      <div class="relative flex min-w-48 flex-col gap-y-2.5 rounded-r-lg border border-l-0 bg-light-background p-3.5">
+      <div class="relative flex min-w-52 flex-col gap-y-2.5 rounded-r-lg border border-l-0 bg-light-background p-3.5">
         <div class="space-y-1.5">
           <h1 class="pb-0.5 text-lg text-light-green">Room</h1>
           <div class="flex items-center justify-between">
@@ -86,7 +86,10 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
                 });
               }}
             >
-              <optgroup label="min 500wpp (words per prompt)">
+              <optgroup label="min 1000wpp (words per prompt)">
+                <option value="1000">very easy</option>
+              </optgroup>
+              <optgroup label="min 500wpp">
                 <option value="500">easy</option>
               </optgroup>
               <optgroup label="min 300wpp">
