@@ -14,10 +14,10 @@ export function ErrorDisplay({ error, reset }: { error: unknown; reset?: () => v
 
   return (
     <main class="flex h-screen items-center justify-center">
-      <div class="flex flex-col gap-y-4 rounded-lg border bg-light-background p-4">
+      <div class="bg-light-background flex flex-col gap-y-4 rounded-lg border p-4">
         <div class="flex items-center gap-x-3">
           <h1 class="text-lg">oh, we errored</h1>
-          <div class="w-px self-stretch bg-dark-green/30"></div>
+          <div class="bg-dark-green/30 w-px self-stretch"></div>
           <pre class="text-light-green">
             {JSON.stringify(
               error instanceof Error
@@ -32,7 +32,7 @@ export function ErrorDisplay({ error, reset }: { error: unknown; reset?: () => v
             )}
           </pre>
         </div>
-        {message && <h1 class="text-center text-lightest-green">the server might be offline</h1>}
+        {message && <h1 class="text-lightest-green text-center">the server might be offline</h1>}
         <div class="flex gap-x-2.5">
           <Button size="lg" class="flex-1" onClick={reset ?? (() => setError(undefined))}>
             rejoin

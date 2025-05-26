@@ -171,7 +171,7 @@ export function WordBomb({
       </div>
       <div
         ref={bombOverlayElement}
-        class="absolute rounded-xl border border-dark-green text-dark-green"
+        class="border-dark-green text-dark-green absolute rounded-xl border"
       >
         <SmallBomb class="absolute bottom-1.5 left-1.5 -translate-x-1/2 translate-y-1/2" />
       </div>
@@ -226,7 +226,7 @@ function Player({ room, player }: { room: Accessor<Room>; player: WordBombPlayer
 
 function Letters({ usedLetters }: { usedLetters: Accessor<Set<string>> }) {
   return (
-    <div class="absolute bottom-6 right-6 flex flex-col space-y-1.5">
+    <div class="absolute right-6 bottom-6 flex flex-col space-y-1.5">
       <h1 class="fade-after-10 mb-1.5 text-end text-gray-400">
         use all letters to gain an extra life!
       </h1>

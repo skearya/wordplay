@@ -21,11 +21,11 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
   return (
     <div
       classList={{ "-translate-x-full": !visible() }}
-      class="fixed left-0 top-1/2 z-50 -translate-y-1/2 transition-transform"
+      class="fixed top-1/2 left-0 z-50 -translate-y-1/2 transition-transform"
     >
-      <div class="relative flex min-w-52 flex-col gap-y-2.5 rounded-r-lg border border-l-0 bg-light-background p-3.5">
+      <div class="bg-light-background relative flex min-w-52 flex-col gap-y-2.5 rounded-r-lg border border-l-0 p-3.5">
         <div class="space-y-1.5">
-          <h1 class="pb-0.5 text-lg text-light-green">Room</h1>
+          <h1 class="text-light-green pb-0.5 text-lg">Room</h1>
           <div class="flex items-center justify-between">
             <label for="game">game</label>
             <Select
@@ -61,9 +61,9 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
             />
           </div>
         </div>
-        <div class="h-px w-full bg-dark-green/30"></div>
+        <div class="bg-dark-green/30 h-px w-full"></div>
         <div class="space-y-1.5">
-          <h1 class="pb-0.5 text-lg text-light-green">Word Bomb</h1>
+          <h1 class="text-light-green pb-0.5 text-lg">Word Bomb</h1>
           <div class="flex items-center justify-between">
             <label for="min-wpp">difficulty</label>
             <Select
@@ -104,7 +104,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
         <Button
           color="muted"
           size="sm"
-          class="absolute -right-2.5 top-1/2 -translate-y-1/2 translate-x-full border-none bg-transparent p-0 text-light-green"
+          class="text-light-green absolute top-1/2 -right-2.5 translate-x-full -translate-y-1/2 border-none bg-transparent p-0"
           onClick={() => setVisible((visible) => !visible)}
         >
           <SettingsIcon />

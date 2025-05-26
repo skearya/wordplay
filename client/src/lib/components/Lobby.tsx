@@ -58,7 +58,7 @@ export function Lobby({
 
   return (
     <main>
-      <div class="absolute left-1/2 top-1/2 flex h-[480px] -translate-x-1/2 -translate-y-1/2 gap-x-4 rounded-xl border bg-light-background p-3.5">
+      <div class="bg-light-background absolute top-1/2 left-1/2 flex h-[480px] -translate-x-1/2 -translate-y-1/2 gap-x-4 rounded-xl border p-3.5">
         <Show when={postGameInfo}>
           <Switch>
             <Match when={postGameInfo!.type === "WordBomb"}>
@@ -74,7 +74,7 @@ export function Lobby({
               />
             </Match>
           </Switch>
-          <div class="w-px self-stretch bg-dark-green/30"></div>
+          <div class="bg-dark-green/30 w-px self-stretch"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
           <ReadyPlayers room={room} lobby={lobby} />
@@ -186,7 +186,7 @@ function WordBombLeaderboard({
             <h1 class="tabular-nums">{i + 1}.</h1>
             <Avatar username={username} size={18} />
             <h1 class="min-w-4 flex-1 truncate">{username}</h1>
-            <h1 class="justify-self-end truncate text-light-green" title={value.toString()}>
+            <h1 class="text-light-green justify-self-end truncate" title={value.toString()}>
               {typeof value === "number" ? value.toFixed(2) : value}
             </h1>
           </div>
@@ -215,7 +215,7 @@ function AnagramsLeaderboard({
               <h1 class="tabular-nums">{i + 1}.</h1>
               <Avatar username={username} size={25} />
               <h1 class="min-w-4 flex-1 truncate">{username}</h1>
-              <h1 class="justify-self-end truncate text-lightest-green">{score}</h1>
+              <h1 class="text-lightest-green justify-self-end truncate">{score}</h1>
             </div>
             <p class="text-light-green">{usedWords}</p>
           </div>
@@ -227,7 +227,7 @@ function AnagramsLeaderboard({
 
 function Stats({ children }: { children: JSX.Element | Array<JSX.Element> }) {
   return (
-    <div class="mt-auto flex justify-around text-center [&>h1>span]:text-lightest-green">
+    <div class="[&>h1>span]:text-lightest-green mt-auto flex justify-around text-center">
       {children}
     </div>
   );
@@ -238,12 +238,12 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
     <>
       <div class="flex items-baseline justify-between">
         <h1 class="text-xl">Ready Players</h1>
-        <h1 class="text-lg text-green">{8 - lobby().ready.length} slots left</h1>
+        <h1 class="text-green text-lg">{8 - lobby().ready.length} slots left</h1>
       </div>
       <Show
         when={room().clients.length !== 0}
         fallback={
-          <div class="flex h-full flex-col items-center justify-center gap-y-2.5 text-light-green">
+          <div class="text-light-green flex h-full flex-col items-center justify-center gap-y-2.5">
             <h1>maybe invite someone!</h1>
             <Copy color="muted" size="sm" content={window.location.href}>
               copy invite link
@@ -263,7 +263,7 @@ function ReadyPlayers({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<L
                   class="flex items-center justify-between gap-x-4 rounded-lg border p-2 transition-colors"
                 >
                   <Avatar username={client.username} size={55} />
-                  <h1 class="overflow-hidden text-ellipsis whitespace-nowrap text-lg">
+                  <h1 class="overflow-hidden text-lg text-ellipsis whitespace-nowrap">
                     {client.username}
                   </h1>
                 </div>
@@ -380,7 +380,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
   onCleanup(() => timerAnimation?.cancel());
 
   return (
-    <div class="absolute right-4 top-1/2 flex w-40 -translate-y-1/2 flex-col gap-y-3">
+    <div class="absolute top-1/2 right-4 flex w-40 -translate-y-1/2 flex-col gap-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-light-green">practice</h3>
         <div
@@ -390,7 +390,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
           {practiceSet()[0] ?? "..."}
         </div>
       </div>
-      <div ref={progressElement} class="h-[1.5px] w-full rounded-full bg-green"></div>
+      <div ref={progressElement} class="bg-green h-[1.5px] w-full rounded-full"></div>
       <Input
         ref={practiceInputElement}
         size="sm"
@@ -429,7 +429,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
 
 function Status({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
-    <div class="absolute bottom-0 right-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,5vw,80px)]">
+    <div class="absolute right-0 bottom-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,5vw,80px)]">
       <Switch>
         <Match when={room().settings.game === "WordBomb"}>
           <Bomb class="mr-3.5 h-min w-[3em]" />
@@ -438,7 +438,7 @@ function Status({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbySt
           <Anagrams class="mr-5 h-min w-[5em]" />
         </Match>
       </Switch>
-      <h1 class="text-outline -skew-x-6 text-[1em] leading-tight text-background">
+      <h1 class="text-outline text-background -skew-x-6 text-[1em] leading-tight">
         {lobby().startingCountdown
           ? `starting in ${lobby().startingCountdown}`
           : "waiting for players..."}

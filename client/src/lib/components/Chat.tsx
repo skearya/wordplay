@@ -77,13 +77,13 @@ export function Chat({
   return (
     <div
       ref={chatElement}
-      class="fixed bottom-0 left-0 z-10 flex w-96 flex-col gap-y-2 rounded-tr-lg border-r border-t bg-transparent p-2"
+      class="fixed bottom-0 left-0 z-10 flex w-96 flex-col gap-y-2 rounded-tr-lg border-t border-r bg-transparent p-2"
       onMouseEnter={reappear}
       onMouseLeave={() => startFadeOut()}
     >
       <ul
         ref={chatContentElement}
-        class="list-item h-48 overflow-y-auto overflow-x-hidden text-wrap"
+        class="list-item h-48 overflow-x-hidden overflow-y-auto text-wrap"
       >
         <li class="text-green">server: welcome to wordplay!</li>
         <li class="text-green">

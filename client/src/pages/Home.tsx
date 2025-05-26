@@ -23,7 +23,7 @@ export default function Home() {
   });
 
   return (
-    <main class="mx-auto mt-16 flex h-[calc(100vh-4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-xl border border-b-0 bg-light-background p-4">
+    <main class="bg-light-background mx-auto mt-16 flex h-[calc(100vh-4rem)] min-h-96 max-w-xl flex-col gap-y-4 rounded-t-xl border border-b-0 p-4">
       <div class="flex items-center gap-x-3.5">
         <h1 class="text-3xl">wordplay</h1>
         <a href="https://skeary.me" target="_blank" class="ml-auto text-[#c58ffe]">
@@ -33,11 +33,11 @@ export default function Home() {
           <GitHub />
         </a>
       </div>
-      <div class="h-px w-full bg-dark-green/30"></div>
+      <div class="bg-dark-green/30 h-px w-full"></div>
       <CreateOrJoinRoom />
       <Switch>
         <Match when={data.loading}>
-          <h1 class="text-center text-light-green">loading...</h1>
+          <h1 class="text-light-green text-center">loading...</h1>
         </Match>
         <Match when={data.error}>
           <h1 class="text-center text-red-400">something went wrong...</h1>
@@ -198,7 +198,7 @@ function CreateOrJoinRoom() {
         <div class="relative h-16 w-full rounded-lg border">
           <h1
             ref={roomErrorElement}
-            class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 opacity-0"
+            class="absolute top-1/2 right-4 -translate-y-1/2 text-red-400 opacity-0"
           >
             {roomErrorMessage()}
           </h1>
@@ -230,7 +230,7 @@ function Room(props: { name: string; players: Array<string>; game: Games }) {
     >
       <div>
         <h1 class="text-lg">{props.name}</h1>
-        <h1 class="text-sm text-light-green">
+        <h1 class="text-light-green text-sm">
           {props.game === "WordBomb" ? "Word Bomb" : "Anagrams"}
         </h1>
       </div>

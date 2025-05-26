@@ -114,7 +114,7 @@ export function Anagrams({
     <main class="flex h-screen items-center justify-center">
       <div class="relative flex items-center gap-x-8">
         <Leaderboard room={room} players={() => game().players} />
-        <div class="w-px self-stretch bg-dark-green/30"></div>
+        <div class="bg-dark-green/30 w-px self-stretch"></div>
         <div class="flex font-mono text-[36px]">
           {[...game().anagram].map((char, i) => (
             <h1
@@ -182,7 +182,7 @@ function Leaderboard({
               <h1 class="tabular-nums">{i() + 1}.</h1>
               <Avatar username={client().username} size={25} />
               <h1 class="min-w-4 flex-1 truncate">{client().username}</h1>
-              <h1 class="justify-self-end truncate text-light-green">{score}</h1>
+              <h1 class="text-light-green justify-self-end truncate">{score}</h1>
             </div>
           );
         }}

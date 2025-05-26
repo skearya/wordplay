@@ -17,14 +17,14 @@ export function GameNav({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Roo
   onCleanup(() => clearInterval(pingInterval));
 
   return (
-    <nav class="flex w-full items-center justify-between px-6 py-5 text-light-green">
-      <a href="/" class="text-xl text-foreground">
+    <nav class="text-light-green flex w-full items-center justify-between px-6 py-5">
+      <a href="/" class="text-foreground text-xl">
         wordplay
       </a>
       <div class="flex items-center gap-x-5">
         <div
           style="box-shadow: 0px 0px 15.5px 1px #26D16C"
-          class="h-[13px] w-[13px] rounded-full bg-green"
+          class="bg-green h-[13px] w-[13px] rounded-full"
         />
         <h1>{ping()}ms</h1>
         <div class="flex -space-x-2">
