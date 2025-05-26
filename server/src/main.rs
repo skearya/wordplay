@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Router::new()
             .nest("/info", info::make_router())
             .nest("/auth", auth::make_router(state.clone()))
-            .route("/room/*room", get(game::ws_handler))
+            .route("/room/{room}", get(game::ws_handler))
             .with_state(state),
     );
 

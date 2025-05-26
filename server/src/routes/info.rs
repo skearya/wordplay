@@ -9,7 +9,7 @@ use serde::Serialize;
 pub fn make_router() -> Router<AppState> {
     Router::new()
         .route("/", get(info))
-        .route("/room-available/:room_name", get(room_available))
+        .route("/room-available/{room_name}", get(room_available))
 }
 
 async fn info(State(state): State<AppState>) -> Json<ServerInfo> {
