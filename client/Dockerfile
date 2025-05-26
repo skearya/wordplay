@@ -1,4 +1,4 @@
-FROM node:21.5.0 AS frontend-builder
+FROM node:22.16.0 AS frontend-builder
 
 WORKDIR /frontend
 ENV NODE_ENV=production
