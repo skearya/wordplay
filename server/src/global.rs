@@ -1,4 +1,7 @@
-use rand::{seq::SliceRandom, thread_rng};
+use rand::{
+    rng,
+    seq::{IndexedRandom, SliceRandom},
+};
 use std::sync::LazyLock;
 
 pub static GLOBAL: LazyLock<GlobalData> = LazyLock::new(GlobalData::new);
@@ -22,11 +25,11 @@ impl GlobalData {
 
     pub fn random_anagram(&self) -> (&str, String) {
         loop {
-            let anagram = *self.words.choose(&mut thread_rng()).unwrap();
+            let anagram = *self.words.choose(&mut rng()).unwrap();
 
             if anagram.len() == 6 {
                 let mut chars: Vec<char> = anagram.chars().collect();
-                chars.shuffle(&mut thread_rng());
+                chars.shuffle(&mut rng());
 
                 break (anagram, chars.into_iter().collect());
             }
@@ -74,8 +77,6 @@ impl Prompts {
             .min_by_key(|(index, _)| index.abs_diff(min_wpp))
             .unwrap();
 
-        self.prompts[*closest_index..]
-            .choose(&mut thread_rng())
-            .unwrap()
+        self.prompts[*closest_index..].choose(&mut rng()).unwrap()
     }
 }

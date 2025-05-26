@@ -14,10 +14,10 @@ use crate::{
     AppState,
 };
 use axum::extract::ws::{close_code, CloseFrame, Message};
-use rand::{seq::IteratorRandom, thread_rng};
+use rand::{rng, seq::IteratorRandom};
 use rustrict::CensorStr;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
@@ -59,7 +59,7 @@ impl Client {
         self.tx.send(message.into()).ok();
     }
 
-    pub fn close(&self, close_frame: Option<CloseFrame<'static>>) {
+    pub fn close(&self, close_frame: Option<CloseFrame>) {
         self.tx.send(Message::Close(close_frame)).ok();
     }
 }
@@ -132,7 +132,7 @@ impl AppState {
             if client.socket.is_some() {
                 client.close(Some(CloseFrame {
                     code: close_code::ABNORMAL,
-                    reason: Cow::from("connected on another client?"),
+                    reason: "connected on another client?".into(),
                 }));
             }
 
@@ -218,9 +218,9 @@ impl AppState {
             .get_mut(&uuid)
             .ok_or(RoomError::CouldntFindClientToRemove)?;
 
-        if !client
+        if client
             .socket
-            .is_some_and(|client_socket_id| client_socket_id == socket_id)
+            .is_none_or(|client_socket_id| client_socket_id != socket_id)
         {
             return Err(RoomError::SocketUuidMismatchWhileRemoving)?;
         }
@@ -351,7 +351,7 @@ pub fn check_for_new_room_owner(clients: &HashMap<Uuid, Client>, owner: &mut Uui
     if clients.get(owner).is_some() {
         None
     } else {
-        *owner = *clients.keys().choose(&mut thread_rng()).unwrap();
+        *owner = *clients.keys().choose(&mut rng()).unwrap();
         Some(*owner)
     }
 }

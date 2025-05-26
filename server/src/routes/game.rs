@@ -14,7 +14,6 @@ use axum_extra::extract::CookieJar;
 use futures::{stream::StreamExt, SinkExt};
 use rustrict::CensorStr;
 use serde::Deserialize;
-use std::borrow::Cow;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -72,7 +71,7 @@ async fn send_error(mut socket: WebSocket, reason: &'static str) {
     socket
         .send(Message::Close(Some(CloseFrame {
             code: close_code::ERROR,
-            reason: Cow::Borrowed(reason),
+            reason: reason.into(),
         })))
         .await
         .ok();

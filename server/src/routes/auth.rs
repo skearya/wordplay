@@ -87,7 +87,7 @@ async fn discord_callback(
 ) -> Result<Response, AuthError> {
     let stored_state = jar.get("state").map(Cookie::value);
 
-    if !stored_state.is_some_and(|stored| stored == params.state) {
+    if stored_state.is_none_or(|stored| stored != params.state) {
         return Err(AuthError::BadRequest);
     }
 
@@ -258,7 +258,7 @@ struct AuthResponse {
 }
 
 #[derive(Error, Debug)]
-#[error("{self:#?}")]
+#[error("{:#?}", self)]
 pub enum AuthError {
     BadRequest,
     UsernameTooShort,
@@ -289,7 +289,6 @@ impl IntoResponse for AuthError {
                 StatusCode::CONFLICT,
                 "that username has already been taken, try another one",
             ),
-
             AuthError::DiscordApiError(_) => (
                 StatusCode::UNAUTHORIZED,
                 "failed to verify account with discord",

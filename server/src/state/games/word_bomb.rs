@@ -9,7 +9,7 @@ use crate::{
     utils::{filter_string, ClientUtils, Sorted},
     AppState,
 };
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -127,7 +127,7 @@ impl WordBomb {
     }
 
     pub fn player_timed_out(&mut self) -> Result<()> {
-        self.timer.length = thread_rng().gen_range(10.0..=30.0);
+        self.timer.length = rng().random_range(10.0..=30.0);
 
         self.missed_prompts.push(self.prompt);
 
@@ -271,7 +271,7 @@ impl AppState {
                 clients.broadcast(ServerMessage::WordBombInvalidGuess { uuid, reason });
             }
             Err(error) => return Err(error),
-        };
+        }
 
         Ok(())
     }

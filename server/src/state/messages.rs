@@ -172,7 +172,6 @@ pub enum CountdownState {
 
 impl From<ServerMessage> for Message {
     fn from(msg: ServerMessage) -> Self {
-        let serialized = serde_json::to_string(&msg).unwrap();
-        Self::Text(serialized)
+        serde_json::to_string(&msg).unwrap().into()
     }
 }

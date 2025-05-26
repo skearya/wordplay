@@ -14,7 +14,7 @@ use crate::{
     AppState,
 };
 use rand::prelude::SliceRandom;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -49,14 +49,14 @@ impl Lobby {
         room: String,
         settings: WordBombSettings,
     ) -> State {
-        let timer_len = thread_rng().gen_range(10.0..=30.0);
+        let timer_len = rng().random_range(10.0..=30.0);
         let prompt = GLOBAL.prompts.random_prompt(settings.min_wpm);
         let mut players: Vec<word_bomb::Player> = self
             .ready
             .iter()
             .map(|uuid| word_bomb::Player::new(*uuid))
             .collect();
-        players.shuffle(&mut thread_rng());
+        players.shuffle(&mut rng());
 
         let task = Arc::new(
             tokio::spawn(async move {

@@ -6,25 +6,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.7.5", features = ["macros", "ws"] }
-axum-extra = { version = "0.9.3", features = ["typed-header", "cookie"] }
-futures = "0.3.30"
+axum = { version = "0.8.4", features = ["macros", "ws"] }
+axum-extra = { version = "0.10.1", features = ["typed-header", "cookie"] }
+futures = "0.3.31"
 headers = "0.4.0"
-tokio = { version = "1.39.3", features = ["full"] }
-uuid = { version = "1.10.0", features = ["v4", "fast-rng", "serde"] }
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.127"
+tokio = { version = "1.45.1", features = ["full"] }
+uuid = { version = "1.17.0", features = ["v4", "fast-rng", "serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 dotenvy = "0.15.7"
-rand = "0.8.5"
-tower-http = { version = "0.5.2", features = ["fs", "cors"] }
-sqlx = { version = "0.8.1", features = [
+rand = "0.9.1"
+tower-http = { version = "0.6.4", features = ["fs", "cors"] }
+sqlx = { version = "0.8.6", features = [
     "runtime-tokio",
     "tls-native-tls",
     "sqlite",
 ] }
-reqwest = { version = "0.12.7", features = ["json"] }
+reqwest = { version = "0.12.15", features = ["json"] }
 cookie = "0.18.1"
-thiserror = "1.0.63"
-dashmap = "6.0.1"
-governor = "0.6.3"
-rustrict = "0.7.26"
+thiserror = "2.0.12"
+dashmap = "6.1.0"
+governor = "0.10.0"
+rustrict = "0.7.35"

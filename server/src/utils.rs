@@ -1,8 +1,8 @@
 use crate::state::{messages::ServerMessage, room::Client};
 use axum::extract::ws::Message;
 use rand::{
-    distributions::{Alphanumeric, DistString},
-    thread_rng,
+    distr::{Alphanumeric, SampleString},
+    rng,
 };
 use std::{
     cmp::Ordering,
@@ -82,5 +82,5 @@ pub fn filter_string(input: &mut String) {
 }
 
 pub fn random_string(len: usize) -> String {
-    Alphanumeric.sample_string(&mut thread_rng(), len)
+    Alphanumeric.sample_string(&mut rng(), len)
 }
