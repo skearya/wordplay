@@ -74,7 +74,7 @@ export function Lobby({
               />
             </Match>
           </Switch>
-          <div class="w-[1px] self-stretch bg-dark-green/30"></div>
+          <div class="w-px self-stretch bg-dark-green/30"></div>
         </Show>
         <div class="flex w-[475px] flex-col gap-y-2">
           <ReadyPlayers room={room} lobby={lobby} />
@@ -429,7 +429,7 @@ function Practice({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Room> }) 
 
 function Status({ room, lobby }: { room: Accessor<Room>; lobby: Accessor<LobbyState> }) {
   return (
-    <div class="absolute bottom-0 right-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,_5vw,_80px)]">
+    <div class="absolute bottom-0 right-0 -z-10 flex flex-col items-end overflow-hidden text-[clamp(50px,5vw,80px)]">
       <Switch>
         <Match when={room().settings.game === "WordBomb"}>
           <Bomb class="mr-3.5 h-min w-[3em]" />

@@ -12,11 +12,11 @@
     "@fontsource-variable/inter": "^5.0.20",
     "@fontsource-variable/jetbrains-mono": "^5.0.22",
     "@solidjs/router": "^0.14.3",
-    "autoprefixer": "^10.4.20",
+    "@tailwindcss/postcss": "^4.1.7",
     "postcss": "^8.4.41",
     "solid-js": "1.8.22",
     "tailwind-variants": "^0.2.1",
-    "tailwindcss": "^3.4.10",
+    "tailwindcss": "^4.1.7",
     "tinycolor2": "^1.6.0",
     "vite": "^5.4.2",
     "vite-plugin-solid": "^2.10.2"
@@ -25,7 +25,7 @@
     "@types/tinycolor2": "^1.4.6",
     "prettier": "^3.3.3",
     "prettier-plugin-organize-imports": "^4.0.0",
-    "prettier-plugin-tailwindcss": "^0.6.6",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "solid-devtools": "^0.30.1"
   }
 }

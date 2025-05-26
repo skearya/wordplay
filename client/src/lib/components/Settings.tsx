@@ -61,7 +61,7 @@ export function Settings({ sendMsg, room }: { sendMsg: SendFn; room: Accessor<Ro
             />
           </div>
         </div>
-        <div class="h-[1px] w-full bg-dark-green/30"></div>
+        <div class="h-px w-full bg-dark-green/30"></div>
         <div class="space-y-1.5">
           <h1 class="pb-0.5 text-lg text-light-green">Word Bomb</h1>
           <div class="flex items-center justify-between">

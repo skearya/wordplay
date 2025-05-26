@@ -10,7 +10,7 @@ const select = tv({
       muted: "bg-light-background text-light-green",
     },
     size: {
-      xs: "rounded px-1.5 py-1 text-sm",
+      xs: "rounded-sm px-1.5 py-1 text-sm",
       md: "px-2.5 py-2",
     },
   },

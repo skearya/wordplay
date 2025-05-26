@@ -1,6 +1,42 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-background: #050705;
+  --color-light-background: #0c0d0a;
+  --color-foreground: #ffffff;
+  --color-lightest-green: #62e297;
+  --color-light-green: #8ba698;
+  --color-green: #26d16c;
+  --color-dark-green: #475d50;
+  --color-blue: #345c8a;
+
+  --font-sans: Inter Variable, sans-serif;
+  --font-mono: JetBrains Mono Variable, monospace;
+}
+
+@utility text-outline {
+  text-shadow:
+    -1px -1px 0 #475d50,
+    0 -1px 0 #475d50,
+    1px -1px 0 #475d50,
+    1px 0 0 #475d50,
+    1px 1px 0 #475d50,
+    0 1px 0 #475d50,
+    -1px 1px 0 #475d50,
+    -1px 0 0 #475d50;
+}
+
+@utility quick-fade-out {
+  animation: 300ms ease fade-out;
+}
+
+@utility quick-fade-in {
+  animation: 300ms ease reverse fade-out;
+}
+
+@utility fade-after-10 {
+  animation: 10s ease forwards late-fade-out;
+}
 
 @layer base {
   html {
@@ -8,7 +44,7 @@
   }
 
   * {
-    @apply border-white/10 focus:outline-none focus-visible:border-green;
+    @apply focus-visible:border-green border-white/10 focus:outline-hidden;
   }
 
   .small-key {
@@ -17,18 +53,6 @@
 }
 
 @layer utilities {
-  .text-outline {
-    text-shadow:
-      -1px -1px 0 #475d50,
-      0 -1px 0 #475d50,
-      1px -1px 0 #475d50,
-      1px 0 0 #475d50,
-      1px 1px 0 #475d50,
-      0 1px 0 #475d50,
-      -1px 1px 0 #475d50,
-      -1px 0 0 #475d50;
-  }
-
   @keyframes fade-out {
     0% {
       opacity: 1;
@@ -38,14 +62,6 @@
     }
   }
 
-  .quick-fade-out {
-    animation: 300ms ease fade-out;
-  }
-
-  .quick-fade-in {
-    animation: 300ms ease reverse fade-out;
-  }
-
   @keyframes late-fade-out {
     90% {
       opacity: 1;
@@ -53,9 +69,5 @@
     100% {
       opacity: 0;
     }
-  }
-
-  .fade-after-10 {
-    animation: 10s ease forwards late-fade-out;
   }
 }

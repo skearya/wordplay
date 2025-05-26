@@ -114,7 +114,7 @@ export function Anagrams({
     <main class="flex h-screen items-center justify-center">
       <div class="relative flex items-center gap-x-8">
         <Leaderboard room={room} players={() => game().players} />
-        <div class="w-[1px] self-stretch bg-dark-green/30"></div>
+        <div class="w-px self-stretch bg-dark-green/30"></div>
         <div class="flex font-mono text-[36px]">
           {[...game().anagram].map((char, i) => (
             <h1
