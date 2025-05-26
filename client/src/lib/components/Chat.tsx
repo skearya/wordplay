@@ -85,9 +85,9 @@ export function Chat({
         ref={chatContentElement}
         class="list-item h-48 overflow-y-auto overflow-x-hidden text-wrap"
       >
-        <li class="text-green">server: welcome to wordplay beta! expect frequent downtime</li>
+        <li class="text-green">server: welcome to wordplay!</li>
         <li class="text-green">
-          server: code/issues/feedback on{" "}
+          server: source/issues/feedback on{" "}
           <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200">
             github
           </a>
