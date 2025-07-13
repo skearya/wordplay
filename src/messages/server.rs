@@ -6,29 +6,32 @@ use uuid::Uuid;
 #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
 #[ts(export)]
 pub enum ServerMessage {
+    /// First message sent after establishing connection, sent only once.
+    Info {
+        /// Joined client's designated UUID.
+        uuid: Uuid,
+        /// State of the room (game, settings).
+        state: State,
+    },
     /// Can be sent from any state.
     General(ServerGeneral),
-    /// Sent in lobby (exception `GameEnded`).
+    /// All lobby messages.
     Lobby(ServerLobby),
-    /// Sent in game.
+    /// All general in-game messages.
     Game(ServerGame),
+    /// All Word Bomb messages.
+    WordBomb(ServerWordBomb),
 }
 
 #[derive(Serialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[ts(export)]
 pub enum ServerGeneral {
-    /// First message sent after establishing connection.
-    Info {
-        /// Joined client's designated UUID.
-        uuid: Uuid,
-        state: State,
-    },
-    /// Sent when a client joins/rejoins.
+    /// Broadcasted when a client joins/rejoins.
     Join {
         uuid: Uuid,
     },
-    /// Sent when a client leaves.
+    /// Broadcasted when a client leaves.
     Leave {
         uuid: Uuid,
     },
@@ -37,7 +40,9 @@ pub enum ServerGeneral {
         author: Uuid,
         content: String,
     },
-    Error(String),
+    Error {
+        message: String,
+    },
 }
 
 #[derive(Serialize, TS)]
@@ -84,17 +89,22 @@ pub enum TimerAction {
 }
 
 #[derive(Serialize, TS)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum ServerGame {
-    /// Sent when the current game has ended.
+    /// Broadcasted when a player requests to end the game early.
+    GameEndRequest { uuid: Uuid },
+    /// Broadcasted when the current game has ended.
     GameEnded {
         info: GameInfo,
         /// Is `Some` with a random client's uuid if the previous room owner
         /// left during game and hasn't come back.
         new_owner: Option<Uuid>,
     },
-    WordBomb(ServerWordBomb),
 }
 
 #[derive(Serialize, TS)]
@@ -103,6 +113,26 @@ pub enum ServerGame {
 pub enum ServerWordBomb {
     /// Broadcasted when the currently active player is typing.
     Input { uuid: Uuid, input: String },
+    Valid {
+        /// Current player's guess that was valid.
+        guess: String,
+        /// True if the current player has used up all letters.
+        life: bool,
+        /// New prompt.
+        prompt: String,
+        /// Player UUID of new turn.
+        turn: Uuid,
+    },
+    Invalid {
+        /// Reason for invalid guess (ex: guess doesn't include prompt)
+        reason: &'static str,
+    },
+    Timeout {
+        /// New prompt.
+        prompt: String,
+        /// Player UUID of new turn.
+        turn: Uuid,
+    },
 }
 
 #[derive(Serialize, TS)]
