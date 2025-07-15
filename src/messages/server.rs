@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 use ts_rs::TS;
 use uuid::Uuid;
@@ -10,7 +12,10 @@ pub enum ServerMessage {
     Info {
         /// Joined client's designated UUID.
         uuid: Uuid,
-        /// State of the room (game, settings).
+        /// Room owner's UUID.
+        owner: Uuid,
+        clients: HashMap<Uuid, Client>,
+        /// State of the room (lobby | game).
         state: State,
     },
     /// Can be sent from any state.
@@ -18,9 +23,20 @@ pub enum ServerMessage {
     /// All lobby messages.
     Lobby(ServerLobby),
     /// All general in-game messages.
-    Game(ServerGame),
+    InGame(ServerInGame),
     /// All Word Bomb messages.
     WordBomb(ServerWordBomb),
+}
+
+#[derive(Serialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub struct Client {
+    username: String,
+    /// URL to account avatar.
+    avatar_url: Option<String>,
+    /// `true` if player disconnected in game only.
+    disconnected: bool,
 }
 
 #[derive(Serialize, TS)]
@@ -75,7 +91,7 @@ pub enum ServerLobby {
     GameStarted {
         /// Contains the player's rejoin token. Is `None` if client is spectating.
         rejoin_token: Option<Uuid>,
-        state: State,
+        state: GameState,
     },
 }
 
@@ -95,11 +111,11 @@ pub enum TimerAction {
     rename_all_fields = "camelCase"
 )]
 #[ts(export)]
-pub enum ServerGame {
+pub enum ServerInGame {
     /// Broadcasted when a player requests to end the game early.
-    GameEndRequest { uuid: Uuid },
+    EndRequest { uuid: Uuid },
     /// Broadcasted when the current game has ended.
-    GameEnded {
+    Ended {
         info: GameInfo,
         /// Is `Some` with a random client's uuid if the previous room owner
         /// left during game and hasn't come back.
@@ -112,7 +128,7 @@ pub enum ServerGame {
 #[ts(export)]
 pub enum ServerWordBomb {
     /// Broadcasted when the currently active player is typing.
-    Input { uuid: Uuid, input: String },
+    Input { input: String },
     Valid {
         /// Current player's guess that was valid.
         guess: String,
@@ -124,9 +140,10 @@ pub enum ServerWordBomb {
         turn: Uuid,
     },
     Invalid {
-        /// Reason for invalid guess (ex: guess doesn't include prompt)
+        /// Reason for invalid guess (ex: "guess doesn't include prompt")
         reason: &'static str,
     },
+    /// Broadcasted previously active player failed to come up with a valid guess.
     Timeout {
         /// New prompt.
         prompt: String,
@@ -136,8 +153,38 @@ pub enum ServerWordBomb {
 }
 
 #[derive(Serialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
-pub struct State;
+/// Room state sent to clients when they join.
+pub enum State {
+    Lobby {
+        ready: Vec<Uuid>,
+        /// Unix timestamp of when the countdown timer started.
+        timer_start: Option<u64>,
+        /// Previous game info.
+        prev_game: Option<GameInfo>,
+    },
+    Game {
+        state: GameState,
+        /// UUIDs of players requesting to end the current game.
+        requesting_end: Option<Vec<Uuid>>,
+    },
+}
+
+#[derive(Serialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum GameState {
+    WordBomb(()),
+}
 
 #[derive(Serialize, TS)]
 #[ts(export)]

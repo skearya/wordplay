@@ -12,6 +12,16 @@ use crate::{socket::handler, state::AppState};
 
 #[tokio::main]
 async fn main() {
+    use messages::server::*;
+
+    let x = ServerMessage::Lobby(ServerLobby::GameStarted {
+        rejoin_token: None,
+        state: GameState::WordBomb(()),
+    });
+
+    println!("{}", serde_json::to_string(&x).unwrap());
+    return;
+
     tracing_subscriber::registry()
         .with(fmt::layer().with_file(true).with_line_number(true))
         .with(EnvFilter::from_default_env())
