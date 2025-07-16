@@ -4,6 +4,11 @@ use serde::Serialize;
 use ts_rs::TS;
 use uuid::Uuid;
 
+use crate::{
+    games::word_bomb::messages::{ServerWordBomb, WordBombPostGameInfo},
+    messages::shared::RoomSettings,
+};
+
 #[derive(Serialize, TS)]
 #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
 #[ts(export)]
@@ -14,9 +19,12 @@ pub enum ServerMessage {
         uuid: Uuid,
         /// Room owner's UUID.
         owner: Uuid,
+        /// Room and game settings.
+        settings: RoomSettings,
+        /// Room clients.
         clients: HashMap<Uuid, Client>,
-        /// State of the room (lobby | game).
-        state: State,
+        /// State of the room (lobby | type of game).
+        state: RoomState,
     },
     /// Can be sent from any state.
     General(ServerGeneral),
@@ -37,6 +45,37 @@ pub struct Client {
     avatar_url: Option<String>,
     /// `true` if player disconnected in game only.
     disconnected: bool,
+}
+
+#[derive(Serialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+/// Room state sent to clients when they join.
+pub enum RoomState {
+    Lobby {
+        ready: Vec<Uuid>,
+        /// Unix timestamp of when the countdown timer started.
+        timer_start: Option<u64>,
+        /// Previous game info.
+        prev_game: Option<PostGameInfo>,
+    },
+    Game {
+        // Specific game type state (ex: word bomb).
+        state: GameState,
+        /// UUIDs of players requesting to end the current game.
+        requesting_end: Option<Vec<Uuid>>,
+    },
+}
+
+#[derive(Serialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum GameState {
+    WordBomb(ServerWordBomb),
 }
 
 #[derive(Serialize, TS)]
@@ -70,7 +109,7 @@ pub enum ServerGeneral {
 #[ts(export)]
 pub enum ServerLobby {
     /// Sent when the room owner has updated room/game settings.
-    Settings(Settings),
+    Settings(RoomSettings),
     Ready {
         uuid: Uuid,
         timer: TimerAction,
@@ -116,7 +155,7 @@ pub enum ServerInGame {
     EndRequest { uuid: Uuid },
     /// Broadcasted when the current game has ended.
     Ended {
-        info: GameInfo,
+        post_game_info: PostGameInfo,
         /// Is `Some` with a random client's uuid if the previous room owner
         /// left during game and hasn't come back.
         new_owner: Option<Uuid>,
@@ -126,70 +165,6 @@ pub enum ServerInGame {
 #[derive(Serialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[ts(export)]
-pub enum ServerWordBomb {
-    /// Broadcasted when the currently active player is typing.
-    Input { input: String },
-    Valid {
-        /// Current player's guess that was valid.
-        guess: String,
-        /// True if the current player has used up all letters.
-        life: bool,
-        /// New prompt.
-        prompt: String,
-        /// Player UUID of new turn.
-        turn: Uuid,
-    },
-    Invalid {
-        /// Reason for invalid guess (ex: "guess doesn't include prompt")
-        reason: &'static str,
-    },
-    /// Broadcasted previously active player failed to come up with a valid guess.
-    Timeout {
-        /// New prompt.
-        prompt: String,
-        /// Player UUID of new turn.
-        turn: Uuid,
-    },
+pub enum PostGameInfo {
+    WordBomb(WordBombPostGameInfo),
 }
-
-#[derive(Serialize, TS)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-#[ts(export)]
-/// Room state sent to clients when they join.
-pub enum State {
-    Lobby {
-        ready: Vec<Uuid>,
-        /// Unix timestamp of when the countdown timer started.
-        timer_start: Option<u64>,
-        /// Previous game info.
-        prev_game: Option<GameInfo>,
-    },
-    Game {
-        state: GameState,
-        /// UUIDs of players requesting to end the current game.
-        requesting_end: Option<Vec<Uuid>>,
-    },
-}
-
-#[derive(Serialize, TS)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-#[ts(export)]
-pub enum GameState {
-    WordBomb(()),
-}
-
-#[derive(Serialize, TS)]
-#[ts(export)]
-pub struct Settings;
-
-#[derive(Serialize, TS)]
-#[ts(export)]
-pub struct GameInfo;

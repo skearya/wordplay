@@ -13,6 +13,7 @@ pub struct AppState {
 }
 
 struct AppStateInner {
+    /// Room name -> Room task message sender
     rooms: HashMap<String, mpsc::UnboundedSender<RoomMessage>>,
 }
 

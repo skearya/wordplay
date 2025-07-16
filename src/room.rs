@@ -4,7 +4,10 @@ use axum::extract::ws::{self, Utf8Bytes};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::task;
+use crate::{
+    messages::server::{ServerGeneral, ServerMessage},
+    task,
+};
 
 #[derive(Debug)]
 pub enum RoomMessage {
@@ -19,21 +22,22 @@ pub enum RoomMessage {
         uuid: Uuid,
         message: ws::Message,
     },
-    CloseTimeout,
-}
-
-enum State {
-    Lobby,
-    Game,
+    CloseCheck,
 }
 
 pub struct Room {
+    /// Sender to our own room task.
     sender: mpsc::UnboundedSender<RoomMessage>,
     reciever: mpsc::UnboundedReceiver<RoomMessage>,
+    clients: Clients,
+}
+
+struct Clients {
+    room: mpsc::UnboundedSender<RoomMessage>,
     clients: HashMap<Uuid, Client>,
 }
 
-pub struct Client {
+struct Client {
     sender: mpsc::UnboundedSender<ws::Message>,
 }
 
@@ -43,9 +47,9 @@ impl Room {
         reciever: mpsc::UnboundedReceiver<RoomMessage>,
     ) -> Self {
         Self {
-            sender,
+            sender: sender.clone(),
             reciever,
-            clients: HashMap::new(),
+            clients: Clients::new(sender),
         }
     }
 
@@ -63,51 +67,95 @@ impl Room {
 
             match message {
                 RoomMessage::Joined { uuid, sender } => {
-                    self.add(uuid, Client { sender });
+                    self.clients.add(uuid, Client { sender });
                 }
                 RoomMessage::Left { uuid } => {
-                    self.remove(&uuid);
+                    self.clients.remove(uuid);
                 }
-                RoomMessage::Client { uuid, message } => {
-                    if let ws::Message::Text(bytes) = message {
-                        let text = format!("{uuid}: {}", bytes.as_str());
-                        let message = ws::Message::Text(Utf8Bytes::from(text));
-
-                        for client in self.clients.values() {
-                            client.sender.send(message.clone()).ok();
-                        }
-                    } else if let ws::Message::Close(_) = message {
-                        self.remove(&uuid);
+                RoomMessage::Client { uuid, message } => match message {
+                    ws::Message::Text(bytes) => {
+                        self.clients
+                            .broadcast(ServerMessage::General(ServerGeneral::Chat {
+                                author: uuid,
+                                content: bytes.as_str().to_owned(),
+                            }));
                     }
-                }
-                RoomMessage::CloseTimeout => {
+                    ws::Message::Close(_) => {
+                        self.clients.remove(uuid);
+                    }
+                    _ => (),
+                },
+                RoomMessage::CloseCheck => {
                     if self.clients.is_empty() {
-                        break;
+                        self.reciever.close();
                     }
                 }
             }
         }
 
-        tracing::info!("room done");
-
         Ok(())
+    }
+}
+
+impl Clients {
+    fn new(room: mpsc::UnboundedSender<RoomMessage>) -> Self {
+        Self {
+            room,
+            clients: HashMap::new(),
+        }
     }
 
     fn add(&mut self, uuid: Uuid, client: Client) {
         self.clients.insert(uuid, client);
+
+        self.broadcast(ServerMessage::General(ServerGeneral::Join { uuid }));
     }
 
-    fn remove(&mut self, uuid: &Uuid) {
-        if self.clients.remove(uuid).is_some() && self.clients.is_empty() {
-            let sender = self.sender.clone();
+    fn remove(&mut self, uuid: Uuid) {
+        if self.clients.remove(&uuid).is_some() {
+            self.broadcast(ServerMessage::General(ServerGeneral::Leave { uuid }));
 
-            task::spawn(async move {
-                tokio::time::sleep(Duration::from_secs(5)).await;
+            if self.clients.is_empty() {
+                let room = self.room.clone();
 
-                sender.send(RoomMessage::CloseTimeout)?;
+                task::spawn(async move {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
 
-                Ok(())
-            });
+                    room.send(RoomMessage::CloseCheck)?;
+
+                    Ok(())
+                });
+            }
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.clients.is_empty()
+    }
+
+    fn send(&self, uuid: &Uuid, message: ServerMessage) {
+        let text = serde_json::to_string(&message)
+            .expect("ServerMessage serialization shouldn't ever fail?");
+
+        let message = ws::Message::Text(Utf8Bytes::from(text));
+
+        self.clients[uuid]
+            .sender
+            .send(message)
+            .expect("client sender shouldn't be closed");
+    }
+
+    fn broadcast(&self, message: ServerMessage) {
+        let text = serde_json::to_string(&message)
+            .expect("ServerMessage serialization shouldn't ever fail?");
+
+        let message = ws::Message::Text(Utf8Bytes::from(text));
+
+        for client in self.clients.values() {
+            client
+                .sender
+                .send(message.clone())
+                .expect("client sender shouldn't be closed");
         }
     }
 }

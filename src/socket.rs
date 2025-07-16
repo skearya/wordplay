@@ -35,6 +35,7 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
         Ok(())
     });
 
+    // Random UUID for this client.
     let uuid = Uuid::new_v4();
     let room = state.get_or_insert_room(room);
 
