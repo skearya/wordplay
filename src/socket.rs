@@ -1,7 +1,7 @@
 use axum::{
     extract::{
         Path, State, WebSocketUpgrade,
-        ws::{self, WebSocket},
+        ws::{Message, WebSocket},
     },
     response::Response,
 };
@@ -25,8 +25,9 @@ pub async fn handler(
 
 fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()> {
     let (mut sink, mut stream) = socket.split();
-    let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
+    let (sender, mut reciever) = mpsc::unbounded_channel::<Message>();
 
+    // Room message -> WebSocket Sink
     task::spawn(async move {
         while let Some(message) = reciever.recv().await {
             sink.send(message).await?;
@@ -41,16 +42,23 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
 
     room.send(RoomMessage::Joined { uuid, sender })?;
 
+    // WebSocket Stream -> Room
     task::spawn(async move {
         while let Some(message) = stream.next().await {
             match message {
-                Ok(message) => {
-                    room.send(RoomMessage::Client { uuid, message })?;
+                Ok(Message::Text(bytes)) => {
+                    if let Ok(message) = serde_json::from_str(bytes.as_str()) {
+                        room.send(RoomMessage::Client { uuid, message })?;
+                    } else {
+                        tracing::error!("failed deserializing: {}", bytes.as_str());
+                    }
                 }
+                Ok(Message::Close(_)) => break,
                 Err(err) => {
-                    tracing::error!(?err);
+                    tracing::error!(?err, "socket error");
                     break;
                 }
+                _ => (),
             }
         }
 

@@ -51,29 +51,24 @@ impl AppStateInner {
     }
 
     fn get_or_insert_room(&mut self, name: String) -> mpsc::UnboundedSender<RoomMessage> {
-        match self.get_room(&name) {
-            Some(room) => room,
-            None => {
-                let room = Room::spawn();
+        if let Some(room) = self.get_room(&name) {
+            room
+        } else {
+            let room = Room::spawn();
+            self.rooms.insert(name, room.clone());
 
-                self.rooms.insert(name, room.clone());
-
-                room
-            }
+            room
         }
     }
 
     fn get_room(&mut self, name: &str) -> Option<mpsc::UnboundedSender<RoomMessage>> {
-        match self.rooms.get(name) {
-            Some(room) => {
-                if !room.is_closed() {
-                    Some(room.clone())
-                } else {
-                    self.rooms.remove(name);
-                    None
-                }
-            }
-            None => None,
+        let room = self.rooms.get(name)?;
+
+        if room.is_closed() {
+            self.rooms.remove(name);
+            None
+        } else {
+            Some(room.clone())
         }
     }
 }

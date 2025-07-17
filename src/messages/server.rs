@@ -24,6 +24,7 @@ pub enum ServerMessage {
         /// Room clients.
         clients: HashMap<Uuid, Client>,
         /// State of the room (lobby | type of game).
+        /// TODO: Box to reduce variant size?.
         state: RoomState,
     },
     /// Can be sent from any state.
