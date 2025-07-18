@@ -3,7 +3,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::general::messages::{RoomSettings, ServerGameState};
+    use crate::{general::messages::ServerGameState, messages::RoomSettings};
 
     #[derive(Deserialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]

@@ -5,7 +5,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::games::word_bomb::messages::WordBombSettings;
+    use crate::messages::RoomSettings;
 
     #[derive(Deserialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]

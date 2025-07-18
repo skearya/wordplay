@@ -52,6 +52,6 @@ pub enum RoomMessage {
 #[derive(Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct Settings {
+pub struct RoomSettings {
     word_bomb: WordBombSettings,
 }
