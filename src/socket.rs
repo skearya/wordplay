@@ -1,7 +1,7 @@
 use axum::{
     extract::{
         Path, State, WebSocketUpgrade,
-        ws::{Message, WebSocket},
+        ws::{self, WebSocket},
     },
     response::Response,
 };
@@ -9,7 +9,7 @@ use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{room::RoomMessage, state::AppState, task};
+use crate::{messages::RoomMessage, state::AppState, task};
 
 pub async fn handler(
     State(state): State<AppState>,
@@ -25,7 +25,7 @@ pub async fn handler(
 
 fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()> {
     let (mut sink, mut stream) = socket.split();
-    let (sender, mut reciever) = mpsc::unbounded_channel::<Message>();
+    let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
 
     // Room message -> WebSocket Sink
     task::spawn(async move {
@@ -46,14 +46,14 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
     task::spawn(async move {
         while let Some(message) = stream.next().await {
             match message {
-                Ok(Message::Text(bytes)) => {
+                Ok(ws::Message::Text(bytes)) => {
                     if let Ok(message) = serde_json::from_str(bytes.as_str()) {
                         room.send(RoomMessage::Client { uuid, message })?;
                     } else {
                         tracing::error!("failed deserializing: {}", bytes.as_str());
                     }
                 }
-                Ok(Message::Close(_)) => break,
+                Ok(ws::Message::Close(_)) => break,
                 Err(err) => {
                     tracing::error!(?err, "socket error");
                     break;

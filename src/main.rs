@@ -1,9 +1,12 @@
+mod games;
 mod messages;
 mod room;
 mod socket;
 mod state;
 mod task;
-mod games;
+mod lobby;
+mod general;
+mod in_game;
 
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;

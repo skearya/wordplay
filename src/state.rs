@@ -5,7 +5,7 @@ use std::{
 
 use tokio::sync::mpsc;
 
-use crate::room::{Room, RoomMessage};
+use crate::{messages::RoomMessage, room::Room};
 
 #[derive(Clone)]
 pub struct AppState {
