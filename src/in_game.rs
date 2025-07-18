@@ -3,11 +3,14 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::games::word_bomb::messages::WordBombPostGameInfo;
+    use crate::games::word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombPostGameInfo};
 
-    #[derive(Deserialize)]
-    #[serde(tag = "kind", rename_all = "camelCase")]
+    #[derive(Deserialize, TS)]
+    #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
+    #[ts(export)]
     pub enum ClientInGame {
+        WordBomb(ClientWordBomb),
+        /// Request to end the game early. Starts a vote.
         EndRequest,
         /// Sent only by the room owner. Immediately ends the game.
         ForceEnd,
@@ -21,8 +24,11 @@ pub mod messages {
     )]
     #[ts(export)]
     pub enum ServerInGame {
+        WordBomb(ServerWordBomb),
         /// Broadcasted when a player requests to end the game early.
-        EndRequest { uuid: Uuid },
+        EndRequest {
+            uuid: Uuid,
+        },
         /// Broadcasted when the current game has ended.
         Ended {
             post_game_info: PostGameInfo,
@@ -38,4 +44,6 @@ pub mod messages {
     pub enum PostGameInfo {
         WordBomb(WordBombPostGameInfo),
     }
+
+    pub enum InGameMessage {}
 }

@@ -7,8 +7,9 @@ pub mod messages {
 
     use crate::messages::RoomSettings;
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
+    #[ts(export)]
     pub enum ClientGeneral {
         Ping { timestamp: u64 },
         ChatMessage { content: String },
@@ -27,7 +28,7 @@ pub mod messages {
             /// Room and game settings.
             settings: RoomSettings,
             /// Room clients.
-            clients: HashMap<Uuid, Client>,
+            clients: HashMap<Uuid, ServerClient>,
             /// State of the room (lobby | type of game).
             /// TODO: Box to reduce variant size?.
             state: ServerState,
@@ -51,9 +52,9 @@ pub mod messages {
     }
 
     #[derive(Serialize, TS)]
-    #[serde(tag = "kind", rename_all = "camelCase")]
+    #[serde(rename_all = "camelCase")]
     #[ts(export)]
-    pub struct Client {
+    pub struct ServerClient {
         username: String,
         /// URL to account avatar.
         avatar_url: Option<String>,
@@ -81,7 +82,7 @@ pub mod messages {
             // Specific game type state (ex: word bomb).
             state: ServerGameState,
             /// UUIDs of players requesting to end the current game.
-            requesting_end: Option<Vec<Uuid>>,
+            requesting_end: Vec<Uuid>,
         },
     }
 
@@ -98,11 +99,11 @@ use uuid::Uuid;
 
 use crate::{
     general::messages::{ClientGeneral, ServerGeneral},
-    room::clients::Messenger,
+    room::{clients::Clients, messenger::ClientMessenger},
 };
 
 pub fn handle_client(
-    clients: impl Messenger<ServerGeneral>,
+    clients: &mut Clients,
     (uuid, message): (Uuid, ClientGeneral),
 ) -> anyhow::Result<()> {
     match message {

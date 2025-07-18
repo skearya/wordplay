@@ -5,8 +5,9 @@ pub mod messages {
 
     use crate::{general::messages::ServerGameState, messages::RoomSettings};
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
+    #[ts(export)]
     pub enum ClientLobby {
         RoomSettings(RoomSettings),
         Ready,
@@ -58,6 +59,10 @@ pub mod messages {
         Stop,
         None,
     }
+
+    pub enum LobbyMessage {
+        GameStart,
+    }
 }
 
 use std::time::{Duration, Instant};
@@ -67,8 +72,8 @@ use uuid::Uuid;
 
 use crate::{
     lobby::messages::{ClientLobby, ServerLobby, TimerAction},
-    messages::RoomMessage,
-    room::clients::Messenger,
+    messages::{RoomMessage, RoomSettings},
+    room::messenger::ClientMessenger,
     task,
 };
 
@@ -100,12 +105,17 @@ impl Lobby {
 
     pub fn handle_client(
         &mut self,
+        settings: &mut RoomSettings,
         room: mpsc::UnboundedSender<RoomMessage>,
-        clients: impl Messenger<ServerLobby>,
+        clients: impl ClientMessenger<ServerLobby>,
         (uuid, message): (Uuid, ClientLobby),
     ) -> anyhow::Result<()> {
         match message {
-            ClientLobby::RoomSettings(room_settings) => todo!(),
+            ClientLobby::RoomSettings(updated) => {
+                *settings = updated;
+
+                clients.broadcast(ServerLobby::Settings(updated));
+            }
             ClientLobby::Ready => {
                 if self.ready.contains(&uuid) {
                     return Ok(());

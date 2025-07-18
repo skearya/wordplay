@@ -5,19 +5,19 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    games::word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombSettings},
+    games::word_bomb::messages::WordBombSettings,
     general::messages::{ClientGeneral, ServerGeneral},
     in_game::messages::{ClientInGame, ServerInGame},
-    lobby::messages::{ClientLobby, ServerLobby},
+    lobby::messages::{ClientLobby, LobbyMessage, ServerLobby},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
 #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
+#[ts(export)]
 pub enum ClientMessage {
     General(ClientGeneral),
     Lobby(ClientLobby),
     InGame(ClientInGame),
-    WordBomb(ClientWordBomb),
 }
 
 #[derive(Serialize, TS)]
@@ -28,10 +28,8 @@ pub enum ServerMessage {
     General(ServerGeneral),
     /// All lobby messages.
     Lobby(ServerLobby),
-    /// All general in-game messages.
+    /// All in-game messages.
     InGame(ServerInGame),
-    /// All Word Bomb messages.
-    WordBomb(ServerWordBomb),
 }
 
 pub enum RoomMessage {
@@ -47,11 +45,13 @@ pub enum RoomMessage {
         message: ClientMessage,
     },
     CloseCheck,
+    Lobby(LobbyMessage),
 }
 
-#[derive(Serialize, Deserialize, TS)]
+#[derive(Serialize, Deserialize, TS, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RoomSettings {
-    word_bomb: WordBombSettings,
+    pub public: bool,
+    pub word_bomb: WordBombSettings,
 }

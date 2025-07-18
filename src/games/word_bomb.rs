@@ -3,7 +3,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    #[derive(Serialize, Deserialize, TS)]
+    #[derive(Serialize, Deserialize, TS, Clone, Copy)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombSettings {}
@@ -37,7 +37,7 @@ pub mod messages {
             reason: &'static str,
         },
         /// Broadcasted previously active player failed to come up with a valid guess.
-        Timeout {
+        Exploded {
             /// New prompt.
             prompt: String,
             /// Player UUID of new turn.
