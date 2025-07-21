@@ -47,3 +47,66 @@ pub mod messages {
 
     pub enum InGameMessage {}
 }
+
+use uuid::Uuid;
+
+use crate::{
+    games::word_bomb::WordBomb,
+    in_game::messages::{ClientInGame, InGameMessage, ServerInGame},
+    messages::RoomSettings,
+    room::{
+        handler::Handler,
+        messenger::{ClientMessenger, RoomMessenger},
+        state::State,
+    },
+};
+
+enum Game {
+    WordBomb(WordBomb),
+}
+
+pub struct InGame {
+    game: Game,
+    requesting_end: Vec<Uuid>,
+}
+
+impl InGame {
+    pub fn new() -> Self {
+        Self {
+            game: todo!(),
+            requesting_end: vec![],
+        }
+    }
+}
+
+impl Handler<State> for InGame {
+    type ClientMessage = ClientInGame;
+    type ServerMessage = ServerInGame;
+    type RoomMessage = InGameMessage;
+
+    fn new(settings: &RoomSettings) -> Self {
+        Self::new()
+    }
+
+    fn client(
+        &mut self,
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<State>> {
+        match message {
+            ClientInGame::WordBomb(client_word_bomb) => todo!(),
+            ClientInGame::EndRequest => todo!(),
+            ClientInGame::ForceEnd => todo!(),
+        }
+    }
+
+    fn room(
+        &mut self,
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        message: Self::RoomMessage,
+    ) -> anyhow::Result<Option<State>> {
+        todo!()
+    }
+}

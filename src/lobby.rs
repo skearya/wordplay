@@ -3,13 +3,12 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::{general::messages::ServerGameState, messages::RoomSettings};
+    use crate::{messages::RoomSettings, room::general::messages::ServerGameState};
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
     pub enum ClientLobby {
-        RoomSettings(RoomSettings),
         Ready,
         StartEarly,
         Unready,
@@ -25,8 +24,6 @@ pub mod messages {
     )]
     #[ts(export)]
     pub enum ServerLobby {
-        /// Sent when the room owner has updated room/game settings.
-        Settings(RoomSettings),
         Ready {
             uuid: Uuid,
             timer: TimerAction,
@@ -105,17 +102,11 @@ impl Lobby {
 
     pub fn handle_client(
         &mut self,
-        settings: &mut RoomSettings,
         room: mpsc::UnboundedSender<RoomMessage>,
         clients: impl ClientMessenger<ServerLobby>,
         (uuid, message): (Uuid, ClientLobby),
     ) -> anyhow::Result<()> {
         match message {
-            ClientLobby::RoomSettings(updated) => {
-                *settings = updated;
-
-                clients.broadcast(ServerLobby::Settings(updated));
-            }
             ClientLobby::Ready => {
                 if self.ready.contains(&uuid) {
                     return Ok(());

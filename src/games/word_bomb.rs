@@ -45,6 +45,8 @@ pub mod messages {
         },
     }
 
+    pub enum WordBombMessage {}
+
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -59,4 +61,42 @@ pub mod messages {
     }
 }
 
+use crate::{
+    games::word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombMessage},
+    in_game::messages::PostGameInfo,
+    messages::RoomSettings,
+    room::{
+        handler::Handler,
+        messenger::{ClientMessenger, RoomMessenger},
+    },
+};
+
 pub struct WordBomb;
+
+impl Handler<PostGameInfo> for WordBomb {
+    type ClientMessage = ClientWordBomb;
+    type ServerMessage = ServerWordBomb;
+    type RoomMessage = WordBombMessage;
+
+    fn new(settings: &RoomSettings) -> Self {
+        todo!()
+    }
+
+    fn client(
+        &mut self,
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        message: (uuid::Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<PostGameInfo>> {
+        todo!()
+    }
+
+    fn room(
+        &mut self,
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        message: Self::RoomMessage,
+    ) -> anyhow::Result<Option<PostGameInfo>> {
+        todo!()
+    }
+}

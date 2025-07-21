@@ -6,9 +6,9 @@ use uuid::Uuid;
 
 use crate::{
     games::word_bomb::messages::WordBombSettings,
-    general::messages::{ClientGeneral, ServerGeneral},
     in_game::messages::{ClientInGame, ServerInGame},
     lobby::messages::{ClientLobby, LobbyMessage, ServerLobby},
+    room::general::messages::{ClientGeneral, ServerGeneral},
 };
 
 #[derive(Deserialize, TS)]

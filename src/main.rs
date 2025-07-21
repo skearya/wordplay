@@ -5,7 +5,6 @@ mod socket;
 mod state;
 mod task;
 mod lobby;
-mod general;
 mod in_game;
 
 use axum::{Router, routing::get};

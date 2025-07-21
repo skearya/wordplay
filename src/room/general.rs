@@ -11,8 +11,14 @@ pub mod messages {
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
     pub enum ClientGeneral {
-        Ping { timestamp: u64 },
-        ChatMessage { content: String },
+        Ping {
+            timestamp: u64,
+        },
+        ChatMessage {
+            content: String,
+        },
+        /// Only sendable by the room owner. Can't be used to change game settings mid-game.
+        Settings(RoomSettings),
     }
 
     #[derive(Serialize, TS)]
@@ -46,6 +52,8 @@ pub mod messages {
             author: Uuid,
             content: String,
         },
+        /// Sent when the room owner has updated room/game settings.
+        Settings(RoomSettings),
         Error {
             message: String,
         },
@@ -97,19 +105,18 @@ pub mod messages {
 
 use uuid::Uuid;
 
-use crate::{
-    general::messages::{ClientGeneral, ServerGeneral},
-    room::{clients::Clients, messenger::ClientMessenger},
-};
+use crate::room::{Room, general::messages::ClientGeneral};
 
-pub fn handle_client(
-    clients: &mut Clients,
-    (uuid, message): (Uuid, ClientGeneral),
-) -> anyhow::Result<()> {
-    match message {
-        ClientGeneral::Ping { timestamp } => todo!(),
-        ClientGeneral::ChatMessage { content } => todo!(),
+impl Room {
+    pub fn handle_client(&mut self, (uuid, message): (Uuid, ClientGeneral)) -> anyhow::Result<()> {
+        match message {
+            ClientGeneral::Ping { timestamp } => todo!(),
+            ClientGeneral::ChatMessage { content } => todo!(),
+            ClientGeneral::Settings(room_settings) => todo!(),
+        }
+
+        Ok(())
     }
 
-    Ok(())
+    // pub fn handle_room(&mut self, message: Room) {}
 }

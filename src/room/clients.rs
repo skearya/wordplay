@@ -5,9 +5,11 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    general::messages::ServerGeneral,
     messages::{RoomMessage, ServerMessage},
-    room::messenger::{ClientMessenger, RoomMessenger},
+    room::{
+        general::messages::ServerGeneral,
+        messenger::{ClientMessenger, RoomMessenger},
+    },
     task,
 };
 

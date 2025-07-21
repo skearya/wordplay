@@ -1,4 +1,6 @@
 pub mod clients;
+pub mod general;
+pub mod handler;
 pub mod messenger;
 pub mod state;
 
@@ -7,7 +9,6 @@ use uuid::Uuid;
 
 use crate::{
     games::word_bomb::messages::WordBombSettings,
-    general::{self, messages::ServerGeneral},
     lobby::{
         Lobby,
         messages::{LobbyMessage, ServerLobby},
@@ -71,6 +72,7 @@ impl Room {
                 }
                 RoomMessage::CloseCheck => {
                     if self.clients.is_empty() {
+                        // TODO: Abort any ongoing game/lobby tasks
                         break;
                     }
                 }
@@ -82,10 +84,10 @@ impl Room {
     }
 
     fn client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<()> {
-        let res = match message {
-            ClientMessage::General(client_general) => {
-                general::handle_client(&mut self.clients, (uuid, client_general))
-            }
+        let new_state = match message {
+            // ClientMessage::General(client_general) => {
+            //     general::handle_client(&mut self.clients, (uuid, client_general))
+            // }
             // ClientMessage::Lobby(client_lobby) => {
             //     let lobby = self.state.try_lobby()?;
 
@@ -99,7 +101,6 @@ impl Room {
             //     // let methods return a new state
             // }
             // ClientMessage::InGame(client_in_game) => todo!(),
-            // ClientMessage::WordBomb(client_word_bomb) => todo!(),
             _ => panic!(),
         };
 

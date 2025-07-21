@@ -1,15 +1,16 @@
-use crate::{games::word_bomb::WordBomb, lobby::Lobby};
+use crate::{in_game::InGame, lobby::Lobby};
 
 pub enum State {
     Lobby(Lobby),
-    WordBomb(WordBomb),
+    InGame(InGame),
 }
 
+// TODO: all of this can be done with derive_more i think
 impl State {
     pub fn name(&self) -> &'static str {
         match self {
             State::Lobby(_) => "lobby",
-            State::WordBomb(_) => "word bomb",
+            State::InGame(_) => "in game",
         }
     }
 
@@ -24,9 +25,9 @@ impl State {
         }
     }
 
-    pub fn try_word_bomb(&mut self) -> anyhow::Result<&mut WordBomb> {
-        if let Self::WordBomb(word_bomb) = self {
-            Ok(word_bomb)
+    pub fn try_in_game(&mut self) -> anyhow::Result<&mut InGame> {
+        if let Self::InGame(in_game) = self {
+            Ok(in_game)
         } else {
             Err(anyhow::anyhow!(
                 "expected to be in word bomb, in {}",
