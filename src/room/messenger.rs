@@ -174,7 +174,7 @@ pub(crate) use submessenger;
 use crate::{
     games::word_bomb::messages::ServerWordBomb,
     in_game::messages::ServerInGame,
-    lobby::messages::{LobbyMessage, ServerLobby},
+    lobby::messages::LobbyMessage,
     messages::{RoomMessage, ServerMessage},
     room::clients::{Clients, RoomSender},
 };

@@ -91,3 +91,55 @@ impl Room {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use tokio::sync::mpsc;
+    use uuid::Uuid;
+
+    use crate::{
+        lobby::messages::{ClientLobby, LobbyMessage},
+        messages::{ClientMessage, RoomMessage},
+        room::{
+            Room,
+            general::messages::{ClientGeneral, GeneralMessage},
+        },
+    };
+
+    #[tokio::test(start_paused = true)]
+    async fn test() -> anyhow::Result<()> {
+        let room = Room::spawn();
+
+        let uuid1 = Uuid::new_v4();
+        let (sender1, _reciever1) = mpsc::unbounded_channel();
+
+        let uuid2 = Uuid::new_v4();
+        let (sender2, mut reciever2) = mpsc::unbounded_channel();
+
+        room.send(RoomMessage::General(GeneralMessage::Joined {
+            uuid: uuid1,
+            sender: sender1,
+        }))?;
+
+        room.send(RoomMessage::General(GeneralMessage::Joined {
+            uuid: uuid2,
+            sender: sender2,
+        }))?;
+
+        room.send(RoomMessage::Client {
+            uuid: uuid1,
+            message: ClientMessage::General(ClientGeneral::ChatMessage {
+                content: "hi".to_owned(),
+            }),
+        })?;
+
+        assert!(matches!(
+            serde_json::from_str::<ClientMessage>(
+                reciever2.recv().await.unwrap().into_text()?.as_str(),
+            )?,
+            ClientMessage::General(ClientGeneral::ChatMessage { content }) if content == "hi"
+        ));
+
+        Ok(())
+    }
+}

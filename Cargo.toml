@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0"
 axum = { version = "0.8", features = ["ws"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["full", "test-util"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 futures = "0.3"
