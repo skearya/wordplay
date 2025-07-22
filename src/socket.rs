@@ -9,7 +9,9 @@ use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{messages::RoomMessage, state::AppState, task};
+use crate::{
+    messages::RoomMessage, room::general::messages::GeneralMessage, state::AppState, task,
+};
 
 pub async fn handler(
     State(state): State<AppState>,
@@ -40,7 +42,10 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
     let uuid = Uuid::new_v4();
     let room = state.get_or_insert_room(room);
 
-    room.send(RoomMessage::Joined { uuid, sender })?;
+    room.send(RoomMessage::General(GeneralMessage::Joined {
+        uuid,
+        sender,
+    }))?;
 
     // WebSocket Stream -> Room
     task::spawn(async move {
@@ -62,7 +67,7 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
             }
         }
 
-        room.send(RoomMessage::Left { uuid })?;
+        room.send(RoomMessage::General(GeneralMessage::Left { uuid }))?;
 
         Ok(())
     });

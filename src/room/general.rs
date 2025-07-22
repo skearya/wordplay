@@ -1,7 +1,6 @@
 pub mod messages {
-    use std::collections::HashMap;
-
     use serde::{Deserialize, Serialize};
+    use tokio::sync::mpsc;
     use ts_rs::TS;
     use uuid::Uuid;
 
@@ -34,35 +33,28 @@ pub mod messages {
             /// Room and game settings.
             settings: RoomSettings,
             /// Room clients.
-            clients: HashMap<Uuid, ServerClient>,
+            clients: Vec<ServerClient>,
             /// State of the room (lobby | type of game).
             /// TODO: Box to reduce variant size?.
             state: ServerState,
         },
         /// Broadcasted when a client joins/rejoins.
-        Join {
-            uuid: Uuid,
-        },
+        Join { uuid: Uuid },
         /// Broadcasted when a client leaves.
-        Leave {
-            uuid: Uuid,
-        },
+        Leave { uuid: Uuid },
         /// Used to broadcast a chat message.
-        Chat {
-            author: Uuid,
-            content: String,
-        },
-        /// Sent when the room owner has updated room/game settings.
+        Chat { author: Uuid, content: String },
+        /// Broadcasted when the room owner has updated room/game settings.
         Settings(RoomSettings),
-        Error {
-            message: String,
-        },
+        /// Sent when the server encounters an error processing a client's message.
+        Error { message: String },
     }
 
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct ServerClient {
+        uuid: Uuid,
         username: String,
         /// URL to account avatar.
         avatar_url: Option<String>,
@@ -101,14 +93,28 @@ pub mod messages {
         // TODO: Game state
         WordBomb(()),
     }
+
+    pub enum GeneralMessage {
+        Joined {
+            uuid: Uuid,
+            sender: mpsc::UnboundedSender<axum::extract::ws::Message>,
+        },
+        Left {
+            uuid: Uuid,
+        },
+        Close,
+    }
 }
 
 use uuid::Uuid;
 
-use crate::room::{Room, general::messages::ClientGeneral};
+use crate::room::{
+    Room,
+    general::messages::{ClientGeneral, GeneralMessage},
+};
 
 impl Room {
-    pub fn handle_client(&mut self, (uuid, message): (Uuid, ClientGeneral)) -> anyhow::Result<()> {
+    fn handle_client(&mut self, (uuid, message): (Uuid, ClientGeneral)) -> anyhow::Result<()> {
         match message {
             ClientGeneral::Ping { timestamp } => todo!(),
             ClientGeneral::ChatMessage { content } => todo!(),
@@ -118,5 +124,19 @@ impl Room {
         Ok(())
     }
 
-    // pub fn handle_room(&mut self, message: Room) {}
+    fn handle(&mut self, message: GeneralMessage) {
+        match message {
+            GeneralMessage::Joined { uuid, sender } => {
+                self.clients.add(uuid, sender);
+            }
+            GeneralMessage::Left { uuid } => {
+                self.clients.remove(uuid);
+            }
+            GeneralMessage::Close => {
+                if self.clients.is_empty() {
+                    // TODO: Abort any ongoing game/lobby tasks
+                }
+            }
+        }
+    }
 }

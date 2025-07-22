@@ -12,17 +12,19 @@ pub trait Handler<T> {
 
     fn new(settings: &RoomSettings) -> Self;
 
-    fn client(
+    fn handle_client(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<T>>;
 
-    fn room(
+    fn handle(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<T>>;
+
+    fn end(&mut self) {}
 }

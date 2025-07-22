@@ -6,7 +6,15 @@ pub mod messages {
     #[derive(Serialize, Deserialize, TS, Clone, Copy)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
-    pub struct WordBombSettings {}
+    pub struct WordBombSettings {
+        min_wpm: usize,
+    }
+
+    impl Default for WordBombSettings {
+        fn default() -> Self {
+            Self { min_wpm: 300 }
+        }
+    }
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -82,7 +90,7 @@ impl Handler<PostGameInfo> for WordBomb {
         todo!()
     }
 
-    fn client(
+    fn handle_client(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
@@ -91,7 +99,7 @@ impl Handler<PostGameInfo> for WordBomb {
         todo!()
     }
 
-    fn room(
+    fn handle(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,

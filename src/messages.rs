@@ -5,10 +5,10 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    games::word_bomb::messages::WordBombSettings,
-    in_game::messages::{ClientInGame, ServerInGame},
+    games::{anagrams::messages::AnagramsSettings, word_bomb::messages::WordBombSettings},
+    in_game::messages::{ClientInGame, InGameMessage, ServerInGame},
     lobby::messages::{ClientLobby, LobbyMessage, ServerLobby},
-    room::general::messages::{ClientGeneral, ServerGeneral},
+    room::general::messages::{ClientGeneral, GeneralMessage, ServerGeneral},
 };
 
 #[derive(Deserialize, TS)]
@@ -33,25 +33,22 @@ pub enum ServerMessage {
 }
 
 pub enum RoomMessage {
-    Joined {
-        uuid: Uuid,
-        sender: mpsc::UnboundedSender<ws::Message>,
-    },
-    Left {
-        uuid: Uuid,
-    },
+    /// Rooms also recieve client messages through the same channel as other room messages.
     Client {
         uuid: Uuid,
         message: ClientMessage,
     },
-    CloseCheck,
+    /// Core room functionality.
+    General(GeneralMessage),
     Lobby(LobbyMessage),
+    InGame(InGameMessage),
 }
 
-#[derive(Serialize, Deserialize, TS, Clone, Copy)]
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RoomSettings {
     pub public: bool,
     pub word_bomb: WordBombSettings,
+    pub anagrams: AnagramsSettings,
 }

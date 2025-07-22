@@ -7,7 +7,8 @@ pub trait ClientMessenger<Msg> {
     fn broadcast(&self, message: Msg);
 }
 
-pub trait RoomMessenger<Msg> {
+// `Send + 'static` needed to allow `RoomMessenger` to be used in futures.
+pub trait RoomMessenger<Msg>: Send + 'static {
     fn send(&self, message: Msg);
 }
 
@@ -167,6 +168,7 @@ fn test(clients: Clients, room: RoomSender) {
 }
 
 pub(crate) use client_submessenger;
+pub(crate) use room_submessenger;
 pub(crate) use submessenger;
 
 use crate::{

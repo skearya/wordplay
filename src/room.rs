@@ -8,15 +8,14 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    games::word_bomb::messages::WordBombSettings,
-    lobby::{
-        Lobby,
-        messages::{LobbyMessage, ServerLobby},
-    },
+    in_game::messages::{InGameMessage, ServerInGame},
+    lobby::messages::{LobbyMessage, ServerLobby},
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
     room::{
-        clients::Clients,
-        messenger::{ClientMessenger, client_submessenger, submessenger},
+        clients::{Clients, RoomSender},
+        general::messages::ServerGeneral,
+        handler::Handler,
+        messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
         state::State,
     },
     task,
@@ -27,7 +26,7 @@ pub struct Room {
     clients: Clients,
     settings: RoomSettings,
     /// Sender to our own room task.
-    sender: mpsc::UnboundedSender<RoomMessage>,
+    sender: RoomSender,
     /// Reciever of `RoomMessages`.
     reciever: mpsc::UnboundedReceiver<RoomMessage>,
 }
@@ -38,13 +37,10 @@ impl Room {
         reciever: mpsc::UnboundedReceiver<RoomMessage>,
     ) -> Self {
         Self {
-            state: State::Lobby(Lobby::new()),
-            settings: RoomSettings {
-                public: false,
-                word_bomb: WordBombSettings {},
-            },
+            state: State::default(),
+            settings: RoomSettings::default(),
             clients: Clients::new(sender.clone()),
-            sender,
+            sender: RoomSender::new(sender),
             reciever,
         }
     }
@@ -60,61 +56,38 @@ impl Room {
     async fn run(mut self) -> anyhow::Result<()> {
         while let Some(message) = self.reciever.recv().await {
             match message {
-                RoomMessage::Joined { uuid, sender } => {
-                    self.clients.add(uuid, sender);
-                }
-                RoomMessage::Left { uuid } => {
-                    self.clients.remove(uuid);
-                }
                 RoomMessage::Client { uuid, message } => {
-                    // TODO: Handle
-                    let _ = self.client(uuid, message);
-                }
-                RoomMessage::CloseCheck => {
-                    if self.clients.is_empty() {
-                        // TODO: Abort any ongoing game/lobby tasks
-                        break;
+                    if let Err(err) = self.client(uuid, message) {
+                        self.clients.send(
+                            uuid,
+                            ServerMessage::General(ServerGeneral::Error {
+                                message: err.to_string(),
+                            }),
+                        );
                     }
                 }
-                RoomMessage::Lobby(lobby_message) => todo!(),
+                RoomMessage::General(message) => todo!(),
+                RoomMessage::Lobby(message) => todo!(),
+                RoomMessage::InGame(message) => todo!(),
             };
         }
 
         Ok(())
     }
 
-    fn client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<()> {
-        let new_state = match message {
-            // ClientMessage::General(client_general) => {
-            //     general::handle_client(&mut self.clients, (uuid, client_general))
-            // }
-            // ClientMessage::Lobby(client_lobby) => {
-            //     let lobby = self.state.try_lobby()?;
-
-            //     lobby.handle_client(
-            //         &mut self.settings,
-            //         self.sender.clone(),
-            //         submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
-            //         (uuid, client_lobby),
-            //     )
-
-            //     // let methods return a new state
-            // }
-            // ClientMessage::InGame(client_in_game) => todo!(),
-            _ => panic!(),
-        };
-
-        // if let Err(err) = &res {
-        //     self.clients.send(
-        //         uuid,
-        //         &ServerMessage::General(ServerGeneral::Error {
-        //             message: err.to_string(),
-        //         }),
-        //     );
-        // }
-
-        // res
-
-        todo!()
+    fn client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<Option<State>> {
+        match message {
+            ClientMessage::General(message) => todo!(),
+            ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
+                client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
+                room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
+                (uuid, message),
+            ),
+            ClientMessage::InGame(message) => self.state.try_in_game()?.handle_client(
+                client_submessenger!(&self.clients, ServerMessage::InGame(ServerInGame)),
+                room_submessenger!(self.sender.clone(), RoomMessage::InGame(InGameMessage)),
+                (uuid, message),
+            ),
+        }
     }
 }

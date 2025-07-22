@@ -1,9 +1,25 @@
+use std::time::{Duration, Instant};
+
+use tokio::{sync::mpsc, task::AbortHandle};
+use uuid::Uuid;
+
+use crate::{
+    lobby::messages::{ClientLobby, LobbyMessage, ServerLobby, TimerAction},
+    messages::{RoomMessage, RoomSettings},
+    room::{
+        handler::Handler,
+        messenger::{ClientMessenger, RoomMessenger},
+        state::State,
+    },
+    task,
+};
+
 pub mod messages {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::{messages::RoomSettings, room::general::messages::ServerGameState};
+    use crate::room::general::messages::ServerGameState;
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -62,18 +78,7 @@ pub mod messages {
     }
 }
 
-use std::time::{Duration, Instant};
-
-use tokio::{sync::mpsc, task::AbortHandle};
-use uuid::Uuid;
-
-use crate::{
-    lobby::messages::{ClientLobby, ServerLobby, TimerAction},
-    messages::{RoomMessage, RoomSettings},
-    room::messenger::ClientMessenger,
-    task,
-};
-
+#[derive(Default)]
 pub struct Lobby {
     ready: Vec<Uuid>,
     countdown: Option<Countdown>,
@@ -84,32 +89,28 @@ struct Countdown {
     timer: AbortHandle,
 }
 
-impl Lobby {
-    pub fn new() -> Self {
+impl Handler<State> for Lobby {
+    type ClientMessage = ClientLobby;
+    type ServerMessage = ServerLobby;
+    type RoomMessage = LobbyMessage;
+
+    fn new(settings: &RoomSettings) -> Self {
         Self {
             ready: vec![],
             countdown: None,
         }
     }
 
-    // pub fn handle_room(
-    //     &mut self,
-    //     room: mpsc::UnboundedSender<RoomMessage>,
-    //     clients: impl Messenger<ServerLobby>,
-    //     message: LobbyMessage,
-    // ) -> anyhow::Result<()> {
-    // }
-
-    pub fn handle_client(
+    fn handle_client(
         &mut self,
-        room: mpsc::UnboundedSender<RoomMessage>,
-        clients: impl ClientMessenger<ServerLobby>,
-        (uuid, message): (Uuid, ClientLobby),
-    ) -> anyhow::Result<()> {
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<State>> {
         match message {
             ClientLobby::Ready => {
                 if self.ready.contains(&uuid) {
-                    return Ok(());
+                    return Ok(None);
                 }
 
                 self.ready.push(uuid);
@@ -122,7 +123,7 @@ impl Lobby {
             ClientLobby::StartEarly => todo!(),
             ClientLobby::Unready => {
                 let Some(index) = self.ready.iter().position(|client| *client == uuid) else {
-                    return Ok(());
+                    return Ok(None);
                 };
 
                 self.ready.remove(index);
@@ -134,19 +135,32 @@ impl Lobby {
             }
             ClientLobby::PracticeRequest => todo!(),
             ClientLobby::PracticeSubmission { prompt, input } => todo!(),
-        }
+        };
 
-        Ok(())
+        Ok(None)
     }
 
-    fn update_countdown(&mut self, room: mpsc::UnboundedSender<RoomMessage>) -> TimerAction {
+    fn handle(
+        &mut self,
+        clients: impl ClientMessenger<Self::ServerMessage>,
+        room: impl RoomMessenger<Self::RoomMessage>,
+        message: Self::RoomMessage,
+    ) -> anyhow::Result<Option<State>> {
+        match message {
+            LobbyMessage::GameStart => Ok(Some(State::InGame(todo!()))),
+        }
+    }
+}
+
+impl Lobby {
+    fn update_countdown(&mut self, room: impl RoomMessenger<LobbyMessage>) -> TimerAction {
         match &mut self.countdown {
             None if self.ready.len() >= 2 => {
                 let start = Instant::now();
 
                 let timer = task::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(10)).await;
-                    room.send(RoomMessage::CloseCheck)?;
+                    room.send(LobbyMessage::GameStart);
 
                     Ok(())
                 })

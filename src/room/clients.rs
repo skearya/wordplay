@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     messages::{RoomMessage, ServerMessage},
     room::{
-        general::messages::ServerGeneral,
+        general::messages::{GeneralMessage, ServerGeneral},
         messenger::{ClientMessenger, RoomMessenger},
     },
     task,
@@ -45,7 +45,7 @@ impl Clients {
 
                 task::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(5)).await;
-                    room.send(RoomMessage::CloseCheck)?;
+                    room.send(RoomMessage::General(GeneralMessage::Close))?;
 
                     Ok(())
                 });
@@ -65,10 +65,7 @@ impl ClientMessenger<ServerMessage> for Clients {
 
         let message = ws::Message::Text(Utf8Bytes::from(text));
 
-        self.clients[&uuid]
-            .sender
-            .send(message)
-            .expect("client sender shouldn't be closed");
+        self.clients[&uuid].sender.send(message).ok();
     }
 
     fn broadcast(&self, message: ServerMessage) {
@@ -78,10 +75,7 @@ impl ClientMessenger<ServerMessage> for Clients {
         let message = ws::Message::Text(Utf8Bytes::from(text));
 
         for client in self.clients.values() {
-            client
-                .sender
-                .send(message.clone())
-                .expect("client sender shouldn't be closed");
+            client.sender.send(message.clone()).ok();
         }
     }
 }
@@ -99,8 +93,14 @@ impl ClientMessenger<ServerMessage> for &Clients {
 #[derive(Clone)]
 pub struct RoomSender(mpsc::UnboundedSender<RoomMessage>);
 
+impl RoomSender {
+    pub fn new(sender: mpsc::UnboundedSender<RoomMessage>) -> Self {
+        Self(sender)
+    }
+}
+
 impl RoomMessenger<RoomMessage> for RoomSender {
     fn send(&self, message: RoomMessage) {
-        self.0.send(message).expect("room should not be closed");
+        self.0.send(message).ok();
     }
 }

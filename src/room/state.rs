@@ -5,34 +5,26 @@ pub enum State {
     InGame(InGame),
 }
 
-// TODO: all of this can be done with derive_more i think
-impl State {
-    pub fn name(&self) -> &'static str {
-        match self {
-            State::Lobby(_) => "lobby",
-            State::InGame(_) => "in game",
-        }
+impl Default for State {
+    fn default() -> Self {
+        Self::Lobby(Default::default())
     }
+}
 
+impl State {
     pub fn try_lobby(&mut self) -> anyhow::Result<&mut Lobby> {
-        if let Self::Lobby(lobby) = self {
-            Ok(lobby)
+        if let Self::Lobby(v) = self {
+            Ok(v)
         } else {
-            Err(anyhow::anyhow!(
-                "expected to be in lobby, in {}",
-                self.name()
-            ))
+            Err(anyhow::anyhow!("expected lobby",))
         }
     }
 
     pub fn try_in_game(&mut self) -> anyhow::Result<&mut InGame> {
-        if let Self::InGame(in_game) = self {
-            Ok(in_game)
+        if let Self::InGame(v) = self {
+            Ok(v)
         } else {
-            Err(anyhow::anyhow!(
-                "expected to be in word bomb, in {}",
-                self.name()
-            ))
+            Err(anyhow::anyhow!("expected in game"))
         }
     }
 }
