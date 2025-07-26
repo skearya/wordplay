@@ -147,20 +147,19 @@ macro_rules! submessenger2 {
 }
 
 fn test(clients: Clients, room: RoomSender) {
-    // todo split into client submmesanger and server submessenger
     // todo fix usages of messangers (state handlers)
     // todo move states (lobby, general, games) into /states
     // move games into in_game
     // think about how game ending messages get sent
 
     let in_game = submessenger2!(
-        clients => ServerMessage::InGame(ServerInGame),
+        clients => ServerMessage::InGame(ServerGame),
         room => RoomMessage::Lobby(LobbyMessage)
     );
 
     in_game
         .clients
-        .broadcast(ServerInGame::WordBomb(ServerWordBomb::Input {
+        .broadcast(ServerGame::WordBomb(ServerWordBomb::Input {
             input: "e".to_string(),
         }));
 
@@ -169,12 +168,10 @@ fn test(clients: Clients, room: RoomSender) {
 
 pub(crate) use client_submessenger;
 pub(crate) use room_submessenger;
-pub(crate) use submessenger;
 
 use crate::{
-    games::word_bomb::messages::ServerWordBomb,
-    in_game::messages::ServerInGame,
+    game::{messages::ServerGame, word_bomb::messages::ServerWordBomb},
     lobby::messages::LobbyMessage,
     messages::{RoomMessage, ServerMessage},
-    room::clients::{Clients, RoomSender},
+    room::{clients::Clients, sender::RoomSender},
 };

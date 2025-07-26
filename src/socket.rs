@@ -58,12 +58,8 @@ fn socket(state: AppState, room: String, socket: WebSocket) -> anyhow::Result<()
                         tracing::error!("failed deserializing: {}", bytes.as_str());
                     }
                 }
-                Ok(ws::Message::Close(_)) => break,
-                Err(err) => {
-                    tracing::error!(?err, "socket error");
-                    break;
-                }
-                _ => (),
+                Ok(_) => (),
+                Err(err) => tracing::error!(?err, "socket error"),
             }
         }
 

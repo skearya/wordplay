@@ -1,6 +1,5 @@
 use crate::{
-    games::anagrams::messages::{AnagramsMessage, ClientAnagrams, ServerAnagrams},
-    in_game::messages::PostGameInfo,
+    game::{anagrams::messages::{AnagramsMessage, ClientAnagrams, ServerAnagrams}, messages::PostGameInfo},
     messages::RoomSettings,
     room::{
         handler::Handler,
@@ -78,12 +77,16 @@ impl Handler<PostGameInfo> for Anagrams {
         todo!()
     }
 
-    fn handle(
+    fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<PostGameInfo>> {
+        todo!()
+    }
+
+    fn end(&mut self) {
         todo!()
     }
 }

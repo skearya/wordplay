@@ -19,12 +19,12 @@ pub trait Handler<T> {
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<T>>;
 
-    fn handle(
+    fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<T>>;
 
-    fn end(&mut self) {}
+    fn end(&mut self);
 }

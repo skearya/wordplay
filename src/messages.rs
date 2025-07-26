@@ -1,12 +1,13 @@
-use axum::extract::ws;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
 use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    games::{anagrams::messages::AnagramsSettings, word_bomb::messages::WordBombSettings},
-    in_game::messages::{ClientInGame, InGameMessage, ServerInGame},
+    game::{
+        anagrams::messages::AnagramsSettings,
+        messages::{ClientGame, GameMessage, ServerGame},
+        word_bomb::messages::WordBombSettings,
+    },
     lobby::messages::{ClientLobby, LobbyMessage, ServerLobby},
     room::general::messages::{ClientGeneral, GeneralMessage, ServerGeneral},
 };
@@ -17,7 +18,7 @@ use crate::{
 pub enum ClientMessage {
     General(ClientGeneral),
     Lobby(ClientLobby),
-    InGame(ClientInGame),
+    InGame(ClientGame),
 }
 
 #[derive(Serialize, TS)]
@@ -29,7 +30,7 @@ pub enum ServerMessage {
     /// All lobby messages.
     Lobby(ServerLobby),
     /// All in-game messages.
-    InGame(ServerInGame),
+    InGame(ServerGame),
 }
 
 pub enum RoomMessage {
@@ -41,7 +42,7 @@ pub enum RoomMessage {
     /// Core room functionality.
     General(GeneralMessage),
     Lobby(LobbyMessage),
-    InGame(InGameMessage),
+    InGame(GameMessage),
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]

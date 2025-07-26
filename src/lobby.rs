@@ -1,19 +1,3 @@
-use std::time::{Duration, Instant};
-
-use tokio::{sync::mpsc, task::AbortHandle};
-use uuid::Uuid;
-
-use crate::{
-    lobby::messages::{ClientLobby, LobbyMessage, ServerLobby, TimerAction},
-    messages::{RoomMessage, RoomSettings},
-    room::{
-        handler::Handler,
-        messenger::{ClientMessenger, RoomMessenger},
-        state::State,
-    },
-    task,
-};
-
 pub mod messages {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
@@ -78,6 +62,22 @@ pub mod messages {
     }
 }
 
+use std::time::{Duration, Instant};
+
+use tokio::task::AbortHandle;
+use uuid::Uuid;
+
+use crate::{
+    lobby::messages::{ClientLobby, LobbyMessage, ServerLobby, TimerAction},
+    messages::RoomSettings,
+    room::{
+        handler::Handler,
+        messenger::{ClientMessenger, RoomMessenger},
+        state::State,
+    },
+    task,
+};
+
 #[derive(Default)]
 pub struct Lobby {
     ready: Vec<Uuid>,
@@ -135,12 +135,12 @@ impl Handler<State> for Lobby {
             }
             ClientLobby::PracticeRequest => todo!(),
             ClientLobby::PracticeSubmission { prompt, input } => todo!(),
-        };
+        }
 
         Ok(None)
     }
 
-    fn handle(
+    fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
@@ -148,6 +148,12 @@ impl Handler<State> for Lobby {
     ) -> anyhow::Result<Option<State>> {
         match message {
             LobbyMessage::GameStart => Ok(Some(State::InGame(todo!()))),
+        }
+    }
+
+    fn end(&mut self) {
+        if let Some(countdown) = &self.countdown {
+            countdown.timer.abort();
         }
     }
 }

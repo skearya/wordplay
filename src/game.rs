@@ -1,9 +1,12 @@
+pub mod anagrams;
+pub mod word_bomb;
+
 pub mod messages {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::games::{
+    use crate::game::{
         anagrams::messages::{
             AnagramsMessage, AnagramsPostGameInfo, ClientAnagrams, ServerAnagrams,
         },
@@ -15,7 +18,7 @@ pub mod messages {
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
     #[ts(export)]
-    pub enum ClientInGame {
+    pub enum ClientGame {
         WordBomb(ClientWordBomb),
         Anagrams(ClientAnagrams),
         /// Request to end the game early. Starts a vote.
@@ -31,7 +34,7 @@ pub mod messages {
         rename_all_fields = "camelCase"
     )]
     #[ts(export)]
-    pub enum ServerInGame {
+    pub enum ServerGame {
         WordBomb(ServerWordBomb),
         Anagrams(ServerAnagrams),
         /// Broadcasted when a player requests to end the game early.
@@ -55,7 +58,7 @@ pub mod messages {
         Anagrams(AnagramsPostGameInfo),
     }
 
-    pub enum InGameMessage {
+    pub enum GameMessage {
         WordBomb(WordBombMessage),
         Anagrams(AnagramsMessage),
     }
@@ -64,17 +67,17 @@ pub mod messages {
 use uuid::Uuid;
 
 use crate::{
-    games::{
+    game::{
         anagrams::{
             Anagrams,
             messages::{AnagramsMessage, ServerAnagrams},
         },
+        messages::{ClientGame, GameMessage, ServerGame},
         word_bomb::{
             WordBomb,
-            messages::{ClientWordBomb, ServerWordBomb, WordBombMessage},
+            messages::{ServerWordBomb, WordBombMessage},
         },
     },
-    in_game::messages::{ClientInGame, InGameMessage, ServerInGame},
     messages::RoomSettings,
     room::{
         handler::Handler,
@@ -83,12 +86,12 @@ use crate::{
     },
 };
 
-enum Game {
+enum GameState {
     WordBomb(WordBomb),
     Anagrams(Anagrams),
 }
 
-impl Game {
+impl GameState {
     fn try_word_bomb(&mut self) -> anyhow::Result<&mut WordBomb> {
         if let Self::WordBomb(v) = self {
             Ok(v)
@@ -104,17 +107,24 @@ impl Game {
             Err(anyhow::anyhow!("expected anagrams"))
         }
     }
+
+    fn end(&mut self) {
+        match self {
+            Self::WordBomb(word_bomb) => word_bomb.end(),
+            Self::Anagrams(anagrams) => anagrams.end(),
+        }
+    }
 }
 
-pub struct InGame {
-    game: Game,
+pub struct Game {
+    game: GameState,
     requesting_end: Vec<Uuid>,
 }
 
-impl Handler<State> for InGame {
-    type ClientMessage = ClientInGame;
-    type ServerMessage = ServerInGame;
-    type RoomMessage = InGameMessage;
+impl Handler<State> for Game {
+    type ClientMessage = ClientGame;
+    type ServerMessage = ServerGame;
+    type RoomMessage = GameMessage;
 
     fn new(settings: &RoomSettings) -> Self {
         Self {
@@ -130,57 +140,61 @@ impl Handler<State> for InGame {
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<State>> {
         match message {
-            ClientInGame::WordBomb(message) => {
+            ClientGame::WordBomb(message) => {
                 let word_bomb = self.game.try_word_bomb()?;
 
                 word_bomb.handle_client(
-                    client_submessenger!(clients, ServerInGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, InGameMessage::WordBomb(WordBombMessage)),
+                    client_submessenger!(clients, ServerGame::WordBomb(ServerWordBomb)),
+                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     (uuid, message),
                 )?;
             }
-            ClientInGame::Anagrams(message) => {
+            ClientGame::Anagrams(message) => {
                 let anagrams = self.game.try_anagrams()?;
 
                 anagrams.handle_client(
-                    client_submessenger!(clients, ServerInGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, InGameMessage::Anagrams(AnagramsMessage)),
+                    client_submessenger!(clients, ServerGame::Anagrams(ServerAnagrams)),
+                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     (uuid, message),
                 )?;
             }
-            ClientInGame::EndRequest => todo!(),
-            ClientInGame::ForceEnd => todo!(),
+            ClientGame::EndRequest => todo!(),
+            ClientGame::ForceEnd => todo!(),
         }
 
         Ok(None)
     }
 
-    fn handle(
+    fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>> {
         match message {
-            InGameMessage::WordBomb(message) => {
+            GameMessage::WordBomb(message) => {
                 let word_bomb = self.game.try_word_bomb()?;
 
-                word_bomb.handle(
-                    client_submessenger!(clients, ServerInGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, InGameMessage::WordBomb(WordBombMessage)),
+                word_bomb.handle_message(
+                    client_submessenger!(clients, ServerGame::WordBomb(ServerWordBomb)),
+                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     message,
                 )?;
             }
-            InGameMessage::Anagrams(message) => {
+            GameMessage::Anagrams(message) => {
                 let anagrams = self.game.try_anagrams()?;
 
-                anagrams.handle(
-                    client_submessenger!(clients, ServerInGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, InGameMessage::Anagrams(AnagramsMessage)),
+                anagrams.handle_message(
+                    client_submessenger!(clients, ServerGame::Anagrams(ServerAnagrams)),
+                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     message,
                 )?;
             }
         }
         todo!()
+    }
+
+    fn end(&mut self) {
+        self.game.end();
     }
 }

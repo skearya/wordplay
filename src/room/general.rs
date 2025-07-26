@@ -111,20 +111,24 @@ use uuid::Uuid;
 use crate::room::{
     Room,
     general::messages::{ClientGeneral, GeneralMessage},
+    state::State,
 };
 
+// Special `Handler` implementation for "General" messages, requires a mutable reference to `Clients`
+// and more mutable access to `Room` in order to operate which can't be provided in `Handler`.
 impl Room {
-    fn handle_client(&mut self, (uuid, message): (Uuid, ClientGeneral)) -> anyhow::Result<()> {
+    pub fn handle_client(
+        &mut self,
+        (uuid, message): (Uuid, ClientGeneral),
+    ) -> anyhow::Result<Option<State>> {
         match message {
             ClientGeneral::Ping { timestamp } => todo!(),
             ClientGeneral::ChatMessage { content } => todo!(),
             ClientGeneral::Settings(room_settings) => todo!(),
         }
-
-        Ok(())
     }
 
-    fn handle(&mut self, message: GeneralMessage) {
+    pub fn handle_message(&mut self, message: GeneralMessage) -> anyhow::Result<Option<State>> {
         match message {
             GeneralMessage::Joined { uuid, sender } => {
                 self.clients.add(uuid, sender);
@@ -134,9 +138,12 @@ impl Room {
             }
             GeneralMessage::Close => {
                 if self.clients.is_empty() {
-                    // TODO: Abort any ongoing game/lobby tasks
+                    self.state.end();
+                    self.close = true;
                 }
             }
         }
+
+        Ok(None)
     }
 }
