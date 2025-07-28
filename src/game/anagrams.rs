@@ -40,7 +40,23 @@ pub mod messages {
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
-    pub struct AnagramsPostGameInfo {
+    pub struct AnagramsState {
+        players: Vec<AnagramsPlayer>,
+        anagram: String,
+    }
+
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsPlayer {
+        uuid: Uuid,
+        used_words: Vec<String>,
+    }
+
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsPostGame {
         original_word: String,
         leaderboard: Vec<(Uuid, u32)>,
         used_words: Vec<(Uuid, Vec<String>)>,
@@ -51,9 +67,9 @@ pub mod messages {
 use uuid::Uuid;
 
 use crate::{
-    game::{
-        anagrams::messages::{AnagramsMessage, AnagramsSettings, ClientAnagrams, ServerAnagrams},
-        messages::PostGameInfo,
+    game::anagrams::messages::{
+        AnagramsMessage, AnagramsPostGame, AnagramsSettings, AnagramsState, ClientAnagrams,
+        ServerAnagrams,
     },
     room::{
         handler::GameHandler,
@@ -64,10 +80,12 @@ use crate::{
 pub struct Anagrams;
 
 impl GameHandler for Anagrams {
+    type Settings = AnagramsSettings;
     type ClientMessage = ClientAnagrams;
     type ServerMessage = ServerAnagrams;
     type RoomMessage = AnagramsMessage;
-    type Settings = AnagramsSettings;
+    type StateMessage = AnagramsState;
+    type PostGameMessage = AnagramsPostGame;
 
     fn new(settings: &AnagramsSettings, players: &[Uuid]) -> Self {
         todo!()
@@ -78,7 +96,7 @@ impl GameHandler for Anagrams {
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<PostGameInfo>> {
+    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         todo!()
     }
 
@@ -87,7 +105,11 @@ impl GameHandler for Anagrams {
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<PostGameInfo>> {
+    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
+        todo!()
+    }
+
+    fn state(&self) -> Self::StateMessage {
         todo!()
     }
 

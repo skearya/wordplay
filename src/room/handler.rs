@@ -13,6 +13,7 @@ pub trait Handler {
     type ClientMessage;
     type ServerMessage;
     type RoomMessage;
+    type StateMessage;
 
     fn handle_client(
         &mut self,
@@ -30,14 +31,18 @@ pub trait Handler {
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>>;
 
+    fn state(&self) -> Self::StateMessage;
+
     fn end(&mut self);
 }
 
 pub trait GameHandler {
+    type Settings;
     type ClientMessage;
     type ServerMessage;
     type RoomMessage;
-    type Settings;
+    type StateMessage;
+    type PostGameMessage;
 
     fn new(settings: &Self::Settings, players: &[Uuid]) -> Self;
 
@@ -46,14 +51,16 @@ pub trait GameHandler {
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<PostGameInfo>>;
+    ) -> anyhow::Result<Option<Self::PostGameMessage>>;
 
     fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<PostGameInfo>>;
+    ) -> anyhow::Result<Option<Self::PostGameMessage>>;
+
+    fn state(&self) -> Self::StateMessage;
 
     fn end(&mut self);
 }

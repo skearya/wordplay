@@ -53,14 +53,31 @@ pub mod messages {
         },
     }
 
-    pub enum WordBombMessage {
-        Client { uuid: Uuid, message: ClientWordBomb },
+    pub enum WordBombMessage {}
+
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct WordBombState {
+        players: Vec<WordBombPlayer>,
+        turn: Uuid,
+        prompt: String,
     }
 
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
-    pub struct WordBombPostGameInfo {
+    pub struct WordBombPlayer {
+        uuid: Uuid,
+        input: String,
+        lives: u8,
+        used_letters: Vec<char>,
+    }
+
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct WordBombPostGame {
         winner: Uuid,
         mins_elapsed: f32,
         words_used: usize,
@@ -74,9 +91,9 @@ pub mod messages {
 use uuid::Uuid;
 
 use crate::{
-    game::{
-        messages::PostGameInfo,
-        word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombSettings},
+    game::word_bomb::messages::{
+        ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombPostGame, WordBombSettings,
+        WordBombState,
     },
     room::{
         handler::GameHandler,
@@ -87,10 +104,12 @@ use crate::{
 pub struct WordBomb;
 
 impl GameHandler for WordBomb {
+    type Settings = WordBombSettings;
     type ClientMessage = ClientWordBomb;
     type ServerMessage = ServerWordBomb;
     type RoomMessage = WordBombMessage;
-    type Settings = WordBombSettings;
+    type StateMessage = WordBombState;
+    type PostGameMessage = WordBombPostGame;
 
     fn new(settings: &WordBombSettings, players: &[Uuid]) -> Self {
         todo!()
@@ -101,7 +120,7 @@ impl GameHandler for WordBomb {
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<PostGameInfo>> {
+    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         todo!()
     }
 
@@ -110,7 +129,11 @@ impl GameHandler for WordBomb {
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<PostGameInfo>> {
+    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
+        todo!()
+    }
+
+    fn state(&self) -> Self::StateMessage {
         todo!()
     }
 

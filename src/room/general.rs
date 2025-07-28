@@ -5,7 +5,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::messages::RoomSettings;
+    use crate::{game::messages::GameState, lobby::messages::LobbyState, messages::RoomSettings};
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -62,35 +62,12 @@ pub mod messages {
     }
 
     #[derive(Serialize, TS)]
-    #[serde(
-        tag = "kind",
-        rename_all = "camelCase",
-        rename_all_fields = "camelCase"
-    )]
+    #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
     /// Room state sent to clients when they join.
     pub enum ServerState {
-        Lobby {
-            ready: Vec<Uuid>,
-            /// Unix timestamp of when the countdown timer started.
-            timer_start: Option<u64>,
-            // TODO: Show previous game info.
-            // prev_game: Option<PostGameInfo>,
-        },
-        Game {
-            // Specific game type state (ex: word bomb).
-            state: ServerGameState,
-            /// UUIDs of players requesting to end the current game.
-            requesting_end: Vec<Uuid>,
-        },
-    }
-
-    #[derive(Serialize, TS)]
-    #[serde(tag = "kind", rename_all = "camelCase")]
-    #[ts(export)]
-    pub enum ServerGameState {
-        // TODO: Game state
-        WordBomb(()),
+        Lobby(LobbyState),
+        Game(GameState),
     }
 
     pub enum GeneralMessage {

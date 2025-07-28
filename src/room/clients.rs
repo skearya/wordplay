@@ -97,6 +97,7 @@ impl Clients {
     pub fn get_mut(&mut self, uuid: &Uuid) -> Option<&mut Client> {
         self.clients.get_mut(uuid)
     }
+
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty()
     }

@@ -3,7 +3,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::room::general::messages::ServerGameState;
+    use crate::game::messages::GameState;
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -44,7 +44,7 @@ pub mod messages {
         GameStarted {
             /// Contains the player's rejoin token. Is `None` if client is spectating.
             rejoin_token: Option<Uuid>,
-            state: ServerGameState,
+            state: GameState,
         },
     }
 
@@ -60,16 +60,27 @@ pub mod messages {
     pub enum LobbyMessage {
         GameStart,
     }
+
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct LobbyState {
+        pub ready: Vec<Uuid>,
+        /// Unix timestamp of when the countdown timer started.
+        pub timer_start: Option<u64>,
+        // TODO: Show previous game info.
+        // prev_game: Option<PostGameInfo>,
+    }
 }
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
     game::Game,
-    lobby::messages::{ClientLobby, LobbyMessage, ServerLobby, TimerAction},
+    lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     messages::RoomSettings,
     room::{
         handler::Handler,
@@ -86,7 +97,8 @@ pub struct Lobby {
 }
 
 struct Countdown {
-    start: Instant,
+    /// Start time of the timer (milliseconds since unix epoch).
+    start: u64,
     timer: AbortHandle,
 }
 
@@ -103,6 +115,7 @@ impl Handler for Lobby {
     type ClientMessage = ClientLobby;
     type ServerMessage = ServerLobby;
     type RoomMessage = LobbyMessage;
+    type StateMessage = LobbyState;
 
     fn handle_client(
         &mut self,
@@ -162,6 +175,13 @@ impl Handler for Lobby {
         }
     }
 
+    fn state(&self) -> Self::StateMessage {
+        LobbyState {
+            ready: self.ready.clone(),
+            timer_start: self.countdown.as_ref().map(|countdown| countdown.start),
+        }
+    }
+
     fn end(&mut self) {
         if let Some(countdown) = &self.countdown {
             countdown.timer.abort();
@@ -173,7 +193,10 @@ impl Lobby {
     fn update_countdown(&mut self, room: impl RoomMessenger<LobbyMessage>) -> TimerAction {
         match &mut self.countdown {
             None if self.ready.len() >= 2 => {
-                let start = Instant::now();
+                let start = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("time has gone backwards")
+                    .as_micros() as u64;
 
                 let timer = task::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(10)).await;
