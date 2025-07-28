@@ -14,7 +14,7 @@ pub mod messages {
         Ping {
             timestamp: u64,
         },
-        ChatMessage {
+        Chat {
             content: String,
         },
         /// Only sendable by the room owner. Can't be used to change game settings mid-game.
@@ -138,7 +138,7 @@ impl Room {
     ) -> anyhow::Result<Option<State>> {
         match message {
             ClientGeneral::Ping { timestamp } => todo!(),
-            ClientGeneral::ChatMessage { content } => {
+            ClientGeneral::Chat { content } => {
                 self.clients
                     .broadcast(ServerMessage::General(ServerGeneral::Chat {
                         author: uuid,

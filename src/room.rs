@@ -5,7 +5,6 @@ pub mod messenger;
 pub mod sender;
 pub mod state;
 
-use axum::extract::ws;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -146,10 +145,10 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test() -> anyhow::Result<()> {
+    async fn chatting() -> anyhow::Result<()> {
         let uuid1 = Uuid::new_v4();
         let socket_uuid1 = Uuid::new_v4();
-        let (sender1, _reciever1) = mpsc::unbounded_channel();
+        let (sender1, reciever1) = mpsc::unbounded_channel();
 
         let room = Room::spawn((uuid1, Client::new(socket_uuid1, sender1)));
 
@@ -165,18 +164,21 @@ mod tests {
 
         room.send(RoomMessage::Client {
             uuid: uuid1,
-            message: ClientMessage::General(ClientGeneral::ChatMessage {
+            message: ClientMessage::General(ClientGeneral::Chat {
                 content: "hi".to_owned(),
             }),
         });
 
-        // don't broadcast ourselves joining to ourselves
-        assert!(matches!(
-            serde_json::from_str::<ClientMessage>(
-                dbg!(reciever2.recv().await.unwrap().into_text()?.as_str()),
-            )?,
-            ClientMessage::General(ClientGeneral::ChatMessage { content }) if content == "hi"
-        ));
+        assert!(reciever1.is_empty());
+
+        let res = serde_json::from_str::<serde_json::Value>(
+            reciever2.recv().await.unwrap().into_text()?.as_str(),
+        )?;
+
+        assert_eq!(res["kind"], "general");
+        assert_eq!(res["data"]["kind"], "chat");
+        assert_eq!(res["data"]["author"], uuid1.to_string());
+        assert_eq!(res["data"]["content"], "hi");
 
         Ok(())
     }

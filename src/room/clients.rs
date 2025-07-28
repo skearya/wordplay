@@ -66,7 +66,7 @@ impl Clients {
             },
         );
 
-        self.broadcast(ServerMessage::General(ServerGeneral::Join { uuid }));
+        self.broadcast_except(uuid, ServerMessage::General(ServerGeneral::Join { uuid }));
     }
 
     pub fn remove(&mut self, uuid: Uuid, socket_uuid: Uuid) {
@@ -122,6 +122,21 @@ impl ClientMessenger<ServerMessage> for Clients {
             client.sender.send(message.clone()).ok();
         }
     }
+
+    fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
+        let text = serde_json::to_string(&message)
+            .expect("ServerMessage serialization shouldn't ever fail?");
+
+        let message = ws::Message::Text(Utf8Bytes::from(text));
+
+        for (uuid, client) in &self.clients {
+            if *uuid == exclude {
+                continue;
+            }
+
+            client.sender.send(message.clone()).ok();
+        }
+    }
 }
 
 impl ClientMessenger<ServerMessage> for &Clients {
@@ -131,5 +146,9 @@ impl ClientMessenger<ServerMessage> for &Clients {
 
     fn broadcast(&self, message: ServerMessage) {
         (*self).broadcast(message);
+    }
+
+    fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
+        (*self).broadcast_except(exclude, message);
     }
 }
