@@ -68,6 +68,7 @@ use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
+    game::Game,
     lobby::messages::{ClientLobby, LobbyMessage, ServerLobby, TimerAction},
     messages::RoomSettings,
     room::{
@@ -89,20 +90,23 @@ struct Countdown {
     timer: AbortHandle,
 }
 
-impl Handler<State> for Lobby {
-    type ClientMessage = ClientLobby;
-    type ServerMessage = ServerLobby;
-    type RoomMessage = LobbyMessage;
-
-    fn new(settings: &RoomSettings) -> Self {
+impl Lobby {
+    pub fn new() -> Self {
         Self {
             ready: vec![],
             countdown: None,
         }
     }
+}
+
+impl Handler for Lobby {
+    type ClientMessage = ClientLobby;
+    type ServerMessage = ServerLobby;
+    type RoomMessage = LobbyMessage;
 
     fn handle_client(
         &mut self,
+        settings: &RoomSettings,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
@@ -120,7 +124,13 @@ impl Handler<State> for Lobby {
                     timer: self.update_countdown(room),
                 });
             }
-            ClientLobby::StartEarly => todo!(),
+            ClientLobby::StartEarly => {
+                if settings.owner != uuid {
+                    return Ok(None);
+                }
+
+                return Ok(Some(State::InGame(Game::new(settings, &self.ready))));
+            }
             ClientLobby::Unready => {
                 let Some(index) = self.ready.iter().position(|client| *client == uuid) else {
                     return Ok(None);
@@ -142,12 +152,13 @@ impl Handler<State> for Lobby {
 
     fn handle_message(
         &mut self,
-        clients: impl ClientMessenger<Self::ServerMessage>,
-        room: impl RoomMessenger<Self::RoomMessage>,
+        settings: &RoomSettings,
+        _clients: impl ClientMessenger<Self::ServerMessage>,
+        _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>> {
         match message {
-            LobbyMessage::GameStart => Ok(Some(State::InGame(todo!()))),
+            LobbyMessage::GameStart => Ok(Some(State::InGame(Game::new(settings, &self.ready)))),
         }
     }
 

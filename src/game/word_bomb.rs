@@ -71,23 +71,28 @@ pub mod messages {
     }
 }
 
+use uuid::Uuid;
+
 use crate::{
-    game::{messages::PostGameInfo, word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombMessage}},
-    messages::RoomSettings,
+    game::{
+        messages::PostGameInfo,
+        word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombSettings},
+    },
     room::{
-        handler::Handler,
+        handler::GameHandler,
         messenger::{ClientMessenger, RoomMessenger},
     },
 };
 
 pub struct WordBomb;
 
-impl Handler<PostGameInfo> for WordBomb {
+impl GameHandler for WordBomb {
     type ClientMessage = ClientWordBomb;
     type ServerMessage = ServerWordBomb;
     type RoomMessage = WordBombMessage;
+    type Settings = WordBombSettings;
 
-    fn new(settings: &RoomSettings) -> Self {
+    fn new(settings: &WordBombSettings, players: &[Uuid]) -> Self {
         todo!()
     }
 
@@ -95,7 +100,7 @@ impl Handler<PostGameInfo> for WordBomb {
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
-        message: (uuid::Uuid, Self::ClientMessage),
+        message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<PostGameInfo>> {
         todo!()
     }

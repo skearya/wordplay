@@ -3,7 +3,7 @@ import type { PostGameInfo } from "./PostGameInfo";
 import type { ServerAnagrams } from "./ServerAnagrams";
 import type { ServerWordBomb } from "./ServerWordBomb";
 
-export type ServerInGame = { "kind": "wordBomb" } & ServerWordBomb | { "kind": "anagrams" } & ServerAnagrams | { "kind": "endRequest", uuid: string, } | { "kind": "ended", postGameInfo: PostGameInfo, 
+export type ServerGame = { "kind": "wordBomb" } & ServerWordBomb | { "kind": "anagrams" } & ServerAnagrams | { "kind": "endRequest", uuid: string, } | { "kind": "ended", postGameInfo: PostGameInfo, 
 /**
  * Is `Some` with a random client's uuid if the previous room owner
  * left during game and hasn't come back.

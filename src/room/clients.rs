@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use axum::extract::ws::{self, Utf8Bytes};
+use axum::extract::ws::{self, CloseFrame, Utf8Bytes, close_code};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -8,51 +8,95 @@ use crate::{
     messages::{RoomMessage, ServerMessage},
     room::{
         general::messages::{GeneralMessage, ServerGeneral},
-        messenger::ClientMessenger,
+        messenger::{ClientMessenger, RoomMessenger},
+        sender::RoomSender,
     },
     task,
 };
 
 pub struct Clients {
-    room: mpsc::UnboundedSender<RoomMessage>,
+    room: RoomSender,
     clients: HashMap<Uuid, Client>,
 }
 
-struct Client {
+pub struct Client {
+    /// UUID unique to the client's socket task. **Not** client UUID.
+    socket_uuid: Uuid,
+    /// Sender to the client's reciever task that proxies WebSocket messages.
     sender: mpsc::UnboundedSender<ws::Message>,
 }
 
-impl Clients {
-    pub fn new(room: mpsc::UnboundedSender<RoomMessage>) -> Self {
+impl Client {
+    pub fn new(socket_uuid: Uuid, sender: mpsc::UnboundedSender<ws::Message>) -> Self {
         Self {
-            room,
-            clients: HashMap::new(),
+            socket_uuid,
+            sender,
         }
     }
 
-    pub fn add(&mut self, uuid: Uuid, sender: mpsc::UnboundedSender<ws::Message>) {
-        self.clients.insert(uuid, Client { sender });
+    pub fn close(&self, reason: &'static str) {
+        self.sender
+            .send(ws::Message::Close(Some(CloseFrame {
+                code: close_code::ERROR,
+                reason: Utf8Bytes::from_static(reason),
+            })))
+            .ok();
+    }
+}
+
+impl Clients {
+    pub fn new(room: RoomSender, owner: (Uuid, Client)) -> Self {
+        Self {
+            room,
+            clients: HashMap::from([owner]),
+        }
+    }
+
+    pub fn add(
+        &mut self,
+        uuid: Uuid,
+        socket_uuid: Uuid,
+        sender: mpsc::UnboundedSender<ws::Message>,
+    ) {
+        self.clients.insert(
+            uuid,
+            Client {
+                socket_uuid,
+                sender,
+            },
+        );
 
         self.broadcast(ServerMessage::General(ServerGeneral::Join { uuid }));
     }
 
-    pub fn remove(&mut self, uuid: Uuid) {
-        if self.clients.remove(&uuid).is_some() {
-            self.broadcast(ServerMessage::General(ServerGeneral::Leave { uuid }));
+    pub fn remove(&mut self, uuid: Uuid, socket_uuid: Uuid) {
+        if let Some(client) = self.get(&uuid) {
+            if client.socket_uuid == socket_uuid {
+                self.clients.remove(&uuid);
 
-            if self.clients.is_empty() {
-                let room = self.room.clone();
+                self.broadcast(ServerMessage::General(ServerGeneral::Leave { uuid }));
 
-                task::spawn(async move {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    room.send(RoomMessage::General(GeneralMessage::Close))?;
+                if self.is_empty() {
+                    let room = self.room.clone();
 
-                    Ok(())
-                });
+                    task::spawn(async move {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        room.send(RoomMessage::General(GeneralMessage::Close));
+
+                        Ok(())
+                    });
+                }
             }
         }
     }
 
+    pub fn get(&self, uuid: &Uuid) -> Option<&Client> {
+        self.clients.get(uuid)
+    }
+
+    pub fn get_mut(&mut self, uuid: &Uuid) -> Option<&mut Client> {
+        self.clients.get_mut(uuid)
+    }
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty()
     }

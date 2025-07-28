@@ -9,10 +9,6 @@ export type ServerGeneral = { "kind": "info",
  */
 uuid: string, 
 /**
- * Room owner's UUID.
- */
-owner: string, 
-/**
  * Room and game settings.
  */
 settings: RoomSettings, 

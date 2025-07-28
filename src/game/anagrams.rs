@@ -1,12 +1,3 @@
-use crate::{
-    game::{anagrams::messages::{AnagramsMessage, ClientAnagrams, ServerAnagrams}, messages::PostGameInfo},
-    messages::RoomSettings,
-    room::{
-        handler::Handler,
-        messenger::{ClientMessenger, RoomMessenger},
-    },
-};
-
 pub mod messages {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
@@ -57,14 +48,28 @@ pub mod messages {
     }
 }
 
+use uuid::Uuid;
+
+use crate::{
+    game::{
+        anagrams::messages::{AnagramsMessage, AnagramsSettings, ClientAnagrams, ServerAnagrams},
+        messages::PostGameInfo,
+    },
+    room::{
+        handler::GameHandler,
+        messenger::{ClientMessenger, RoomMessenger},
+    },
+};
+
 pub struct Anagrams;
 
-impl Handler<PostGameInfo> for Anagrams {
+impl GameHandler for Anagrams {
     type ClientMessage = ClientAnagrams;
     type ServerMessage = ServerAnagrams;
     type RoomMessage = AnagramsMessage;
+    type Settings = AnagramsSettings;
 
-    fn new(settings: &RoomSettings) -> Self {
+    fn new(settings: &AnagramsSettings, players: &[Uuid]) -> Self {
         todo!()
     }
 
@@ -72,7 +77,7 @@ impl Handler<PostGameInfo> for Anagrams {
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
-        message: (uuid::Uuid, Self::ClientMessage),
+        message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<PostGameInfo>> {
         todo!()
     }

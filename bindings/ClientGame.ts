@@ -2,4 +2,4 @@
 import type { ClientAnagrams } from "./ClientAnagrams";
 import type { ClientWordBomb } from "./ClientWordBomb";
 
-export type ClientInGame = { "kind": "wordBomb", "data": ClientWordBomb } | { "kind": "anagrams", "data": ClientAnagrams } | { "kind": "endRequest" } | { "kind": "forceEnd" };
+export type ClientGame = { "kind": "wordBomb", "data": ClientWordBomb } | { "kind": "anagrams", "data": ClientAnagrams } | { "kind": "endRequest" } | { "kind": "forceEnd" };

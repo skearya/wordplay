@@ -50,6 +50,17 @@ pub enum RoomMessage {
 #[ts(export)]
 pub struct RoomSettings {
     pub public: bool,
+    pub owner: Uuid,
+    pub game: GameType,
     pub word_bomb: WordBombSettings,
     pub anagrams: AnagramsSettings,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum GameType {
+    #[default]
+    WordBomb,
+    Anagrams,
 }

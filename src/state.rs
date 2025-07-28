@@ -3,9 +3,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use tokio::sync::mpsc;
+use uuid::Uuid;
 
-use crate::{messages::RoomMessage, room::Room};
+use crate::room::{Room, clients::Client, sender::RoomSender};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,7 +14,7 @@ pub struct AppState {
 
 struct AppStateInner {
     /// Room name -> Room task message sender
-    rooms: HashMap<String, mpsc::UnboundedSender<RoomMessage>>,
+    rooms: HashMap<String, RoomSender>,
 }
 
 impl AppState {
@@ -24,22 +24,22 @@ impl AppState {
         }
     }
 
-    pub fn get_or_insert_room(&self, name: String) -> mpsc::UnboundedSender<RoomMessage> {
-        let mut lock = match self.inner.lock() {
-            Ok(lock) => lock,
-            Err(poison) => poison.into_inner(),
-        };
-
-        lock.get_or_insert_room(name)
-    }
-
-    pub fn get_room(&self, name: &str) -> Option<mpsc::UnboundedSender<RoomMessage>> {
+    pub fn get_room(&self, name: &str) -> Option<RoomSender> {
         let mut lock = match self.inner.lock() {
             Ok(lock) => lock,
             Err(poison) => poison.into_inner(),
         };
 
         lock.get_room(name)
+    }
+
+    pub fn insert_room(&self, name: &str, owner: (Uuid, Client)) -> RoomSender {
+        let mut lock = match self.inner.lock() {
+            Ok(lock) => lock,
+            Err(poison) => poison.into_inner(),
+        };
+
+        lock.insert_room(name, owner)
     }
 }
 
@@ -50,25 +50,22 @@ impl AppStateInner {
         }
     }
 
-    fn get_or_insert_room(&mut self, name: String) -> mpsc::UnboundedSender<RoomMessage> {
-        if let Some(room) = self.get_room(&name) {
-            room
-        } else {
-            let room = Room::spawn();
-            self.rooms.insert(name, room.clone());
-
-            room
-        }
-    }
-
-    fn get_room(&mut self, name: &str) -> Option<mpsc::UnboundedSender<RoomMessage>> {
+    fn get_room(&mut self, name: &str) -> Option<RoomSender> {
         let room = self.rooms.get(name)?;
 
         if room.is_closed() {
             self.rooms.remove(name);
+
             None
         } else {
             Some(room.clone())
         }
+    }
+
+    fn insert_room(&mut self, name: &str, owner: (Uuid, Client)) -> RoomSender {
+        let room = Room::spawn(owner);
+        self.rooms.insert(name.to_owned(), room.clone());
+
+        room
     }
 }

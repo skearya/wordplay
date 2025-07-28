@@ -9,6 +9,10 @@ impl RoomSender {
     pub fn new(sender: mpsc::UnboundedSender<RoomMessage>) -> Self {
         Self(sender)
     }
+
+    pub fn is_closed(&self) -> bool {
+        self.0.is_closed()
+    }
 }
 
 impl RoomMessenger<RoomMessage> for RoomSender {

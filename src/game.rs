@@ -64,6 +64,8 @@ pub mod messages {
     }
 }
 
+use std::collections::HashMap;
+
 use uuid::Uuid;
 
 use crate::{
@@ -78,9 +80,10 @@ use crate::{
             messages::{ServerWordBomb, WordBombMessage},
         },
     },
-    messages::RoomSettings,
+    lobby::Lobby,
+    messages::{GameType, RoomSettings},
     room::{
-        handler::Handler,
+        handler::{GameHandler, Handler},
         messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
         state::State,
     },
@@ -117,84 +120,93 @@ impl GameState {
 }
 
 pub struct Game {
-    game: GameState,
+    state: GameState,
+    rejoin_tokens: HashMap<Uuid, Uuid>,
     requesting_end: Vec<Uuid>,
 }
 
-impl Handler<State> for Game {
-    type ClientMessage = ClientGame;
-    type ServerMessage = ServerGame;
-    type RoomMessage = GameMessage;
-
-    fn new(settings: &RoomSettings) -> Self {
+impl Game {
+    pub fn new(settings: &RoomSettings, players: &[Uuid]) -> Self {
         Self {
-            game: todo!(),
+            state: match settings.game {
+                GameType::WordBomb => {
+                    GameState::WordBomb(WordBomb::new(&settings.word_bomb, players))
+                }
+                GameType::Anagrams => {
+                    GameState::Anagrams(Anagrams::new(&settings.anagrams, players))
+                }
+            },
+            rejoin_tokens: players.iter().map(|&uuid| (uuid, Uuid::new_v4())).collect(),
             requesting_end: vec![],
         }
     }
 
+    pub fn lookup_rejoin_token(&self, rejoin_token: Uuid) -> Option<Uuid> {
+        self.rejoin_tokens.get(&rejoin_token).copied()
+    }
+}
+
+impl Handler for Game {
+    type ClientMessage = ClientGame;
+    type ServerMessage = ServerGame;
+    type RoomMessage = GameMessage;
+
     fn handle_client(
         &mut self,
+        settings: &RoomSettings,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<State>> {
-        match message {
-            ClientGame::WordBomb(message) => {
-                let word_bomb = self.game.try_word_bomb()?;
-
-                word_bomb.handle_client(
-                    client_submessenger!(clients, ServerGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
-                    (uuid, message),
-                )?;
-            }
-            ClientGame::Anagrams(message) => {
-                let anagrams = self.game.try_anagrams()?;
-
-                anagrams.handle_client(
-                    client_submessenger!(clients, ServerGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
-                    (uuid, message),
-                )?;
-            }
+        let info = match message {
+            ClientGame::WordBomb(message) => self.state.try_word_bomb()?.handle_client(
+                client_submessenger!(&clients, ServerGame::WordBomb(ServerWordBomb)),
+                room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
+                (uuid, message),
+            )?,
+            ClientGame::Anagrams(message) => self.state.try_anagrams()?.handle_client(
+                client_submessenger!(&clients, ServerGame::Anagrams(ServerAnagrams)),
+                room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
+                (uuid, message),
+            )?,
             ClientGame::EndRequest => todo!(),
             ClientGame::ForceEnd => todo!(),
+        };
+
+        if let Some(info) = info {
+            clients.broadcast(ServerGame::Ended {
+                post_game_info: info,
+                new_owner: None,
+            });
         }
 
-        Ok(None)
+        todo!()
     }
 
     fn handle_message(
         &mut self,
+        settings: &RoomSettings,
         clients: impl ClientMessenger<Self::ServerMessage>,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>> {
-        match message {
-            GameMessage::WordBomb(message) => {
-                let word_bomb = self.game.try_word_bomb()?;
+        let info = match message {
+            GameMessage::WordBomb(message) => self.state.try_word_bomb()?.handle_message(
+                client_submessenger!(&clients, ServerGame::WordBomb(ServerWordBomb)),
+                room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
+                message,
+            )?,
+            GameMessage::Anagrams(message) => self.state.try_anagrams()?.handle_message(
+                client_submessenger!(&clients, ServerGame::Anagrams(ServerAnagrams)),
+                room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
+                message,
+            )?,
+        };
 
-                word_bomb.handle_message(
-                    client_submessenger!(clients, ServerGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
-                    message,
-                )?;
-            }
-            GameMessage::Anagrams(message) => {
-                let anagrams = self.game.try_anagrams()?;
-
-                anagrams.handle_message(
-                    client_submessenger!(clients, ServerGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
-                    message,
-                )?;
-            }
-        }
         todo!()
     }
 
     fn end(&mut self) {
-        self.game.end();
+        self.state.end();
     }
 }

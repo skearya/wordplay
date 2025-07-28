@@ -88,9 +88,9 @@ macro_rules! submessenger {
 
 macro_rules! client_submessenger {
     ($messenger:expr, $server_type:ident :: $variant:ident( $subtype:ty )) => {{
-        struct SubmessengerImpl<T: ClientMessenger<$server_type>>(T);
+        struct SubmessengerImpl<'a, T: ClientMessenger<$server_type>>(&'a T);
 
-        impl<T: ClientMessenger<$server_type>> ClientMessenger<$subtype> for SubmessengerImpl<T> {
+        impl<T: ClientMessenger<$server_type>> ClientMessenger<$subtype> for SubmessengerImpl<'_, T> {
             fn send(&self, uuid: Uuid, message: $subtype) {
                 self.0.send(uuid, $server_type::$variant(message));
             }

@@ -5,6 +5,7 @@ pub mod messenger;
 pub mod sender;
 pub mod state;
 
+use axum::extract::ws;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -13,7 +14,7 @@ use crate::{
     lobby::messages::{LobbyMessage, ServerLobby},
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
     room::{
-        clients::Clients,
+        clients::{Client, Clients},
         general::messages::ServerGeneral,
         handler::Handler,
         messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
@@ -37,23 +38,28 @@ pub struct Room {
 
 impl Room {
     pub fn new(
-        sender: mpsc::UnboundedSender<RoomMessage>,
+        owner: (Uuid, Client),
+        sender: RoomSender,
         reciever: mpsc::UnboundedReceiver<RoomMessage>,
     ) -> Self {
         Self {
             state: State::default(),
-            settings: RoomSettings::default(),
-            clients: Clients::new(sender.clone()),
-            sender: RoomSender::new(sender),
+            settings: RoomSettings {
+                owner: owner.0,
+                ..RoomSettings::default()
+            },
+            clients: Clients::new(sender.clone(), owner),
+            sender,
             reciever,
             close: false,
         }
     }
 
-    pub fn spawn() -> mpsc::UnboundedSender<RoomMessage> {
+    pub fn spawn(owner: (Uuid, Client)) -> RoomSender {
         let (sender, reciever) = mpsc::unbounded_channel::<RoomMessage>();
+        let sender = RoomSender::new(sender);
 
-        task::spawn(Self::new(sender.clone(), reciever).run());
+        task::spawn(Self::new(owner, sender.clone(), reciever).run());
 
         sender
     }
@@ -91,11 +97,13 @@ impl Room {
             },
             RoomMessage::General(message) => self.handle_message(message),
             RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
+                &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 message,
             ),
             RoomMessage::InGame(message) => self.state.try_in_game()?.handle_message(
+                &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::InGame(ServerGame)),
                 room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
                 message,
@@ -107,11 +115,13 @@ impl Room {
         match message {
             ClientMessage::General(message) => self.handle_client((uuid, message)),
             ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
+                &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 (uuid, message),
             ),
             ClientMessage::InGame(message) => self.state.try_in_game()?.handle_client(
+                &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::InGame(ServerGame)),
                 room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
                 (uuid, message),
@@ -129,40 +139,41 @@ mod tests {
         messages::{ClientMessage, RoomMessage},
         room::{
             Room,
+            clients::Client,
             general::messages::{ClientGeneral, GeneralMessage},
+            messenger::RoomMessenger,
         },
     };
 
     #[tokio::test(start_paused = true)]
     async fn test() -> anyhow::Result<()> {
-        let room = Room::spawn();
-
         let uuid1 = Uuid::new_v4();
+        let socket_uuid1 = Uuid::new_v4();
         let (sender1, _reciever1) = mpsc::unbounded_channel();
 
+        let room = Room::spawn((uuid1, Client::new(socket_uuid1, sender1)));
+
         let uuid2 = Uuid::new_v4();
+        let socket_uuid2 = Uuid::new_v4();
         let (sender2, mut reciever2) = mpsc::unbounded_channel();
 
-        room.send(RoomMessage::General(GeneralMessage::Joined {
-            uuid: uuid1,
-            sender: sender1,
-        }))?;
-
-        room.send(RoomMessage::General(GeneralMessage::Joined {
+        room.send(RoomMessage::General(GeneralMessage::Join {
             uuid: uuid2,
+            socket_uuid: socket_uuid2,
             sender: sender2,
-        }))?;
+        }));
 
         room.send(RoomMessage::Client {
             uuid: uuid1,
             message: ClientMessage::General(ClientGeneral::ChatMessage {
                 content: "hi".to_owned(),
             }),
-        })?;
+        });
 
+        // don't broadcast ourselves joining to ourselves
         assert!(matches!(
             serde_json::from_str::<ClientMessage>(
-                reciever2.recv().await.unwrap().into_text()?.as_str(),
+                dbg!(reciever2.recv().await.unwrap().into_text()?.as_str()),
             )?,
             ClientMessage::General(ClientGeneral::ChatMessage { content }) if content == "hi"
         ));
