@@ -91,7 +91,7 @@ async fn socket(
             (uuid, room)
         }
         // If we don't have a room, it doesn't matter if we have a rejoin token.
-        (None, Some(_)) | (None, None) => {
+        (None, Some(_) | None) => {
             let uuid = Uuid::new_v4();
             let room = state.insert_room(&room, (uuid, Client::new(socket, sender, username)));
 

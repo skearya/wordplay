@@ -41,6 +41,8 @@ pub mod messages {
         Join { uuid: Uuid },
         /// Broadcasted when a client leaves.
         Leave { uuid: Uuid },
+        /// Sent back when a client sends a `ClientGeneral::Ping`.
+        Pong { timestamp: u64 },
         /// Used to broadcast a chat message.
         Chat { author: Uuid, content: String },
         /// Broadcasted when the room owner has updated room/game settings.
@@ -99,35 +101,31 @@ use crate::{
     messages::RoomSettings,
     room::{
         clients::Client,
-        general::messages::{
-            ClientGeneral, GeneralMessage, ServerClient, ServerGeneral, ServerState,
-        },
-        handler::HandlerMut,
-        messenger::{ClientMessenger, ClientUtils, ClientUtilsMut, RoomMessenger},
+        general::messages::{ClientGeneral, GeneralMessage, ServerClient, ServerGeneral},
+        messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
         state::State,
     },
 };
 
 pub struct General<'a> {
     state: &'a mut State,
-    close: &'a mut bool,
+    settings: &'a mut RoomSettings,
 }
 
-impl HandlerMut for General<'_> {
-    type ClientMessage = ClientGeneral;
-    type ServerMessage = ServerGeneral;
-    type RoomMessage = GeneralMessage;
-    type StateMessage = ServerState;
+impl<'a> General<'a> {
+    pub fn new(state: &'a mut State, settings: &'a mut RoomSettings) -> Self {
+        Self { state, settings }
+    }
 
-    fn handle_client(
+    pub fn handle_client(
         &mut self,
-        settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils + ClientUtilsMut,
-        room: impl RoomMessenger<Self::RoomMessage>,
-        (uuid, message): (Uuid, Self::ClientMessage),
+        clients: impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut,
+        (uuid, message): (Uuid, ClientGeneral),
     ) -> anyhow::Result<Option<State>> {
         match message {
-            ClientGeneral::Ping { timestamp } => todo!(),
+            ClientGeneral::Ping { timestamp } => {
+                clients.send(uuid, ServerGeneral::Pong { timestamp });
+            }
             ClientGeneral::Chat { content } => {
                 clients.broadcast(ServerGeneral::Chat {
                     author: uuid,
@@ -135,21 +133,19 @@ impl HandlerMut for General<'_> {
                 });
             }
             ClientGeneral::Settings(new) => {
-                *settings = new;
+                *self.settings = new;
 
-                clients.broadcast(ServerGeneral::Settings(settings.clone()));
+                clients.broadcast(ServerGeneral::Settings(*self.settings));
             }
         }
 
         Ok(None)
     }
 
-    fn handle_message(
+    pub fn handle_message(
         &mut self,
-        settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils + ClientUtilsMut,
-        room: impl RoomMessenger<Self::RoomMessage>,
-        message: Self::RoomMessage,
+        mut clients: impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut,
+        message: GeneralMessage,
     ) -> anyhow::Result<Option<State>> {
         match message {
             GeneralMessage::Join {
@@ -160,7 +156,7 @@ impl HandlerMut for General<'_> {
             } => {
                 clients.add(uuid, Client::new(socket, sender, username));
 
-                clients.send(uuid, self.info(uuid, &settings, &clients));
+                clients.send(uuid, self.info(uuid, self.settings, &clients));
             }
             GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
@@ -195,31 +191,19 @@ impl HandlerMut for General<'_> {
 
                 response.send(uuid).ok();
 
-                clients.send(uuid, self.info(uuid, &settings, &clients));
+                clients.send(uuid, self.info(uuid, self.settings, &clients));
             }
             GeneralMessage::Leave { uuid, socket } => {
                 clients.remove(uuid, socket);
             }
             GeneralMessage::Close => {
                 if clients.is_empty() {
-                    *self.close = true;
+                    return Ok(Some(State::Ended));
                 }
             }
         }
 
         Ok(None)
-    }
-
-    fn state(&self) -> Self::StateMessage {
-        self.state.state()
-    }
-
-    fn end(&mut self) {}
-}
-
-impl<'a> General<'a> {
-    pub fn new(state: &'a mut State, close: &'a mut bool) -> Self {
-        Self { state, close }
     }
 
     fn info(
@@ -230,7 +214,7 @@ impl<'a> General<'a> {
     ) -> ServerGeneral {
         ServerGeneral::Info {
             uuid,
-            settings: settings.clone(),
+            settings: *settings,
             clients: clients
                 .iter()
                 .map(|(&uuid, client)| ServerClient {
@@ -239,7 +223,7 @@ impl<'a> General<'a> {
                     avatar_url: None,
                 })
                 .collect(),
-            state: self.state(),
+            state: self.state.state(),
         }
     }
 }

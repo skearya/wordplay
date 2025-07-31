@@ -7,6 +7,8 @@ use crate::{
 pub enum State {
     Lobby(Lobby),
     InGame(Game),
+    /// Indicator that the room task should end.
+    Ended,
 }
 
 impl Default for State {
@@ -36,6 +38,7 @@ impl State {
         match self {
             Self::Lobby(lobby) => ServerState::Lobby(lobby.state()),
             Self::InGame(in_game) => ServerState::Game(in_game.state()),
+            Self::Ended => unreachable!(),
         }
     }
 
@@ -43,6 +46,7 @@ impl State {
         match self {
             Self::Lobby(lobby) => lobby.end(),
             Self::InGame(in_game) => in_game.end(),
+            Self::Ended => unreachable!(),
         }
     }
 }

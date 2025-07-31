@@ -14,11 +14,8 @@ use crate::{
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
     room::{
         clients::{Client, Clients},
-        general::{
-            General,
-            messages::{GeneralMessage, ServerGeneral},
-        },
-        handler::{Handler, HandlerMut},
+        general::{General, messages::ServerGeneral},
+        handler::Handler,
         messenger::{
             ClientMessenger, RoomMessenger, client_submessenger, client_submessenger_mut,
             room_submessenger,
@@ -37,8 +34,6 @@ pub struct Room {
     sender: RoomSender,
     /// Reciever of `RoomMessages`.
     reciever: mpsc::UnboundedReceiver<RoomMessage>,
-    /// Indicator that the room task should end.
-    close: bool,
 }
 
 impl Room {
@@ -56,7 +51,6 @@ impl Room {
             clients: Clients::new(sender.clone(), owner),
             sender,
             reciever,
-            close: false,
         }
     }
 
@@ -71,24 +65,23 @@ impl Room {
 
     async fn run(mut self) -> anyhow::Result<()> {
         while let Some(message) = self.reciever.recv().await {
-            match self.handle(message) {
+            match self.handle_message(message) {
+                Ok(Some(State::Ended)) => {
+                    self.state.end();
+                    break;
+                }
                 Ok(Some(state)) => self.state = state,
                 Ok(None) => (),
                 Err(err) => tracing::error!(?err),
-            }
-
-            if self.close {
-                self.state.end();
-                break;
             }
         }
 
         Ok(())
     }
 
-    fn handle(&mut self, message: RoomMessage) -> anyhow::Result<Option<State>> {
+    fn handle_message(&mut self, message: RoomMessage) -> anyhow::Result<Option<State>> {
         match message {
-            RoomMessage::Client { uuid, message } => match self.client(uuid, message) {
+            RoomMessage::Client { uuid, message } => match self.handle_client(uuid, message) {
                 Ok(state) => Ok(state),
                 Err(err) => {
                     self.clients.send(
@@ -101,14 +94,12 @@ impl Room {
                     Err(err)
                 }
             },
-            RoomMessage::General(message) => General::new(&mut self.state, &mut self.close)
+            RoomMessage::General(message) => General::new(&mut self.state, &mut self.settings)
                 .handle_message(
-                    &mut self.settings,
                     client_submessenger_mut!(
                         &mut self.clients,
                         ServerMessage::General(ServerGeneral)
                     ),
-                    room_submessenger!(self.sender.clone(), RoomMessage::General(GeneralMessage)),
                     message,
                 ),
             RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
@@ -126,16 +117,18 @@ impl Room {
         }
     }
 
-    fn client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<Option<State>> {
+    fn handle_client(
+        &mut self,
+        uuid: Uuid,
+        message: ClientMessage,
+    ) -> anyhow::Result<Option<State>> {
         match message {
-            ClientMessage::General(message) => General::new(&mut self.state, &mut self.close)
+            ClientMessage::General(message) => General::new(&mut self.state, &mut self.settings)
                 .handle_client(
-                    &mut self.settings,
                     client_submessenger_mut!(
                         &mut self.clients,
                         ServerMessage::General(ServerGeneral)
                     ),
-                    room_submessenger!(self.sender.clone(), RoomMessage::General(GeneralMessage)),
                     (uuid, message),
                 ),
             ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
