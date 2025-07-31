@@ -40,7 +40,10 @@ async fn socket(
     socket: WebSocket,
     state: AppState,
     room: String,
-    params: Params,
+    Params {
+        username,
+        rejoin_token,
+    }: Params,
 ) -> anyhow::Result<()> {
     let (mut sink, mut stream) = socket.split();
     let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
@@ -55,17 +58,18 @@ async fn socket(
     });
 
     // Random UUID for this socket.
-    let socket_uuid = Uuid::new_v4();
+    let socket = Uuid::new_v4();
 
     // TODO work on actually sending the info message on every join type
-    
-    let (uuid, room) = match (state.get_room(&room), params.rejoin_token) {
+
+    let (uuid, room) = match (state.get_room(&room), rejoin_token) {
         (Some(room), Some(rejoin_token)) => {
             let (response, uuid) = oneshot::channel();
 
             room.send(RoomMessage::General(GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
-                socket_uuid,
+                socket,
+                username,
                 sender,
                 response,
             }));
@@ -79,7 +83,8 @@ async fn socket(
 
             room.send(RoomMessage::General(GeneralMessage::Join {
                 uuid,
-                socket_uuid,
+                socket,
+                username,
                 sender,
             }));
 
@@ -88,7 +93,7 @@ async fn socket(
         // If we don't have a room, it doesn't matter if we have a rejoin token.
         (None, Some(_)) | (None, None) => {
             let uuid = Uuid::new_v4();
-            let room = state.insert_room(&room, (uuid, Client::new(socket_uuid, sender)));
+            let room = state.insert_room(&room, (uuid, Client::new(socket, sender, username)));
 
             (uuid, room)
         }
@@ -110,10 +115,7 @@ async fn socket(
             }
         }
 
-        room.send(RoomMessage::General(GeneralMessage::Leave {
-            uuid,
-            socket_uuid,
-        }));
+        room.send(RoomMessage::General(GeneralMessage::Leave { uuid, socket }));
 
         Ok(())
     });

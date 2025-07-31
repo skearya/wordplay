@@ -131,7 +131,8 @@ impl Room {
 
 #[cfg(test)]
 mod tests {
-    use tokio::sync::mpsc;
+    use axum::extract::ws;
+    use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
     use uuid::Uuid;
 
     use crate::{
@@ -144,40 +145,61 @@ mod tests {
         },
     };
 
+    struct FakeClient {
+        uuid: Uuid,
+        socket: Uuid,
+        username: String,
+        sender: UnboundedSender<ws::Message>,
+        reciever: UnboundedReceiver<ws::Message>,
+    }
+
+    impl FakeClient {
+        fn new(id: &mut u32) -> Self {
+            *id += 1;
+
+            let (sender, reciever) = mpsc::unbounded_channel();
+
+            Self {
+                uuid: Uuid::new_v4(),
+                socket: Uuid::new_v4(),
+                username: format!("Client {id}"),
+                sender,
+                reciever,
+            }
+        }
+    }
+
     #[tokio::test(start_paused = true)]
     async fn chatting() -> anyhow::Result<()> {
-        let uuid1 = Uuid::new_v4();
-        let socket_uuid1 = Uuid::new_v4();
-        let (sender1, reciever1) = mpsc::unbounded_channel();
+        let mut id = 0;
 
-        let room = Room::spawn((uuid1, Client::new(socket_uuid1, sender1)));
-
-        let uuid2 = Uuid::new_v4();
-        let socket_uuid2 = Uuid::new_v4();
-        let (sender2, mut reciever2) = mpsc::unbounded_channel();
+        let one = FakeClient::new(&mut id);
+        let room = Room::spawn((one.uuid, Client::new(one.socket, one.sender, one.username)));
+        let mut two = FakeClient::new(&mut id);
 
         room.send(RoomMessage::General(GeneralMessage::Join {
-            uuid: uuid2,
-            socket_uuid: socket_uuid2,
-            sender: sender2,
+            uuid: two.uuid,
+            socket: two.socket,
+            sender: two.sender,
+            username: two.username,
         }));
 
         room.send(RoomMessage::Client {
-            uuid: uuid1,
+            uuid: one.uuid,
             message: ClientMessage::General(ClientGeneral::Chat {
                 content: "hi".to_owned(),
             }),
         });
 
-        assert!(reciever1.is_empty());
+        assert!(one.reciever.is_empty());
 
         let res = serde_json::from_str::<serde_json::Value>(
-            reciever2.recv().await.unwrap().into_text()?.as_str(),
+            two.reciever.recv().await.unwrap().into_text()?.as_str(),
         )?;
 
         assert_eq!(res["kind"], "general");
         assert_eq!(res["data"]["kind"], "chat");
-        assert_eq!(res["data"]["author"], uuid1.to_string());
+        assert_eq!(res["data"]["author"], one.uuid.to_string());
         assert_eq!(res["data"]["content"], "hi");
 
         Ok(())

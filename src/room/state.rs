@@ -1,4 +1,8 @@
-use crate::{game::Game, lobby::Lobby, room::handler::Handler};
+use crate::{
+    game::Game,
+    lobby::Lobby,
+    room::{general::messages::ServerState, handler::Handler},
+};
 
 pub enum State {
     Lobby(Lobby),
@@ -25,6 +29,13 @@ impl State {
             Ok(v)
         } else {
             Err(anyhow::anyhow!("expected in game"))
+        }
+    }
+
+    pub fn state(&self) -> ServerState {
+        match self {
+            Self::Lobby(lobby) => ServerState::Lobby(lobby.state()),
+            Self::InGame(in_game) => ServerState::Game(in_game.state()),
         }
     }
 

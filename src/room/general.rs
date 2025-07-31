@@ -53,12 +53,10 @@ pub mod messages {
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct ServerClient {
-        uuid: Uuid,
-        username: String,
+        pub uuid: Uuid,
+        pub username: String,
         /// URL to account avatar.
-        avatar_url: Option<String>,
-        /// `true` if player disconnected in game only.
-        disconnected: bool,
+        pub avatar_url: Option<String>,
     }
 
     #[derive(Serialize, TS)]
@@ -73,12 +71,14 @@ pub mod messages {
     pub enum GeneralMessage {
         Join {
             uuid: Uuid,
-            socket_uuid: Uuid,
+            socket: Uuid,
+            username: String,
             sender: mpsc::UnboundedSender<ws::Message>,
         },
         JoinWithRejoinToken {
             rejoin_token: Uuid,
-            socket_uuid: Uuid,
+            socket: Uuid,
+            username: String,
             sender: mpsc::UnboundedSender<ws::Message>,
             /// Response to the socket task that tried joining containing the client's designated UUID.
             /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
@@ -87,7 +87,7 @@ pub mod messages {
         },
         Leave {
             uuid: Uuid,
-            socket_uuid: Uuid,
+            socket: Uuid,
         },
         Close,
     }
@@ -100,8 +100,8 @@ use crate::{
     room::{
         Room,
         clients::Client,
-        general::messages::{ClientGeneral, GeneralMessage, ServerGeneral},
-        messenger::ClientMessenger,
+        general::messages::{ClientGeneral, GeneralMessage, ServerClient, ServerGeneral},
+        messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
         state::State,
     },
 };
@@ -132,15 +132,21 @@ impl Room {
         match message {
             GeneralMessage::Join {
                 uuid,
-                socket_uuid,
+                socket,
+                username,
                 sender,
             } => {
-                self.clients.add(uuid, socket_uuid, sender);
+                self.clients
+                    .add(uuid, Client::new(socket, sender, username));
+
+                self.clients
+                    .send(uuid, ServerMessage::General(self.info(uuid)));
             }
             GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
-                socket_uuid,
+                socket,
                 sender,
+                username,
                 response,
             } => {
                 let uuid = if let Some(player) = self
@@ -149,28 +155,33 @@ impl Room {
                     .ok()
                     .and_then(|game| game.lookup_rejoin_token(rejoin_token))
                 {
-                    match self.clients.get_mut(&player) {
+                    match self.clients.get_mut(player) {
                         Some(client) => {
                             client.close("Reconnected on another client.");
-                            *client = Client::new(socket_uuid, sender);
+                            *client = Client::new(socket, sender, username);
                         }
                         None => {
-                            self.clients.add(player, socket_uuid, sender);
+                            self.clients
+                                .add(player, Client::new(socket, sender, username));
                         }
                     }
 
                     player
                 } else {
                     let uuid = Uuid::new_v4();
-                    self.clients.add(uuid, socket_uuid, sender);
+                    self.clients
+                        .add(uuid, Client::new(socket, sender, username));
 
                     uuid
                 };
 
                 response.send(uuid).ok();
+
+                self.clients
+                    .send(uuid, ServerMessage::General(self.info(uuid)));
             }
-            GeneralMessage::Leave { uuid, socket_uuid } => {
-                self.clients.remove(uuid, socket_uuid);
+            GeneralMessage::Leave { uuid, socket } => {
+                self.clients.remove(uuid, socket);
             }
             GeneralMessage::Close => {
                 if self.clients.is_empty() {
@@ -181,6 +192,23 @@ impl Room {
         }
 
         Ok(None)
+    }
+
+    fn info(&self, uuid: Uuid) -> ServerGeneral {
+        ServerGeneral::Info {
+            uuid,
+            settings: self.settings.clone(),
+            clients: self
+                .clients
+                .iter()
+                .map(|(&uuid, client)| ServerClient {
+                    uuid,
+                    username: client.username.clone(),
+                    avatar_url: None,
+                })
+                .collect(),
+            state: self.state.state(),
+        }
     }
 }
 

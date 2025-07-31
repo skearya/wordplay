@@ -8,29 +8,29 @@ use crate::{
     messages::{RoomMessage, ServerMessage},
     room::{
         general::messages::{GeneralMessage, ServerGeneral},
-        messenger::{ClientMessenger, RoomMessenger},
+        messenger::{
+            ClientMessenger, ClientUtils, ClientUtilsMut, RoomMessenger,
+        },
         sender::RoomSender,
     },
     task,
 };
 
-pub struct Clients {
-    room: RoomSender,
-    clients: HashMap<Uuid, Client>,
-}
-
 pub struct Client {
     /// UUID unique to the client's socket task. **Not** client UUID.
-    socket_uuid: Uuid,
+    socket: Uuid,
     /// Sender to the client's reciever task that proxies WebSocket messages.
     sender: mpsc::UnboundedSender<ws::Message>,
+    /// Client username.
+    pub username: String,
 }
 
 impl Client {
-    pub fn new(socket_uuid: Uuid, sender: mpsc::UnboundedSender<ws::Message>) -> Self {
+    pub fn new(socket: Uuid, sender: mpsc::UnboundedSender<ws::Message>, username: String) -> Self {
         Self {
-            socket_uuid,
+            socket,
             sender,
+            username,
         }
     }
 
@@ -44,62 +44,17 @@ impl Client {
     }
 }
 
+pub struct Clients {
+    clients: HashMap<Uuid, Client>,
+    room: RoomSender,
+}
+
 impl Clients {
     pub fn new(room: RoomSender, owner: (Uuid, Client)) -> Self {
         Self {
-            room,
             clients: HashMap::from([owner]),
+            room,
         }
-    }
-
-    pub fn add(
-        &mut self,
-        uuid: Uuid,
-        socket_uuid: Uuid,
-        sender: mpsc::UnboundedSender<ws::Message>,
-    ) {
-        self.clients.insert(
-            uuid,
-            Client {
-                socket_uuid,
-                sender,
-            },
-        );
-
-        self.broadcast_except(uuid, ServerMessage::General(ServerGeneral::Join { uuid }));
-    }
-
-    pub fn remove(&mut self, uuid: Uuid, socket_uuid: Uuid) {
-        if let Some(client) = self.get(&uuid) {
-            if client.socket_uuid == socket_uuid {
-                self.clients.remove(&uuid);
-
-                self.broadcast(ServerMessage::General(ServerGeneral::Leave { uuid }));
-
-                if self.is_empty() {
-                    let room = self.room.clone();
-
-                    task::spawn(async move {
-                        tokio::time::sleep(Duration::from_secs(5)).await;
-                        room.send(RoomMessage::General(GeneralMessage::Close));
-
-                        Ok(())
-                    });
-                }
-            }
-        }
-    }
-
-    pub fn get(&self, uuid: &Uuid) -> Option<&Client> {
-        self.clients.get(uuid)
-    }
-
-    pub fn get_mut(&mut self, uuid: &Uuid) -> Option<&mut Client> {
-        self.clients.get_mut(uuid)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.clients.is_empty()
     }
 }
 
@@ -140,16 +95,49 @@ impl ClientMessenger<ServerMessage> for Clients {
     }
 }
 
-impl ClientMessenger<ServerMessage> for &Clients {
-    fn send(&self, uuid: Uuid, message: ServerMessage) {
-        (*self).send(uuid, message);
+impl ClientUtils for Clients {
+    fn get(&self, uuid: Uuid) -> Option<&Client> {
+        self.clients.get(&uuid)
     }
 
-    fn broadcast(&self, message: ServerMessage) {
-        (*self).broadcast(message);
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
+        self.clients.iter()
     }
 
-    fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
-        (*self).broadcast_except(exclude, message);
+    fn is_empty(&self) -> bool {
+        self.clients.is_empty()
+    }
+}
+
+impl ClientUtilsMut for Clients {
+    fn add(&mut self, uuid: Uuid, client: Client) {
+        self.clients.insert(uuid, client);
+
+        self.broadcast_except(uuid, ServerMessage::General(ServerGeneral::Join { uuid }));
+    }
+
+    fn remove(&mut self, uuid: Uuid, socket: Uuid) {
+        if let Some(client) = self.get(uuid) {
+            if client.socket == socket {
+                self.clients.remove(&uuid);
+
+                self.broadcast(ServerMessage::General(ServerGeneral::Leave { uuid }));
+
+                if self.is_empty() {
+                    let room = self.room.clone();
+
+                    task::spawn(async move {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        room.send(RoomMessage::General(GeneralMessage::Close));
+
+                        Ok(())
+                    });
+                }
+            }
+        }
+    }
+
+    fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
+        self.clients.get_mut(&uuid)
     }
 }
