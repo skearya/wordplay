@@ -57,6 +57,8 @@ async fn socket(
     // Random UUID for this socket.
     let socket_uuid = Uuid::new_v4();
 
+    // TODO work on actually sending the info message on every join type
+    
     let (uuid, room) = match (state.get_room(&room), params.rejoin_token) {
         (Some(room), Some(rejoin_token)) => {
             let (response, uuid) = oneshot::channel();
