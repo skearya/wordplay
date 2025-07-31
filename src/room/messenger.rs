@@ -119,7 +119,7 @@ macro_rules! client_submessenger_mut {
             }
         }
 
-        impl<T: ClientMessenger<$server_type> + ClientUtilsMut> ClientUtils for SubmessengerImpl<'_, T> {
+        impl<T: ClientMessenger<$server_type> + ClientUtilsMut> ClientUtilsMut for SubmessengerImpl<'_, T> {
             fn add(&mut self, uuid: Uuid, client: Client) {
                 self.0.add(uuid, client)
             }
@@ -129,7 +129,7 @@ macro_rules! client_submessenger_mut {
             }
 
             fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
-                self.0.get_mut(uuid, uuid)
+                self.0.get_mut(uuid)
             }
         }
 

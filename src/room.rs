@@ -14,9 +14,15 @@ use crate::{
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
     room::{
         clients::{Client, Clients},
-        general::messages::ServerGeneral,
-        handler::Handler,
-        messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
+        general::{
+            General,
+            messages::{GeneralMessage, ServerGeneral},
+        },
+        handler::{Handler, HandlerMut},
+        messenger::{
+            ClientMessenger, RoomMessenger, client_submessenger, client_submessenger_mut,
+            room_submessenger,
+        },
         sender::RoomSender,
         state::State,
     },
@@ -72,6 +78,7 @@ impl Room {
             }
 
             if self.close {
+                self.state.end();
                 break;
             }
         }
@@ -94,7 +101,16 @@ impl Room {
                     Err(err)
                 }
             },
-            RoomMessage::General(message) => self.handle_message(message),
+            RoomMessage::General(message) => General::new(&mut self.state, &mut self.close)
+                .handle_message(
+                    &mut self.settings,
+                    client_submessenger_mut!(
+                        &mut self.clients,
+                        ServerMessage::General(ServerGeneral)
+                    ),
+                    room_submessenger!(self.sender.clone(), RoomMessage::General(GeneralMessage)),
+                    message,
+                ),
             RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
                 &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
@@ -112,7 +128,16 @@ impl Room {
 
     fn client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<Option<State>> {
         match message {
-            ClientMessage::General(message) => self.handle_client((uuid, message)),
+            ClientMessage::General(message) => General::new(&mut self.state, &mut self.close)
+                .handle_client(
+                    &mut self.settings,
+                    client_submessenger_mut!(
+                        &mut self.clients,
+                        ServerMessage::General(ServerGeneral)
+                    ),
+                    room_submessenger!(self.sender.clone(), RoomMessage::General(GeneralMessage)),
+                    (uuid, message),
+                ),
             ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
                 &self.settings,
                 client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
