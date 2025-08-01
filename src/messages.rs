@@ -8,8 +8,8 @@ use crate::{
         messages::{ClientGame, GameMessage, ServerGame},
         word_bomb::messages::WordBombSettings,
     },
+    general::messages::{ClientGeneral, GeneralMessage, ServerGeneral},
     lobby::messages::{ClientLobby, LobbyMessage, ServerLobby},
-    room::general::messages::{ClientGeneral, GeneralMessage, ServerGeneral},
 };
 
 #[derive(Deserialize, TS)]
@@ -21,6 +21,7 @@ pub enum ClientMessage {
     InGame(ClientGame),
 }
 
+#[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
 #[derive(Serialize, TS)]
 #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
 #[ts(export)]
@@ -45,6 +46,7 @@ pub enum RoomMessage {
     InGame(GameMessage),
 }
 
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -56,6 +58,7 @@ pub struct RoomSettings {
     pub anagrams: AnagramsSettings,
 }
 
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

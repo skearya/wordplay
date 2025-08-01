@@ -8,8 +8,8 @@ pub trait ClientMessenger<Msg> {
 
 pub trait ClientUtils {
     fn get(&self, uuid: Uuid) -> Option<&Client>;
-    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client>;
     fn is_empty(&self) -> bool;
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client>;
 }
 
 pub trait ClientUtilsMut {
@@ -49,15 +49,15 @@ macro_rules! client_submessenger {
 
         impl<T: ClientMessenger<$server_type>> ClientMessenger<$subtype> for SubmessengerImpl<'_, T> {
             fn send(&self, uuid: Uuid, message: $subtype) {
-                self.0.send(uuid, $server_type::$variant(message));
+                self.0.send(uuid, $server_type::$variant(message))
             }
 
             fn broadcast(&self, message: $subtype) {
-                self.0.broadcast($server_type::$variant(message));
+                self.0.broadcast($server_type::$variant(message))
             }
 
             fn broadcast_except(&self, except: Uuid, message: $subtype) {
-                self.0.broadcast_except(except, $server_type::$variant(message));
+                self.0.broadcast_except(except, $server_type::$variant(message))
             }
         }
 
@@ -66,12 +66,12 @@ macro_rules! client_submessenger {
                 self.0.get(uuid)
             }
 
-            fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
-                self.0.iter()
-            }
-
             fn is_empty(&self) -> bool {
                 self.0.is_empty()
+            }
+
+            fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
+                self.0.iter()
             }
         }
 
@@ -93,15 +93,15 @@ macro_rules! client_submessenger_mut {
 
         impl<T: ClientMessenger<$server_type>> ClientMessenger<$subtype> for SubmessengerImpl<'_, T> {
             fn send(&self, uuid: Uuid, message: $subtype) {
-                self.0.send(uuid, $server_type::$variant(message));
+                self.0.send(uuid, $server_type::$variant(message))
             }
 
             fn broadcast(&self, message: $subtype) {
-                self.0.broadcast($server_type::$variant(message));
+                self.0.broadcast($server_type::$variant(message))
             }
 
             fn broadcast_except(&self, except: Uuid, message: $subtype) {
-                self.0.broadcast_except(except, $server_type::$variant(message));
+                self.0.broadcast_except(except, $server_type::$variant(message))
             }
         }
 
@@ -110,12 +110,12 @@ macro_rules! client_submessenger_mut {
                 self.0.get(uuid)
             }
 
-            fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
-                self.0.iter()
-            }
-
             fn is_empty(&self) -> bool {
                 self.0.is_empty()
+            }
+
+            fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
+                self.0.iter()
             }
         }
 

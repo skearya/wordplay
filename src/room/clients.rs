@@ -5,15 +5,10 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    messages::{RoomMessage, ServerMessage},
-    room::{
-        general::messages::{GeneralMessage, ServerGeneral},
-        messenger::{
-            ClientMessenger, ClientUtils, ClientUtilsMut, RoomMessenger,
-        },
+    general::messages::{GeneralMessage, ServerGeneral}, messages::{RoomMessage, ServerMessage}, room::{
+        messenger::{ClientMessenger, ClientUtils, ClientUtilsMut, RoomMessenger},
         sender::RoomSender,
-    },
-    task,
+    }, task
 };
 
 pub struct Client {
@@ -50,9 +45,9 @@ pub struct Clients {
 }
 
 impl Clients {
-    pub fn new(room: RoomSender, owner: (Uuid, Client)) -> Self {
+    pub fn new(room: RoomSender) -> Self {
         Self {
-            clients: HashMap::from([owner]),
+            clients: HashMap::new(),
             room,
         }
     }
@@ -100,12 +95,12 @@ impl ClientUtils for Clients {
         self.clients.get(&uuid)
     }
 
-    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
-        self.clients.iter()
-    }
-
     fn is_empty(&self) -> bool {
         self.clients.is_empty()
+    }
+
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
+        self.clients.iter()
     }
 }
 

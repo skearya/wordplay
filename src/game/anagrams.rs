@@ -1,8 +1,11 @@
 pub mod messages {
+    use std::collections::HashMap;
+
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
     use uuid::Uuid;
 
+    #[cfg_attr(test, derive(Debug, PartialEq))]
     #[derive(Serialize, Deserialize, TS, Clone, Copy)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -21,6 +24,7 @@ pub mod messages {
         Guess { word: String },
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
@@ -31,28 +35,30 @@ pub mod messages {
         },
         Invalid {
             /// Reason for invalid guess (ex: "guess doesn't include prompt")
-            reason: &'static str,
+            reason: String,
         },
     }
 
     pub enum AnagramsMessage {}
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct AnagramsState {
-        players: Vec<AnagramsPlayer>,
+        players: HashMap<Uuid, AnagramsPlayer>,
         anagram: String,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct AnagramsPlayer {
-        uuid: Uuid,
         used_words: Vec<String>,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -113,7 +119,7 @@ impl GameHandler for Anagrams {
         todo!()
     }
 
-    fn end(&mut self) {
+    fn end(&mut self) -> Self::PostGameMessage {
         todo!()
     }
 }

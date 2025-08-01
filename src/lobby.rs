@@ -16,6 +16,7 @@ pub mod messages {
         PracticeSubmission { prompt: String, input: String },
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(
         tag = "kind",
@@ -48,6 +49,7 @@ pub mod messages {
         },
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -61,6 +63,7 @@ pub mod messages {
         GameStart,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -84,7 +87,7 @@ use crate::{
     messages::RoomSettings,
     room::{
         handler::Handler,
-        messenger::{ClientMessenger, RoomMessenger},
+        messenger::{ClientMessenger, ClientUtils, RoomMessenger},
         state::State,
     },
     task,
@@ -119,8 +122,8 @@ impl Handler for Lobby {
 
     fn handle_client(
         &mut self,
-        settings: &RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<State>> {
@@ -138,7 +141,7 @@ impl Handler for Lobby {
                 });
             }
             ClientLobby::StartEarly => {
-                if settings.owner != uuid {
+                if settings.owner != uuid || self.ready.len() < 2 {
                     return Ok(None);
                 }
 
@@ -165,8 +168,8 @@ impl Handler for Lobby {
 
     fn handle_message(
         &mut self,
-        settings: &RoomSettings,
-        _clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>> {
@@ -213,9 +216,30 @@ impl Lobby {
             Some(countdown) if self.ready.len() < 2 => {
                 countdown.timer.abort();
 
+                self.countdown = None;
+
                 TimerAction::Stop
             }
             Some(_) | None => TimerAction::None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Dummy;
+
+    impl RoomMessenger<LobbyMessage> for Dummy {
+        fn send(&self, _message: LobbyMessage) {}
+    }
+
+    #[test]
+    fn countdown_none() {
+        let mut lobby = Lobby::new();
+
+        assert_eq!(lobby.update_countdown(Dummy), TimerAction::None);
+        assert!(lobby.countdown.is_none())
     }
 }

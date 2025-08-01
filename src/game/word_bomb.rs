@@ -1,8 +1,11 @@
 pub mod messages {
+    use std::collections::HashMap;
+
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
     use uuid::Uuid;
 
+    #[cfg_attr(test, derive(Debug, PartialEq))]
     #[derive(Serialize, Deserialize, TS, Clone, Copy)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -24,6 +27,7 @@ pub mod messages {
         Guess { word: String },
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
@@ -42,7 +46,7 @@ pub mod messages {
         },
         Invalid {
             /// Reason for invalid guess (ex: "guess doesn't include prompt")
-            reason: &'static str,
+            reason: String,
         },
         /// Broadcasted previously active player failed to come up with a valid guess.
         Exploded {
@@ -55,25 +59,27 @@ pub mod messages {
 
     pub enum WordBombMessage {}
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombState {
-        players: Vec<WordBombPlayer>,
+        players: HashMap<Uuid, WordBombPlayer>,
         turn: Uuid,
         prompt: String,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombPlayer {
-        uuid: Uuid,
         input: String,
         lives: u8,
         used_letters: Vec<char>,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -137,7 +143,7 @@ impl GameHandler for WordBomb {
         todo!()
     }
 
-    fn end(&mut self) {
+    fn end(&mut self) -> Self::PostGameMessage {
         todo!()
     }
 }

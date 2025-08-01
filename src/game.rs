@@ -27,6 +27,7 @@ pub mod messages {
         ForceEnd,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(
         tag = "kind",
@@ -50,6 +51,7 @@ pub mod messages {
         },
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
@@ -63,6 +65,7 @@ pub mod messages {
         Anagrams(AnagramsMessage),
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
@@ -73,6 +76,7 @@ pub mod messages {
         pub requesting_end: Vec<Uuid>,
     }
 
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
@@ -84,6 +88,7 @@ pub mod messages {
 
 use std::collections::HashMap;
 
+use rand::{rng, seq::IteratorRandom};
 use uuid::Uuid;
 
 use crate::{
@@ -104,7 +109,9 @@ use crate::{
     messages::{GameType, RoomSettings},
     room::{
         handler::{GameHandler, Handler},
-        messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
+        messenger::{
+            ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
+        },
         state::State as RoomState,
     },
 };
@@ -138,10 +145,10 @@ impl State {
         }
     }
 
-    fn end(&mut self) {
+    fn end(&mut self) -> PostGameInfo {
         match self {
-            Self::WordBomb(word_bomb) => word_bomb.end(),
-            Self::Anagrams(anagrams) => anagrams.end(),
+            Self::WordBomb(word_bomb) => PostGameInfo::WordBomb(word_bomb.end()),
+            Self::Anagrams(anagrams) => PostGameInfo::Anagrams(anagrams.end()),
         }
     }
 }
@@ -167,6 +174,38 @@ impl Game {
     pub fn lookup_rejoin_token(&self, rejoin_token: Uuid) -> Option<Uuid> {
         self.rejoin_tokens.get(&rejoin_token).copied()
     }
+
+    fn handle_post_game_info(
+        settings: &mut RoomSettings,
+        clients: &(impl ClientMessenger<ServerGame> + ClientUtils),
+        post_game_info: Option<PostGameInfo>,
+    ) -> Option<RoomState> {
+        match post_game_info {
+            Some(post_game_info) => {
+                let new_owner = if clients.get(settings.owner).is_none() {
+                    let owner = *clients
+                        .iter()
+                        .choose(&mut rng())
+                        .expect("should always be at least one client")
+                        .0;
+
+                    settings.owner = owner;
+
+                    Some(owner)
+                } else {
+                    None
+                };
+
+                clients.broadcast(ServerGame::Ended {
+                    post_game_info,
+                    new_owner,
+                });
+
+                Some(RoomState::Lobby(Lobby::new()))
+            }
+            None => None,
+        }
+    }
 }
 
 impl Handler for Game {
@@ -177,12 +216,12 @@ impl Handler for Game {
 
     fn handle_client(
         &mut self,
-        settings: &RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<RoomState>> {
-        let info = match message {
+        let post_game_info = match message {
             ClientGame::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
@@ -201,34 +240,35 @@ impl Handler for Game {
                     (uuid, message),
                 )?
                 .map(PostGameInfo::Anagrams),
-            ClientGame::EndRequest => todo!(),
-            ClientGame::ForceEnd => todo!(),
-        };
+            ClientGame::EndRequest => {
+                self.requesting_end.push(uuid);
 
-        match info {
-            Some(info) => {
-                clients.broadcast(ServerGame::Ended {
-                    post_game_info: info,
-                    // TODO: New owner
-                    new_owner: None,
-                });
-
-                Some(RoomState::Lobby(Lobby::new()))
+                // If everyone in game has requested to end early, end.
+                if self.requesting_end.len() == self.rejoin_tokens.len() {
+                    Some(self.state.end())
+                } else {
+                    clients.broadcast(ServerGame::EndRequest { uuid });
+                    None
+                }
             }
-            None => None,
+            ClientGame::ForceEnd => Some(self.state.end()),
         };
 
-        todo!()
+        Ok(Game::handle_post_game_info(
+            settings,
+            &clients,
+            post_game_info,
+        ))
     }
 
     fn handle_message(
         &mut self,
-        settings: &RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<RoomState>> {
-        let info = match message {
+        let post_game_info = match message {
             GameMessage::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
@@ -249,7 +289,11 @@ impl Handler for Game {
                 .map(PostGameInfo::Anagrams),
         };
 
-        todo!()
+        Ok(Game::handle_post_game_info(
+            settings,
+            &clients,
+            post_game_info,
+        ))
     }
 
     fn state(&self) -> Self::StateMessage {

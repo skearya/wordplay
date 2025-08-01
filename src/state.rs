@@ -3,9 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use uuid::Uuid;
-
-use crate::room::{Room, clients::Client, sender::RoomSender};
+use crate::room::sender::RoomSender;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -33,13 +31,13 @@ impl AppState {
         lock.get_room(name)
     }
 
-    pub fn insert_room(&self, name: &str, owner: (Uuid, Client)) -> RoomSender {
+    pub fn insert_room(&self, name: String, room: RoomSender) {
         let mut lock = match self.inner.lock() {
             Ok(lock) => lock,
             Err(poison) => poison.into_inner(),
         };
 
-        lock.insert_room(name, owner)
+        lock.insert_room(name, room)
     }
 }
 
@@ -62,10 +60,7 @@ impl AppStateInner {
         }
     }
 
-    fn insert_room(&mut self, name: &str, owner: (Uuid, Client)) -> RoomSender {
-        let room = Room::spawn(owner);
-        self.rooms.insert(name.to_owned(), room.clone());
-
-        room
+    fn insert_room(&mut self, name: String, room: RoomSender) {
+        self.rooms.insert(name, room);
     }
 }

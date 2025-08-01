@@ -1,4 +1,5 @@
 mod game;
+mod general;
 mod lobby;
 mod messages;
 mod room;

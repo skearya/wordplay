@@ -11,8 +11,9 @@ use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::{
+    general::messages::GeneralMessage,
     messages::RoomMessage,
-    room::{clients::Client, general::messages::GeneralMessage, messenger::RoomMessenger},
+    room::{Room, clients::Client, messenger::RoomMessenger},
     state::AppState,
     task,
 };
@@ -26,11 +27,11 @@ pub struct Params {
 pub async fn handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
-    Path(room): Path<String>,
+    Path(room_name): Path<String>,
     Query(params): Query<Params>,
 ) -> Response {
     ws.max_message_size(256).on_upgrade(|ws| async {
-        if let Err(err) = socket(ws, state, room, params).await {
+        if let Err(err) = socket(ws, state, room_name, params).await {
             tracing::error!(?err);
         }
     })
@@ -39,7 +40,7 @@ pub async fn handler(
 async fn socket(
     socket: WebSocket,
     state: AppState,
-    room: String,
+    room_name: String,
     Params {
         username,
         rejoin_token,
@@ -60,17 +61,13 @@ async fn socket(
     // Random UUID for this socket.
     let socket = Uuid::new_v4();
 
-    // TODO work on actually sending the info message on every join type
-
-    let (uuid, room) = match (state.get_room(&room), rejoin_token) {
+    let (uuid, room) = match (state.get_room(&room_name), rejoin_token) {
         (Some(room), Some(rejoin_token)) => {
             let (response, uuid) = oneshot::channel();
 
             room.send(RoomMessage::General(GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
-                socket,
-                username,
-                sender,
+                client: Client::new(socket, sender, username),
                 response,
             }));
 
@@ -83,9 +80,7 @@ async fn socket(
 
             room.send(RoomMessage::General(GeneralMessage::Join {
                 uuid,
-                socket,
-                username,
-                sender,
+                client: Client::new(socket, sender, username),
             }));
 
             (uuid, room)
@@ -93,7 +88,14 @@ async fn socket(
         // If we don't have a room, it doesn't matter if we have a rejoin token.
         (None, Some(_) | None) => {
             let uuid = Uuid::new_v4();
-            let room = state.insert_room(&room, (uuid, Client::new(socket, sender, username)));
+            let room = Room::spawn();
+
+            room.send(RoomMessage::General(GeneralMessage::Join {
+                uuid,
+                client: Client::new(socket, sender, username),
+            }));
+
+            state.insert_room(room_name, room.clone());
 
             (uuid, room)
         }

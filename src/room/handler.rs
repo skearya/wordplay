@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     messages::RoomSettings,
     room::{
-        messenger::{ClientMessenger, RoomMessenger},
+        messenger::{ClientMessenger, ClientUtils, RoomMessenger},
         state::State,
     },
 };
@@ -16,16 +16,16 @@ pub trait Handler {
 
     fn handle_client(
         &mut self,
-        settings: &RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<State>>;
 
     fn handle_message(
         &mut self,
-        settings: &RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<State>>;
@@ -61,5 +61,5 @@ pub trait GameHandler {
 
     fn state(&self) -> Self::StateMessage;
 
-    fn end(&mut self);
+    fn end(&mut self) -> Self::PostGameMessage;
 }
