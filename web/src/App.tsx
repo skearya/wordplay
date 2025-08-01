@@ -5,10 +5,7 @@ export default function App() {
 
 	return (
 		<div>
-			<button
-				className="bg-white opacity-25 backdrop-blur-2xl hover:bg-red-50"
-				onClick={() => setCount((count) => count + 1)}
-			>
+			<button onClick={() => setCount((count) => count + 1)}>
 				count is {count}
 			</button>
 		</div>
