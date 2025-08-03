@@ -88,7 +88,6 @@ pub mod messages {
 
 use std::collections::HashMap;
 
-use rand::{rng, seq::IteratorRandom};
 use uuid::Uuid;
 
 use crate::{
@@ -183,15 +182,10 @@ impl Game {
         match post_game_info {
             Some(post_game_info) => {
                 let new_owner = if clients.get(settings.owner).is_none() {
-                    let owner = *clients
-                        .iter()
-                        .choose(&mut rng())
-                        .expect("should always be at least one client")
-                        .0;
+                    let random = *clients.random().0;
+                    settings.owner = random;
 
-                    settings.owner = owner;
-
-                    Some(owner)
+                    Some(random)
                 } else {
                     None
                 };

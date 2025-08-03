@@ -37,7 +37,7 @@ impl AppState {
             Err(poison) => poison.into_inner(),
         };
 
-        lock.insert_room(name, room)
+        lock.insert_room(name, room);
     }
 }
 

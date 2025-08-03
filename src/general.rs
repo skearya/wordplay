@@ -43,9 +43,13 @@ pub mod messages {
             state: ServerState,
         },
         /// Broadcasted when a client joins/rejoins.
-        Join { uuid: Uuid },
+        Join { uuid: Uuid, client: ServerClient },
         /// Broadcasted when a client leaves.
-        Leave { uuid: Uuid },
+        /// `new_owner` will only be some if the owner leaves in lobby, if the owner
+        /// leaves in game, they will still be owner and have the chance to rejoin.
+        /// If they don't rejoin before the game ends, the game ending message will
+        /// broadcast the new owner.
+        Leave { uuid: Uuid, new_owner: Option<Uuid> },
         /// Sent back when a client sends a `ClientGeneral::Ping`.
         Pong { timestamp: u64 },
         /// Used to broadcast a chat message.
@@ -94,9 +98,10 @@ pub mod messages {
             uuid: Uuid,
             socket: Uuid,
         },
-        Close,
     }
 }
+
+use std::mem;
 
 use uuid::Uuid;
 
@@ -104,6 +109,7 @@ use crate::{
     general::messages::{ClientGeneral, GeneralMessage, ServerClient, ServerGeneral},
     messages::RoomSettings,
     room::{
+        clients::Client,
         messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
         state::State,
     },
@@ -152,13 +158,11 @@ impl<'a> General<'a> {
     ) -> anyhow::Result<Option<State>> {
         match message {
             GeneralMessage::Join { uuid, client } => {
-                clients.add(uuid, client);
-
                 if settings.owner == Uuid::default() {
                     settings.owner = uuid;
                 }
 
-                clients.send(uuid, self.info(uuid, settings, &clients));
+                self.new_client(settings, &mut clients, uuid, client);
             }
             GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
@@ -173,30 +177,61 @@ impl<'a> General<'a> {
                 {
                     match clients.get_mut(player) {
                         Some(old) => {
+                            let old = mem::replace(old, client);
                             old.close("Reconnected on another client.");
-                            *old = client;
+
+                            clients.send(player, self.info(player, settings, &clients));
                         }
                         None => {
-                            clients.add(player, client);
+                            self.new_client(settings, &mut clients, player, client);
                         }
                     }
 
                     player
                 } else {
                     let uuid = Uuid::new_v4();
-                    clients.add(uuid, client);
+                    self.new_client(settings, &mut clients, uuid, client);
 
                     uuid
                 };
 
                 response.send(uuid).ok();
-
-                clients.send(uuid, self.info(uuid, settings, &clients));
             }
+            // TODO: Disconnected clients don't get removed on game end.
             GeneralMessage::Leave { uuid, socket } => {
-                clients.remove(uuid, socket);
-            }
-            GeneralMessage::Close => {
+                if !clients
+                    .get(uuid)
+                    .is_some_and(|client| client.socket_uuid_eq(socket))
+                {
+                    return Ok(None);
+                }
+
+                match self.state {
+                    State::Lobby(_) => {
+                        clients.remove(uuid);
+
+                        let new_owner = if uuid == settings.owner {
+                            let random = *clients.random().0;
+                            settings.owner = random;
+
+                            Some(random)
+                        } else {
+                            None
+                        };
+
+                        clients.broadcast(ServerGeneral::Leave { uuid, new_owner });
+                    }
+                    State::InGame(_) => {
+                        clients.disconnect(uuid);
+
+                        clients.broadcast(ServerGeneral::Leave {
+                            uuid,
+                            new_owner: None,
+                        });
+                    }
+                    State::Ended => unreachable!(),
+                }
+
                 if clients.is_empty() {
                     return Ok(Some(State::Ended));
                 }
@@ -204,6 +239,21 @@ impl<'a> General<'a> {
         }
 
         Ok(None)
+    }
+
+    fn new_client(
+        &self,
+        settings: &RoomSettings,
+        clients: &mut (impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut),
+        uuid: Uuid,
+        client: Client,
+    ) {
+        let data = (&client).into();
+
+        clients.add(uuid, client);
+
+        clients.send(uuid, self.info(uuid, settings, clients));
+        clients.broadcast_except(uuid, ServerGeneral::Join { uuid, client: data });
     }
 
     fn info(
@@ -217,17 +267,18 @@ impl<'a> General<'a> {
             settings: *settings,
             clients: clients
                 .iter()
-                .map(|(uuid, client)| {
-                    (
-                        *uuid,
-                        ServerClient {
-                            username: client.username.clone(),
-                            avatar_url: None,
-                        },
-                    )
-                })
+                .map(|(uuid, client)| (*uuid, client.into()))
                 .collect(),
             state: self.state.state(),
+        }
+    }
+}
+
+impl From<&Client> for ServerClient {
+    fn from(client: &Client) -> Self {
+        Self {
+            username: client.username.clone(),
+            avatar_url: None,
         }
     }
 }

@@ -42,7 +42,7 @@ impl Room {
             // Warning: settings.owner is initialized to `Uuid::default()` (nil).
             // Should immediately be overwritten by the owner joining.
             settings: RoomSettings::default(),
-            clients: Clients::new(sender.clone()),
+            clients: Clients::new(),
             sender,
             reciever,
         }
@@ -180,17 +180,6 @@ mod tests {
             )?;
 
             Ok(msg)
-        }
-
-        async fn skip(&mut self) -> anyhow::Result<()> {
-            assert!(!self.reciever.is_empty());
-
-            self.reciever
-                .recv()
-                .await
-                .ok_or(anyhow::anyhow!("room shouldn't be closed"))?;
-
-            Ok(())
         }
     }
 

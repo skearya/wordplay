@@ -8,6 +8,7 @@ use axum::{
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
 use tokio::sync::{mpsc, oneshot};
+use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
@@ -18,33 +19,35 @@ use crate::{
     task,
 };
 
-#[derive(Deserialize)]
-pub struct Params {
+#[derive(Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SocketParams {
     pub username: String,
     pub rejoin_token: Option<Uuid>,
 }
 
 pub async fn handler(
-    ws: WebSocketUpgrade,
     State(state): State<AppState>,
     Path(room_name): Path<String>,
-    Query(params): Query<Params>,
+    Query(params): Query<SocketParams>,
+    ws: WebSocketUpgrade,
 ) -> Response {
     ws.max_message_size(256).on_upgrade(|ws| async {
-        if let Err(err) = socket(ws, state, room_name, params).await {
+        if let Err(err) = socket(state, room_name, params, ws).await {
             tracing::error!(?err);
         }
     })
 }
 
 async fn socket(
-    socket: WebSocket,
     state: AppState,
     room_name: String,
-    Params {
+    SocketParams {
         username,
         rejoin_token,
-    }: Params,
+    }: SocketParams,
+    socket: WebSocket,
 ) -> anyhow::Result<()> {
     let (mut sink, mut stream) = socket.split();
     let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();

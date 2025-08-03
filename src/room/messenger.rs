@@ -8,13 +8,15 @@ pub trait ClientMessenger<Msg> {
 
 pub trait ClientUtils {
     fn get(&self, uuid: Uuid) -> Option<&Client>;
+    fn random(&self) -> (&Uuid, &Client);
     fn is_empty(&self) -> bool;
     fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client>;
 }
 
 pub trait ClientUtilsMut {
     fn add(&mut self, uuid: Uuid, client: Client);
-    fn remove(&mut self, uuid: Uuid, socket: Uuid);
+    fn remove(&mut self, uuid: Uuid);
+    fn disconnect(&mut self, uuid: Uuid);
     fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client>;
 }
 
@@ -66,6 +68,10 @@ macro_rules! client_submessenger {
                 self.0.get(uuid)
             }
 
+            fn random(&self) -> (&Uuid, &Client) {
+                self.0.random()
+            }
+
             fn is_empty(&self) -> bool {
                 self.0.is_empty()
             }
@@ -110,6 +116,10 @@ macro_rules! client_submessenger_mut {
                 self.0.get(uuid)
             }
 
+            fn random(&self) -> (&Uuid, &Client) {
+                self.0.random()
+            }
+
             fn is_empty(&self) -> bool {
                 self.0.is_empty()
             }
@@ -124,8 +134,12 @@ macro_rules! client_submessenger_mut {
                 self.0.add(uuid, client)
             }
 
-            fn remove(&mut self, uuid: Uuid, socket: Uuid) {
-                self.0.remove(uuid, socket)
+            fn remove(&mut self, uuid: Uuid) {
+                self.0.remove(uuid)
+            }
+
+            fn disconnect(&mut self, uuid: Uuid) {
+                self.0.disconnect(uuid)
             }
 
             fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {

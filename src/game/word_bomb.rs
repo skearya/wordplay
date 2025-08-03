@@ -110,7 +110,7 @@ use crate::{
 pub struct WordBomb;
 
 impl GameHandler for WordBomb {
-    type Settings = WordBombSettings;
+    type GameSettings = WordBombSettings;
     type ClientMessage = ClientWordBomb;
     type ServerMessage = ServerWordBomb;
     type RoomMessage = WordBombMessage;

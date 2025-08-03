@@ -86,7 +86,7 @@ use crate::{
 pub struct Anagrams;
 
 impl GameHandler for Anagrams {
-    type Settings = AnagramsSettings;
+    type GameSettings = AnagramsSettings;
     type ClientMessage = ClientAnagrams;
     type ServerMessage = ServerAnagrams;
     type RoomMessage = AnagramsMessage;

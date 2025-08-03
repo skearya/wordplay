@@ -36,14 +36,14 @@ pub trait Handler {
 }
 
 pub trait GameHandler {
-    type Settings;
+    type GameSettings;
     type ClientMessage;
     type ServerMessage;
     type RoomMessage;
     type StateMessage;
     type PostGameMessage;
 
-    fn new(settings: &Self::Settings, players: &[Uuid]) -> Self;
+    fn new(settings: &Self::GameSettings, players: &[Uuid]) -> Self;
 
     fn handle_client(
         &mut self,
