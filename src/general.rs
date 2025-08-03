@@ -141,6 +141,10 @@ impl<'a> General<'a> {
                 });
             }
             ClientGeneral::Settings(new) => {
+                if uuid != settings.owner {
+                    return Ok(None);
+                }
+
                 *settings = new;
 
                 clients.broadcast(ServerGeneral::Settings(*settings));
