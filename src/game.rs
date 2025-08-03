@@ -176,11 +176,13 @@ impl Game {
 
     fn handle_post_game_info(
         settings: &mut RoomSettings,
-        clients: &(impl ClientMessenger<ServerGame> + ClientUtils),
+        clients: &mut (impl ClientMessenger<ServerGame> + ClientUtils),
         post_game_info: Option<PostGameInfo>,
     ) -> Option<RoomState> {
         match post_game_info {
             Some(post_game_info) => {
+                clients.keep_connected();
+
                 let new_owner = if clients.get(settings.owner).is_none() {
                     let random = *clients.random().0;
                     settings.owner = random;
@@ -211,7 +213,7 @@ impl Handler for Game {
     fn handle_client(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<RoomState>> {
@@ -220,7 +222,7 @@ impl Handler for Game {
                 .state
                 .try_word_bomb()?
                 .handle_client(
-                    client_submessenger!(&clients, ServerGame::WordBomb(ServerWordBomb)),
+                    client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
                     room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     (uuid, message),
                 )?
@@ -229,7 +231,7 @@ impl Handler for Game {
                 .state
                 .try_anagrams()?
                 .handle_client(
-                    client_submessenger!(&clients, ServerGame::Anagrams(ServerAnagrams)),
+                    client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
                     room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     (uuid, message),
                 )?
@@ -250,7 +252,7 @@ impl Handler for Game {
 
         Ok(Game::handle_post_game_info(
             settings,
-            &clients,
+            &mut clients,
             post_game_info,
         ))
     }
@@ -258,7 +260,7 @@ impl Handler for Game {
     fn handle_message(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<RoomState>> {
@@ -267,7 +269,7 @@ impl Handler for Game {
                 .state
                 .try_word_bomb()?
                 .handle_message(
-                    client_submessenger!(&clients, ServerGame::WordBomb(ServerWordBomb)),
+                    client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
                     room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     message,
                 )?
@@ -276,7 +278,7 @@ impl Handler for Game {
                 .state
                 .try_anagrams()?
                 .handle_message(
-                    client_submessenger!(&clients, ServerGame::Anagrams(ServerAnagrams)),
+                    client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
                     room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     message,
                 )?
@@ -285,7 +287,7 @@ impl Handler for Game {
 
         Ok(Game::handle_post_game_info(
             settings,
-            &clients,
+            &mut clients,
             post_game_info,
         ))
     }

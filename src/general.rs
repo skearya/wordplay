@@ -110,7 +110,7 @@ use crate::{
     messages::RoomSettings,
     room::{
         clients::Client,
-        messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
+        messenger::{ClientMessenger, ClientUtils},
         state::State,
     },
 };
@@ -127,7 +127,7 @@ impl<'a> General<'a> {
     pub fn handle_client(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut,
+        clients: impl ClientMessenger<ServerGeneral> + ClientUtils,
         (uuid, message): (Uuid, ClientGeneral),
     ) -> anyhow::Result<Option<State>> {
         match message {
@@ -157,7 +157,7 @@ impl<'a> General<'a> {
     pub fn handle_message(
         &mut self,
         settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut,
+        mut clients: impl ClientMessenger<ServerGeneral> + ClientUtils,
         message: GeneralMessage,
     ) -> anyhow::Result<Option<State>> {
         match message {
@@ -168,6 +168,7 @@ impl<'a> General<'a> {
 
                 self.new_client(settings, &mut clients, uuid, client);
             }
+            // TODO: Rework join/leave system?
             GeneralMessage::JoinWithRejoinToken {
                 rejoin_token,
                 client,
@@ -201,7 +202,6 @@ impl<'a> General<'a> {
 
                 response.send(uuid).ok();
             }
-            // TODO: Disconnected clients don't get removed on game end.
             GeneralMessage::Leave { uuid, socket } => {
                 if !clients
                     .get(uuid)
@@ -210,31 +210,28 @@ impl<'a> General<'a> {
                     return Ok(None);
                 }
 
-                match self.state {
+                let new_owner = match self.state {
                     State::Lobby(_) => {
                         clients.remove(uuid);
 
-                        let new_owner = if uuid == settings.owner {
+                        if uuid == settings.owner {
                             let random = *clients.random().0;
                             settings.owner = random;
 
                             Some(random)
                         } else {
                             None
-                        };
-
-                        clients.broadcast(ServerGeneral::Leave { uuid, new_owner });
+                        }
                     }
                     State::InGame(_) => {
                         clients.disconnect(uuid);
 
-                        clients.broadcast(ServerGeneral::Leave {
-                            uuid,
-                            new_owner: None,
-                        });
+                        None
                     }
                     State::Ended => unreachable!(),
-                }
+                };
+
+                clients.broadcast(ServerGeneral::Leave { uuid, new_owner });
 
                 if clients.is_empty() {
                     return Ok(Some(State::Ended));
@@ -248,7 +245,7 @@ impl<'a> General<'a> {
     fn new_client(
         &self,
         settings: &RoomSettings,
-        clients: &mut (impl ClientMessenger<ServerGeneral> + ClientUtils + ClientUtilsMut),
+        clients: &mut (impl ClientMessenger<ServerGeneral> + ClientUtils),
         uuid: Uuid,
         client: Client,
     ) {

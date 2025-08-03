@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     messages::ServerMessage,
-    room::messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
+    room::messenger::{ClientMessenger, ClientUtils},
 };
 
 pub struct Client {
@@ -56,10 +56,10 @@ impl Clients {
     }
 }
 
-impl Into<ws::Message> for ServerMessage {
-    fn into(self) -> ws::Message {
-        let text =
-            serde_json::to_string(&self).expect("ServerMessage serialization shouldn't ever fail?");
+impl From<&ServerMessage> for ws::Message {
+    fn from(message: &ServerMessage) -> Self {
+        let text = serde_json::to_string(message)
+            .expect("ServerMessage serialization shouldn't ever fail?");
 
         ws::Message::Text(Utf8Bytes::from(text))
     }
@@ -71,13 +71,13 @@ impl ClientMessenger<ServerMessage> for Clients {
             return;
         };
 
-        let message: ws::Message = message.into();
+        let message: ws::Message = (&message).into();
 
         socket.1.send(message).ok();
     }
 
     fn broadcast(&self, message: ServerMessage) {
-        let message: ws::Message = message.into();
+        let message: ws::Message = (&message).into();
 
         for socket in self
             .clients
@@ -89,7 +89,7 @@ impl ClientMessenger<ServerMessage> for Clients {
     }
 
     fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
-        let message: ws::Message = message.into();
+        let message: ws::Message = (&message).into();
 
         for socket in self
             .clients
@@ -120,9 +120,7 @@ impl ClientUtils for Clients {
     fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
         self.clients.iter()
     }
-}
 
-impl ClientUtilsMut for Clients {
     fn add(&mut self, uuid: Uuid, client: Client) {
         self.clients.insert(uuid, client);
     }
@@ -137,5 +135,9 @@ impl ClientUtilsMut for Clients {
 
     fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
         self.clients.get_mut(&uuid)
+    }
+
+    fn keep_connected(&mut self) {
+        self.clients.retain(|_, client| client.socket.is_some());
     }
 }

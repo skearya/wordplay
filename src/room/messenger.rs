@@ -11,13 +11,12 @@ pub trait ClientUtils {
     fn random(&self) -> (&Uuid, &Client);
     fn is_empty(&self) -> bool;
     fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client>;
-}
 
-pub trait ClientUtilsMut {
     fn add(&mut self, uuid: Uuid, client: Client);
     fn remove(&mut self, uuid: Uuid);
     fn disconnect(&mut self, uuid: Uuid);
     fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client>;
+    fn keep_connected(&mut self);
 }
 
 // `Send + 'static` needed to allow `RoomMessenger` to be used in futures.
@@ -45,54 +44,6 @@ macro_rules! client_submessenger {
         use crate::room::{
             clients::Client,
             messenger::{ClientMessenger, ClientUtils},
-        };
-
-        struct SubmessengerImpl<'a, T: ClientMessenger<$server_type>>(&'a T);
-
-        impl<T: ClientMessenger<$server_type>> ClientMessenger<$subtype> for SubmessengerImpl<'_, T> {
-            fn send(&self, uuid: Uuid, message: $subtype) {
-                self.0.send(uuid, $server_type::$variant(message))
-            }
-
-            fn broadcast(&self, message: $subtype) {
-                self.0.broadcast($server_type::$variant(message))
-            }
-
-            fn broadcast_except(&self, except: Uuid, message: $subtype) {
-                self.0.broadcast_except(except, $server_type::$variant(message))
-            }
-        }
-
-        impl<T: ClientMessenger<$server_type> + ClientUtils> ClientUtils for SubmessengerImpl<'_, T> {
-            fn get(&self, uuid: Uuid) -> Option<&Client> {
-                self.0.get(uuid)
-            }
-
-            fn random(&self) -> (&Uuid, &Client) {
-                self.0.random()
-            }
-
-            fn is_empty(&self) -> bool {
-                self.0.is_empty()
-            }
-
-            fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
-                self.0.iter()
-            }
-        }
-
-        SubmessengerImpl($messenger)
-    }};
-}
-
-pub(crate) use client_submessenger;
-
-/// Copy of `client_submessenger` but with the `ClientUtilsMut` trait.
-macro_rules! client_submessenger_mut {
-    ($messenger:expr, $server_type:ident :: $variant:ident( $subtype:ty )) => {{
-        use crate::room::{
-            clients::Client,
-            messenger::{ClientMessenger, ClientUtils, ClientUtilsMut},
         };
 
         struct SubmessengerImpl<'a, T: ClientMessenger<$server_type>>(&'a mut T);
@@ -127,9 +78,7 @@ macro_rules! client_submessenger_mut {
             fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
                 self.0.iter()
             }
-        }
 
-        impl<T: ClientMessenger<$server_type> + ClientUtilsMut> ClientUtilsMut for SubmessengerImpl<'_, T> {
             fn add(&mut self, uuid: Uuid, client: Client) {
                 self.0.add(uuid, client)
             }
@@ -145,13 +94,17 @@ macro_rules! client_submessenger_mut {
             fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
                 self.0.get_mut(uuid)
             }
+
+            fn keep_connected(&mut self) {
+                self.0.keep_connected()
+            }
         }
 
         SubmessengerImpl($messenger)
     }};
 }
 
-pub(crate) use client_submessenger_mut;
+pub(crate) use client_submessenger;
 
 /// Creates an implementation of `RoomMessenger` that can **only** send sub-enums of `RoomMessage`.
 ///

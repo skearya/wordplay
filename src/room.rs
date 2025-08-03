@@ -15,10 +15,7 @@ use crate::{
     room::{
         clients::Clients,
         handler::Handler,
-        messenger::{
-            ClientMessenger, RoomMessenger, client_submessenger, client_submessenger_mut,
-            room_submessenger,
-        },
+        messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
         sender::RoomSender,
         state::State,
     },
@@ -90,18 +87,18 @@ impl Room {
             },
             RoomMessage::General(message) => General::new(&mut self.state).handle_message(
                 &mut self.settings,
-                client_submessenger_mut!(&mut self.clients, ServerMessage::General(ServerGeneral)),
+                client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
                 message,
             ),
             RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
                 &mut self.settings,
-                client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
+                client_submessenger!(&mut self.clients, ServerMessage::Lobby(ServerLobby)),
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 message,
             ),
             RoomMessage::InGame(message) => self.state.try_in_game()?.handle_message(
                 &mut self.settings,
-                client_submessenger!(&self.clients, ServerMessage::InGame(ServerGame)),
+                client_submessenger!(&mut self.clients, ServerMessage::InGame(ServerGame)),
                 room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
                 message,
             ),
@@ -116,18 +113,18 @@ impl Room {
         match message {
             ClientMessage::General(message) => General::new(&mut self.state).handle_client(
                 &mut self.settings,
-                client_submessenger_mut!(&mut self.clients, ServerMessage::General(ServerGeneral)),
+                client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
                 (uuid, message),
             ),
             ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
                 &mut self.settings,
-                client_submessenger!(&self.clients, ServerMessage::Lobby(ServerLobby)),
+                client_submessenger!(&mut self.clients, ServerMessage::Lobby(ServerLobby)),
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 (uuid, message),
             ),
             ClientMessage::InGame(message) => self.state.try_in_game()?.handle_client(
                 &mut self.settings,
-                client_submessenger!(&self.clients, ServerMessage::InGame(ServerGame)),
+                client_submessenger!(&mut self.clients, ServerMessage::InGame(ServerGame)),
                 room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
                 (uuid, message),
             ),
