@@ -3,4 +3,4 @@ import type { ServerGame } from "./ServerGame";
 import type { ServerGeneral } from "./ServerGeneral";
 import type { ServerLobby } from "./ServerLobby";
 
-export type ServerMessage = { "kind": "general", "data": ServerGeneral } | { "kind": "lobby", "data": ServerLobby } | { "kind": "inGame", "data": ServerGame };
+export type ServerMessage = { "kind": "general", "data": ServerGeneral } | { "kind": "lobby", "data": ServerLobby } | { "kind": "game", "data": ServerGame };

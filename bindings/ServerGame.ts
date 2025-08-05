@@ -3,9 +3,9 @@ import type { PostGameInfo } from "./PostGameInfo";
 import type { ServerAnagrams } from "./ServerAnagrams";
 import type { ServerWordBomb } from "./ServerWordBomb";
 
-export type ServerGame = { "kind": "wordBomb" } & ServerWordBomb | { "kind": "anagrams" } & ServerAnagrams | { "kind": "endRequest", uuid: string, } | { "kind": "ended", postGameInfo: PostGameInfo, 
+export type ServerGame = { "kind": "wordBomb", "data": ServerWordBomb } | { "kind": "anagrams", "data": ServerAnagrams } | { "kind": "endRequest", "data": { uuid: string, } } | { "kind": "ended", "data": { postGameInfo: PostGameInfo, 
 /**
  * Is `Some` with a random client's uuid if the previous room owner
  * left during game and hasn't come back.
  */
-newOwner: string | null, };
+newOwner: string | null, } };

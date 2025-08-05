@@ -31,6 +31,7 @@ pub mod messages {
     #[derive(Serialize, TS)]
     #[serde(
         tag = "kind",
+        content = "data",
         rename_all = "camelCase",
         rename_all_fields = "camelCase"
     )]

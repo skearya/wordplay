@@ -96,10 +96,10 @@ impl Room {
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 message,
             ),
-            RoomMessage::InGame(message) => self.state.try_in_game()?.handle_message(
+            RoomMessage::Game(message) => self.state.try_in_game()?.handle_message(
                 &mut self.settings,
-                client_submessenger!(&mut self.clients, ServerMessage::InGame(ServerGame)),
-                room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
+                client_submessenger!(&mut self.clients, ServerMessage::Game(ServerGame)),
+                room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
                 message,
             ),
         }
@@ -122,10 +122,10 @@ impl Room {
                 room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 (uuid, message),
             ),
-            ClientMessage::InGame(message) => self.state.try_in_game()?.handle_client(
+            ClientMessage::Game(message) => self.state.try_in_game()?.handle_client(
                 &mut self.settings,
-                client_submessenger!(&mut self.clients, ServerMessage::InGame(ServerGame)),
-                room_submessenger!(self.sender.clone(), RoomMessage::InGame(GameMessage)),
+                client_submessenger!(&mut self.clients, ServerMessage::Game(ServerGame)),
+                room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
                 (uuid, message),
             ),
         }

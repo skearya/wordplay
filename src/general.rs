@@ -210,32 +210,26 @@ impl<'a> General<'a> {
                     return Ok(None);
                 }
 
-                let new_owner = match self.state {
-                    State::Lobby(_) => {
-                        clients.remove(uuid);
-
-                        if uuid == settings.owner {
-                            let random = *clients.random().0;
-                            settings.owner = random;
-
-                            Some(random)
-                        } else {
-                            None
-                        }
-                    }
-                    State::InGame(_) => {
-                        clients.disconnect(uuid);
-
-                        None
-                    }
+                match self.state {
+                    State::Lobby(_) => clients.remove(uuid),
+                    State::InGame(_) => clients.disconnect(uuid),
                     State::Ended => unreachable!(),
-                };
-
-                clients.broadcast(ServerGeneral::Leave { uuid, new_owner });
+                }
 
                 if clients.is_empty() {
                     return Ok(Some(State::Ended));
                 }
+
+                let new_owner = if uuid == settings.owner {
+                    let random = *clients.random().0;
+                    settings.owner = random;
+
+                    Some(random)
+                } else {
+                    None
+                };
+
+                clients.broadcast(ServerGeneral::Leave { uuid, new_owner });
             }
         }
 

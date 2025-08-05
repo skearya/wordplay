@@ -3,4 +3,4 @@ import type { ClientGame } from "./ClientGame";
 import type { ClientGeneral } from "./ClientGeneral";
 import type { ClientLobby } from "./ClientLobby";
 
-export type ClientMessage = { "kind": "general", "data": ClientGeneral } | { "kind": "lobby", "data": ClientLobby } | { "kind": "inGame", "data": ClientGame };
+export type ClientMessage = { "kind": "general", "data": ClientGeneral } | { "kind": "lobby", "data": ClientLobby } | { "kind": "game", "data": ClientGame };

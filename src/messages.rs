@@ -18,7 +18,7 @@ use crate::{
 pub enum ClientMessage {
     General(ClientGeneral),
     Lobby(ClientLobby),
-    InGame(ClientGame),
+    Game(ClientGame),
 }
 
 #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -31,7 +31,7 @@ pub enum ServerMessage {
     /// All lobby messages.
     Lobby(ServerLobby),
     /// All in-game messages.
-    InGame(ServerGame),
+    Game(ServerGame),
 }
 
 pub enum RoomMessage {
@@ -43,7 +43,7 @@ pub enum RoomMessage {
     /// Core room functionality.
     General(GeneralMessage),
     Lobby(LobbyMessage),
-    InGame(GameMessage),
+    Game(GameMessage),
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]

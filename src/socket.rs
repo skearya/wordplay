@@ -116,7 +116,7 @@ async fn socket(
                     }
                 }
                 Ok(_) => (),
-                Err(err) => tracing::error!(?err, "socket error"),
+                Err(err) => tracing::error!(?err),
             }
         }
 

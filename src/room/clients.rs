@@ -28,7 +28,7 @@ impl Client {
     }
 
     pub fn socket_uuid_eq(&self, other: Uuid) -> bool {
-        self.socket.as_ref().is_some_and(|socket| socket.0 == other)
+        self.socket.as_ref().is_some_and(|(uuid, _)| *uuid == other)
     }
 
     pub fn close(&self, reason: &'static str) {
@@ -67,37 +67,37 @@ impl From<&ServerMessage> for ws::Message {
 
 impl ClientMessenger<ServerMessage> for Clients {
     fn send(&self, uuid: Uuid, message: ServerMessage) {
-        let Some(socket) = self.clients[&uuid].socket.as_ref() else {
+        let Some((_, socket)) = self.clients[&uuid].socket.as_ref() else {
             return;
         };
 
         let message: ws::Message = (&message).into();
 
-        socket.1.send(message).ok();
+        socket.send(message).ok();
     }
 
     fn broadcast(&self, message: ServerMessage) {
         let message: ws::Message = (&message).into();
 
-        for socket in self
+        for (_, socket) in self
             .clients
             .values()
             .filter_map(|client| client.socket.as_ref())
         {
-            socket.1.send(message.clone()).ok();
+            socket.send(message.clone()).ok();
         }
     }
 
     fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
         let message: ws::Message = (&message).into();
 
-        for socket in self
+        for (_, socket) in self
             .clients
-            .values()
-            .filter_map(|client| client.socket.as_ref())
-            .filter(|socket| socket.0 != exclude)
+            .iter()
+            .filter(|&(uuid, _)| *uuid != exclude)
+            .filter_map(|(_, client)| client.socket.as_ref())
         {
-            socket.1.send(message.clone()).ok();
+            socket.send(message.clone()).ok();
         }
     }
 }

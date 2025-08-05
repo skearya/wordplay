@@ -5,10 +5,10 @@ import { createRoot } from "react-dom/client";
 import { Route, Switch } from "wouter";
 
 createRoot(document.getElementById("root")!).render(
-	<>
+	<StrictMode>
 		<Switch>
 			<Route path="/" component={Index} />
 			<Route>404</Route>
 		</Switch>
-	</>,
+	</StrictMode>,
 );
