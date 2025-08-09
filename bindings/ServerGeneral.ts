@@ -20,4 +20,4 @@ clients: { [key in string]?: ServerClient },
  * State of the room (lobby | type of game).
  * TODO: Box to reduce variant size?.
  */
-state: ServerState, } | { "kind": "join", uuid: string, client: ServerClient, } | { "kind": "leave", uuid: string, new_owner: string | null, } | { "kind": "pong", timestamp: bigint, } | { "kind": "chat", author: string, content: string, } | { "kind": "settings" } & RoomSettings | { "kind": "error", message: string, };
+state: ServerState, } | { "kind": "join", uuid: string, client: ServerClient, } | { "kind": "leave", uuid: string, newOwner: string | null, } | { "kind": "pong", timestamp: bigint, } | { "kind": "chat", author: string, content: string, } | { "kind": "settings" } & RoomSettings | { "kind": "error", message: string, };

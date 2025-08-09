@@ -107,16 +107,12 @@ async fn socket(
     // WebSocket Stream -> Room
     task::spawn(async move {
         while let Some(message) = stream.next().await {
-            match message {
-                Ok(ws::Message::Text(bytes)) => {
-                    if let Ok(message) = serde_json::from_str(bytes.as_str()) {
-                        room.send(RoomMessage::Client { uuid, message });
-                    } else {
-                        tracing::error!("failed deserializing: {}", bytes.as_str());
-                    }
+            if let Ok(ws::Message::Text(bytes)) = message {
+                if let Ok(message) = serde_json::from_str(bytes.as_str()) {
+                    room.send(RoomMessage::Client { uuid, message });
+                } else {
+                    tracing::error!("failed deserializing: {}", bytes.as_str());
                 }
-                Ok(_) => (),
-                Err(err) => tracing::error!(?err),
             }
         }
 

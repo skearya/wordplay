@@ -27,7 +27,11 @@ pub mod messages {
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
     #[derive(Serialize, TS)]
-    #[serde(tag = "kind", rename_all = "camelCase")]
+    #[serde(
+        tag = "kind",
+        rename_all = "camelCase",
+        rename_all_fields = "camelCase"
+    )]
     #[ts(export)]
     pub enum ServerGeneral {
         /// First message sent after establishing connection, sent only once.

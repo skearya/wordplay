@@ -199,7 +199,7 @@ impl Lobby {
                 let start = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .expect("time has gone backwards")
-                    .as_micros() as u64;
+                    .as_millis() as u64;
 
                 let timer = task::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(10)).await;
