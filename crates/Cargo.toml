@@ -1,3 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["server"]
+members = ["server", "state"]
+
+[profile.release]
+lto = true

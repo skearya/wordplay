@@ -3,6 +3,7 @@
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import { rootEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
+	import { onMount } from 'svelte';
 
 	type State =
 		| { kind: 'loading' }
@@ -13,7 +14,7 @@
 	let state = $state<State>({ kind: 'loading' });
 	let socket: WebSocket | undefined;
 
-	$effect(() => {
+	onMount(() => {
 		const room = 'one';
 
 		const params: SocketParams = {
