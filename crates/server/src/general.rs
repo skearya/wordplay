@@ -35,17 +35,7 @@ pub mod messages {
     #[ts(export)]
     pub enum ServerGeneral {
         /// First message sent after establishing connection, sent only once.
-        Info {
-            /// Joined client's designated UUID.
-            uuid: Uuid,
-            /// Room and game settings.
-            settings: RoomSettings,
-            /// Room clients.
-            clients: HashMap<Uuid, ServerClient>,
-            /// State of the room (lobby | type of game).
-            /// TODO: Box to reduce variant size?.
-            state: ServerState,
-        },
+        Info(Info),
         /// Broadcasted when a client joins/rejoins.
         Join { uuid: Uuid, client: ServerClient },
         /// Broadcasted when a client leaves.
@@ -62,6 +52,22 @@ pub mod messages {
         Settings(RoomSettings),
         /// Sent when the server encounters an error processing a client's message.
         Error { message: String },
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct Info {
+        /// Joined client's designated UUID.
+        pub uuid: Uuid,
+        /// Room and game settings.
+        pub settings: RoomSettings,
+        /// Room clients.
+        pub clients: HashMap<Uuid, ServerClient>,
+        /// State of the room (lobby | type of game).
+        /// TODO: Box to reduce variant size?.
+        pub state: ServerState,
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -110,7 +116,7 @@ use std::mem;
 use uuid::Uuid;
 
 use crate::{
-    general::messages::{ClientGeneral, GeneralMessage, ServerClient, ServerGeneral},
+    general::messages::{ClientGeneral, GeneralMessage, Info, ServerClient, ServerGeneral},
     messages::RoomSettings,
     room::{
         clients::Client,
@@ -189,7 +195,10 @@ impl<'a> General<'a> {
                             let old = mem::replace(old, client);
                             old.close("Reconnected on another client.");
 
-                            clients.send(player, self.info(player, settings, &clients));
+                            clients.send(
+                                player,
+                                ServerGeneral::Info(self.info(player, settings, &clients)),
+                            );
                         }
                         None => {
                             self.new_client(settings, &mut clients, player, client);
@@ -251,17 +260,16 @@ impl<'a> General<'a> {
 
         clients.add(uuid, client);
 
-        clients.send(uuid, self.info(uuid, settings, clients));
+        clients.send(
+            uuid,
+            ServerGeneral::Info(self.info(uuid, settings, clients)),
+        );
+
         clients.broadcast_except(uuid, ServerGeneral::Join { uuid, client: data });
     }
 
-    fn info(
-        &self,
-        uuid: Uuid,
-        settings: &RoomSettings,
-        clients: &impl ClientUtils,
-    ) -> ServerGeneral {
-        ServerGeneral::Info {
+    fn info(&self, uuid: Uuid, settings: &RoomSettings, clients: &impl ClientUtils) -> Info {
+        Info {
             uuid,
             settings: *settings,
             clients: clients

@@ -3,12 +3,13 @@
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import { rootEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, type ComponentProps } from 'svelte';
+	import Wordplay from '$lib/components/Wordplay.svelte';
 
 	type State =
 		| { kind: 'loading' }
 		| { kind: 'connected' }
-		| { kind: 'ready'; props: any }
+		| { kind: 'ready'; props: ComponentProps<typeof Wordplay> }
 		| { kind: 'error' };
 
 	let state = $state<State>({ kind: 'loading' });
@@ -44,8 +45,8 @@
 				state = {
 					kind: 'ready',
 					props: {
-						// info: message.data,
-						// sender: (message) => socket.send(JSON.stringify(message))
+						info: message.data,
+						sendMsg: (message) => socket!.send(JSON.stringify(message))
 					}
 				};
 
@@ -86,7 +87,7 @@
 {:else if state.kind === 'connected'}
 	<h1>Loading (established connection)</h1>
 {:else if state.kind === 'ready'}
-	<h1>Connected</h1>
+	<Wordplay {...state.props} />
 {:else if state.kind === 'error'}
 	<h1>Error</h1>
 {:else if state satisfies never}

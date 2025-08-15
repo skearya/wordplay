@@ -140,7 +140,7 @@ mod tests {
     use tokio::sync::mpsc::UnboundedReceiver;
 
     use crate::{
-        general::messages::{GeneralMessage, ServerClient, ServerState},
+        general::messages::{GeneralMessage, Info, ServerClient, ServerState},
         lobby::messages::LobbyState,
         room::clients::Client,
     };
@@ -194,7 +194,7 @@ mod tests {
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info {
+            ServerMessage::General(ServerGeneral::Info(Info {
                 uuid: one.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -211,7 +211,7 @@ mod tests {
                     ready: vec![],
                     timer_start: None
                 })
-            })
+            }))
         );
 
         Ok(())
@@ -232,7 +232,7 @@ mod tests {
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info {
+            ServerMessage::General(ServerGeneral::Info(Info {
                 uuid: one.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -249,7 +249,7 @@ mod tests {
                     ready: vec![],
                     timer_start: None
                 })
-            })
+            }))
         );
 
         room.send(RoomMessage::General(GeneralMessage::Join {
@@ -259,7 +259,7 @@ mod tests {
 
         assert_eq!(
             two.recv().await?,
-            ServerMessage::General(ServerGeneral::Info {
+            ServerMessage::General(ServerGeneral::Info(Info {
                 uuid: two.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -285,7 +285,7 @@ mod tests {
                     ready: vec![],
                     timer_start: None
                 })
-            })
+            }))
         );
 
         Ok(())

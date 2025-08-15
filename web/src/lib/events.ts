@@ -35,7 +35,9 @@ function eventEmitter<Events extends { kind: string }>() {
 
 			subscriptions.add(handlers);
 
-			return () => subscriptions.delete(handlers);
+			return () => {
+				subscriptions.delete(handlers);
+			};
 		},
 
 		emit(message: Events) {
