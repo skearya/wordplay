@@ -174,7 +174,7 @@
 
 <section
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll inset-shadow-[0_20px_20px] inset-shadow-black bg-background flex min-h-screen w-full items-start gap-2.5 bg-repeat p-4"
+	class="background-scroll inset-shadow-[0_20px_20px] inset-shadow-black bg-background flex min-h-[64rem] items-start gap-2.5 bg-repeat p-4"
 >
 	<div style="font-family: 'Mona Sans';" class="text-background sticky top-4 w-[325px] space-y-2.5">
 		<button class="block w-full bg-[#FEC5BB] py-7 text-2xl font-medium">Join room</button>
@@ -195,7 +195,7 @@
 			</div>
 		</div>
 		<div class="grid grid-cols-3 gap-2.5">
-			{#each { length: 24 }}
+			{#each { length: 12 }}
 				<a
 					href="/"
 					style="font-family: 'Mona Sans';"
