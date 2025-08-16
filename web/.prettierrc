@@ -3,7 +3,11 @@
 	"singleQuote": true,
 	"trailingComma": "none",
 	"printWidth": 100,
-	"plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
+	"plugins": [
+		"prettier-plugin-svelte",
+		"prettier-plugin-tailwindcss",
+		"@ianvs/prettier-plugin-sort-imports"
+	],
 	"overrides": [
 		{
 			"files": "*.svelte",
@@ -12,5 +16,6 @@
 			}
 		}
 	],
-	"tailwindStylesheet": "./src/app.css"
+	"tailwindStylesheet": "./src/app.css",
+	"importOrder": ["<TYPES>", "<BUILTIN_MODULES>", "<THIRD_PARTY_MODULES>", "^\\$lib(/.*)$", "^[.]"]
 }
