@@ -1,1 +1,9 @@
 @import 'tailwindcss';
+
+@theme {
+	--color-background: #040605;
+}
+
+body {
+	@apply bg-background text-white;
+}

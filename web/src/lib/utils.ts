@@ -26,14 +26,15 @@ export function setupCanvas(
 		ctx.scale(dpr, dpr);
 	};
 
-	onResize();
+	// window.addEventListener('resize', onResize);
 
-	window.addEventListener('resize', onResize);
+	onResize();
 
 	let rafId: number;
 	let lastTime = performance.now();
 
 	const rafFn = (time: number) => {
+		onResize();
 		onFrame(ctx, time - lastTime);
 
 		lastTime = time;
@@ -44,6 +45,6 @@ export function setupCanvas(
 
 	return () => {
 		if (rafId) cancelAnimationFrame(rafId);
-		window.addEventListener('resize', onResize);
+		// window.addEventListener('resize', onResize);
 	};
 }
