@@ -11,8 +11,7 @@
 	import meSvg from '$lib/assets/me.svg';
 	import searchSvg from '$lib/assets/search.svg';
 
-	const { Engine, Bodies, Composite, Composites, Mouse, MouseConstraint, Vector, Body, Events } =
-		Matter;
+	const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
 
 	const { data }: PageProps = $props();
 
@@ -91,6 +90,7 @@
 		// @ts-expect-error
 		mouse.element.removeEventListener('DOMMouseScroll', mouse.mousewheel);
 
+		// TODO: Update on zoom
 		mouse.pixelRatio = window.devicePixelRatio || 1;
 
 		const mouseConstraint = MouseConstraint.create(engine, {
@@ -103,23 +103,20 @@
 
 		Composite.add(engine.world, mouseConstraint);
 
-		const cleanupCanvas = setupCanvas(canvas, (ctx, dt) => {
-			const canvasWidth = canvas.clientWidth;
-			const canvasHeight = canvas.clientHeight;
-
-			Body.setPosition(leftWall, Vector.create(0 - wallThickness / 2, canvasHeight / 2));
-			Body.setPosition(rightWall, Vector.create(canvasWidth + wallThickness / 2, canvasHeight / 2));
-			Body.setPosition(topWall, Vector.create(canvasWidth / 2, 0 - wallThickness / 2));
+		const cleanupCanvas = setupCanvas(canvas, (ctx, dt, width, height) => {
+			Body.setPosition(leftWall, Vector.create(0 - wallThickness / 2, height / 2));
+			Body.setPosition(rightWall, Vector.create(width + wallThickness / 2, height / 2));
+			Body.setPosition(topWall, Vector.create(width / 2, 0 - wallThickness / 2));
 			Body.setPosition(
 				bottomWall,
-				Vector.create(canvasWidth / 2, canvasHeight + wallThickness / 2),
+				Vector.create(width / 2, height + wallThickness / 2),
 				// @ts-expect-error Sets velocity. Not typed for some reason.
 				true
 			);
 
 			for (const [body] of letters) {
-				const clampedX = Math.max(Math.min(body.position.x, canvasWidth), 0);
-				const clampedY = Math.max(Math.min(body.position.y, canvasHeight), 0);
+				const clampedX = Math.max(Math.min(body.position.x, width), 0);
+				const clampedY = Math.max(Math.min(body.position.y, height), 0);
 
 				if (clampedX !== body.position.x || clampedY !== body.position.y) {
 					Body.setPosition(body, Vector.create(clampedX, clampedY));
@@ -177,13 +174,13 @@
 
 <section
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll inset-shadow-[0_20px_20px] inset-shadow-black bg-background flex min-h-screen w-full gap-2.5 bg-repeat p-4"
+	class="background-scroll inset-shadow-[0_20px_20px] inset-shadow-black bg-background flex min-h-screen w-full items-start gap-2.5 bg-repeat p-4"
 >
-	<div style="font-family: 'Mona Sans';" class="text-background w-[325px] space-y-2.5">
+	<div style="font-family: 'Mona Sans';" class="text-background sticky top-4 w-[325px] space-y-2.5">
 		<button class="block w-full bg-[#FEC5BB] py-7 text-2xl font-medium">Join room</button>
 		<button class="block w-full bg-[#FAE1DD] py-7 text-2xl font-medium">Create room</button>
 		<button class="block w-full bg-[#E8E8E4] py-7 text-2xl font-medium">Singleplayer</button>
-		<div class="mt-6 flex items-center gap-x-2.5 p-2.5">
+		<div class="flex items-center gap-x-2.5 p-2.5">
 			<img src={settingsSvg} alt="Settings" />
 			<img src={githubSvg} alt="Github" />
 			<img src={meSvg} alt="Skeary" width="36px" height="36px" class="mt-[2px]" />
@@ -198,7 +195,7 @@
 			</div>
 		</div>
 		<div class="grid grid-cols-3 gap-2.5">
-			{#each { length: 12 }}
+			{#each { length: 24 }}
 				<a
 					href="/"
 					style="font-family: 'Mona Sans';"

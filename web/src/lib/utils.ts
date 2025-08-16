@@ -9,7 +9,7 @@ export function unreachable(message: any) {
 
 export function setupCanvas(
 	canvas: HTMLCanvasElement,
-	onFrame: (ctx: CanvasRenderingContext2D, dt: number) => void
+	onFrame: (ctx: CanvasRenderingContext2D, dt: number, width: number, height: number) => void
 ) {
 	const ctx = canvas.getContext('2d');
 
@@ -17,25 +17,33 @@ export function setupCanvas(
 		throw new Error("getContext('2d') failed");
 	}
 
-	const onResize = () => {
-		const dpr = window.devicePixelRatio || 1;
+	// `true` to make sure `if (resized)` code runs once
+	let resized = true;
 
-		canvas.width = canvas.clientWidth * dpr;
-		canvas.height = canvas.clientHeight * dpr;
-
-		ctx.scale(dpr, dpr);
-	};
-
-	// window.addEventListener('resize', onResize);
-
-	onResize();
+	const canvasResizeObserver = new ResizeObserver(() => (resized = true));
+	canvasResizeObserver.observe(canvas);
 
 	let rafId: number;
 	let lastTime = performance.now();
+	let width: number;
+	let height: number;
 
 	const rafFn = (time: number) => {
-		onResize();
-		onFrame(ctx, time - lastTime);
+		if (resized) {
+			const dpr = window.devicePixelRatio || 1;
+
+			width = canvas.clientWidth;
+			height = canvas.clientHeight;
+
+			canvas.width = width * dpr;
+			canvas.height = height * dpr;
+
+			ctx.scale(dpr, dpr);
+
+			resized = false;
+		}
+
+		onFrame(ctx, time - lastTime, width, height);
 
 		lastTime = time;
 		rafId = requestAnimationFrame(rafFn);
@@ -45,6 +53,6 @@ export function setupCanvas(
 
 	return () => {
 		if (rafId) cancelAnimationFrame(rafId);
-		// window.addEventListener('resize', onResize);
+		canvasResizeObserver.disconnect();
 	};
 }

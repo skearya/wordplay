@@ -5,7 +5,6 @@
 	import { gameEmitter, generalEmitter, lobbyEmitter, rootEmitter } from '$lib/events';
 	import { onMount } from 'svelte';
 	import Lobby from './Lobby.svelte';
-	import { error } from '@sveltejs/kit';
 
 	const {
 		info,
