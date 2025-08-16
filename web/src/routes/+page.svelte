@@ -160,6 +160,12 @@
 </script>
 
 <header
+	{@attach (header) =>
+		// When the animation ends the `height: 50vh` that gets applied isn't actually a live 50vh.
+		header.addEventListener('animationend', () => {
+			header.style.animation = 'none';
+			header.style.height = '50vh';
+		})}
 	style={`background-image: url("${homepageNoiseImage}");`}
 	class="intro-background relative h-screen bg-cover"
 >
