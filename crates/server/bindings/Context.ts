@@ -3,7 +3,7 @@ import type { RoomSettings } from "./RoomSettings";
 import type { ServerClient } from "./ServerClient";
 import type { ServerState } from "./ServerState";
 
-export type Info = { 
+export type Context = { 
 /**
  * Joined client's designated UUID.
  */

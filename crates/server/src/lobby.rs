@@ -3,7 +3,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::game::messages::GameState;
+    use crate::game::messages::{GameState, PostGameInfo};
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -71,8 +71,8 @@ pub mod messages {
         pub ready: Vec<Uuid>,
         /// Unix timestamp of when the countdown timer started.
         pub timer_start: Option<u64>,
-        // TODO: Show previous game info.
-        // prev_game: Option<PostGameInfo>,
+        // Previous game info.
+        pub prev_game: Option<PostGameInfo>,
     }
 }
 
@@ -82,7 +82,7 @@ use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
-    game::Game,
+    game::{Game, messages::PostGameInfo},
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     messages::RoomSettings,
     room::{
@@ -97,6 +97,7 @@ use crate::{
 pub struct Lobby {
     ready: Vec<Uuid>,
     countdown: Option<Countdown>,
+    prev_game: Option<PostGameInfo>,
 }
 
 struct Countdown {
@@ -106,10 +107,11 @@ struct Countdown {
 }
 
 impl Lobby {
-    pub fn new() -> Self {
+    pub fn new(prev_game: Option<PostGameInfo>) -> Self {
         Self {
             ready: vec![],
             countdown: None,
+            prev_game,
         }
     }
 }
@@ -182,6 +184,7 @@ impl Handler for Lobby {
         LobbyState {
             ready: self.ready.clone(),
             timer_start: self.countdown.as_ref().map(|countdown| countdown.start),
+            prev_game: self.prev_game.clone(),
         }
     }
 
@@ -215,7 +218,6 @@ impl Lobby {
             }
             Some(countdown) if self.ready.len() < 2 => {
                 countdown.timer.abort();
-
                 self.countdown = None;
 
                 TimerAction::Stop
@@ -237,7 +239,7 @@ mod tests {
 
     #[test]
     fn countdown_none() {
-        let mut lobby = Lobby::new();
+        let mut lobby = Lobby::new(None);
 
         assert_eq!(lobby.update_countdown(Dummy), TimerAction::None);
         assert!(lobby.countdown.is_none())

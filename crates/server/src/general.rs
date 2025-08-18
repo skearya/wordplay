@@ -35,7 +35,7 @@ pub mod messages {
     #[ts(export)]
     pub enum ServerGeneral {
         /// First message sent after establishing connection, sent only once.
-        Info(Info),
+        Info(Context),
         /// Broadcasted when a client joins/rejoins.
         Join { uuid: Uuid, client: ServerClient },
         /// Broadcasted when a client leaves.
@@ -58,7 +58,7 @@ pub mod messages {
     #[derive(Serialize, TS)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
-    pub struct Info {
+    pub struct Context {
         /// Joined client's designated UUID.
         pub uuid: Uuid,
         /// Room and game settings.
@@ -116,7 +116,7 @@ use std::mem;
 use uuid::Uuid;
 
 use crate::{
-    general::messages::{ClientGeneral, GeneralMessage, Info, ServerClient, ServerGeneral},
+    general::messages::{ClientGeneral, Context, GeneralMessage, ServerClient, ServerGeneral},
     messages::RoomSettings,
     room::{
         clients::Client,
@@ -268,8 +268,8 @@ impl<'a> General<'a> {
         clients.broadcast_except(uuid, ServerGeneral::Join { uuid, client: data });
     }
 
-    fn info(&self, uuid: Uuid, settings: &RoomSettings, clients: &impl ClientUtils) -> Info {
-        Info {
+    fn info(&self, uuid: Uuid, settings: &RoomSettings, clients: &impl ClientUtils) -> Context {
+        Context {
             uuid,
             settings: *settings,
             clients: clients

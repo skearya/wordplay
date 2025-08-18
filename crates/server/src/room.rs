@@ -140,7 +140,7 @@ mod tests {
     use tokio::sync::mpsc::UnboundedReceiver;
 
     use crate::{
-        general::messages::{GeneralMessage, Info, ServerClient, ServerState},
+        general::messages::{Context, GeneralMessage, ServerClient, ServerState},
         lobby::messages::LobbyState,
         room::clients::Client,
     };
@@ -194,7 +194,7 @@ mod tests {
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Info {
+            ServerMessage::General(ServerGeneral::Info(Context {
                 uuid: one.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -209,7 +209,8 @@ mod tests {
                 )]),
                 state: ServerState::Lobby(LobbyState {
                     ready: vec![],
-                    timer_start: None
+                    timer_start: None,
+                    prev_game: None
                 })
             }))
         );
@@ -232,7 +233,7 @@ mod tests {
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Info {
+            ServerMessage::General(ServerGeneral::Info(Context {
                 uuid: one.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -247,7 +248,8 @@ mod tests {
                 )]),
                 state: ServerState::Lobby(LobbyState {
                     ready: vec![],
-                    timer_start: None
+                    timer_start: None,
+                    prev_game: None
                 })
             }))
         );
@@ -259,7 +261,7 @@ mod tests {
 
         assert_eq!(
             two.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Info {
+            ServerMessage::General(ServerGeneral::Info(Context {
                 uuid: two.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
@@ -283,7 +285,8 @@ mod tests {
                 ]),
                 state: ServerState::Lobby(LobbyState {
                     ready: vec![],
-                    timer_start: None
+                    timer_start: None,
+                    prev_game: None
                 })
             }))
         );

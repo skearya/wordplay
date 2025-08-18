@@ -53,7 +53,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
     pub enum PostGameInfo {
@@ -194,11 +194,11 @@ impl Game {
                 };
 
                 clients.broadcast(ServerGame::Ended {
-                    post_game_info,
+                    post_game_info: post_game_info.clone(),
                     new_owner,
                 });
 
-                Some(RoomState::Lobby(Lobby::new()))
+                Some(RoomState::Lobby(Lobby::new(Some(post_game_info))))
             }
             None => None,
         }

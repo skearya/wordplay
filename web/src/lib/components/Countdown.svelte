@@ -1,16 +1,19 @@
 <script lang="ts">
 	const { timerStart }: { timerStart: bigint } = $props();
 
-	let countdown = $derived(Date.now() - Number(timerStart));
+	let countdown = $derived(10 - Math.floor((Date.now() - Number(timerStart)) / 1000));
 
 	$effect(() => {
 		let interval: number | undefined;
 
-		const timeout = setTimeout(() => {
-			setInterval(() => {
-				countdown -= 1;
-			}, 1000);
-		}, countdown);
+		const timeout = setTimeout(
+			() => {
+				setInterval(() => {
+					countdown -= 1;
+				}, 1000);
+			},
+			(Date.now() - Number(timerStart)) % 1000
+		);
 
 		return () => {
 			if (interval) {
@@ -21,3 +24,5 @@
 		};
 	});
 </script>
+
+<p>{countdown} seconds left</p>
