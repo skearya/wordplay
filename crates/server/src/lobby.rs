@@ -122,6 +122,14 @@ impl Handler for Lobby {
     type RoomMessage = LobbyMessage;
     type StateMessage = LobbyState;
 
+    fn state(&self) -> Self::StateMessage {
+        LobbyState {
+            ready: self.ready.clone(),
+            timer_start: self.countdown.as_ref().map(|countdown| countdown.start),
+            prev_game: self.prev_game.clone(),
+        }
+    }
+
     fn handle_client(
         &mut self,
         settings: &mut RoomSettings,
@@ -177,14 +185,6 @@ impl Handler for Lobby {
     ) -> anyhow::Result<Option<State>> {
         match message {
             LobbyMessage::GameStart => Ok(Some(State::InGame(Game::new(settings, &self.ready)))),
-        }
-    }
-
-    fn state(&self) -> Self::StateMessage {
-        LobbyState {
-            ready: self.ready.clone(),
-            timer_start: self.countdown.as_ref().map(|countdown| countdown.start),
-            prev_game: self.prev_game.clone(),
         }
     }
 

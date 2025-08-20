@@ -1,4 +1,4 @@
-use crate::{game::Game, general::messages::ServerState, lobby::Lobby, room::handler::Handler};
+use crate::{game::Game, lobby::Lobby, messages::ServerState, room::handler::Handler};
 
 pub enum State {
     Lobby(Lobby),

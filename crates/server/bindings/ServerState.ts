@@ -3,6 +3,7 @@ import type { GameState } from "./GameState";
 import type { LobbyState } from "./LobbyState";
 
 /**
- * Room state sent to clients when they join.
+ * Room variant state sent to clients when they join.
+ * All state that can be rolled back on the client.
  */
 export type ServerState = { "kind": "lobby" } & LobbyState | { "kind": "game" } & GameState;

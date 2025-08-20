@@ -12,7 +12,6 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    general::messages::GeneralMessage,
     messages::RoomMessage,
     room::{Room, clients::Client, messenger::RoomMessenger},
     state::AppState,
@@ -68,11 +67,11 @@ async fn socket(
         (Some(room), Some(rejoin_token)) => {
             let (response, uuid) = oneshot::channel();
 
-            room.send(RoomMessage::General(GeneralMessage::JoinWithRejoinToken {
+            room.send(RoomMessage::JoinWithRejoinToken {
                 rejoin_token,
                 client: Client::new(socket, sender, username),
                 response,
-            }));
+            });
 
             let uuid = uuid.await?;
 
@@ -81,10 +80,10 @@ async fn socket(
         (Some(room), None) => {
             let uuid = Uuid::new_v4();
 
-            room.send(RoomMessage::General(GeneralMessage::Join {
+            room.send(RoomMessage::Join {
                 uuid,
                 client: Client::new(socket, sender, username),
-            }));
+            });
 
             (uuid, room)
         }
@@ -93,10 +92,10 @@ async fn socket(
             let uuid = Uuid::new_v4();
             let room = Room::spawn();
 
-            room.send(RoomMessage::General(GeneralMessage::Join {
+            room.send(RoomMessage::Join {
                 uuid,
                 client: Client::new(socket, sender, username),
-            }));
+            });
 
             state.insert_room(room_name, room.clone());
 
@@ -116,7 +115,7 @@ async fn socket(
             }
         }
 
-        room.send(RoomMessage::General(GeneralMessage::Leave { uuid, socket }));
+        room.send(RoomMessage::Leave { uuid, socket });
 
         Ok(())
     });

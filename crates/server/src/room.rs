@@ -4,18 +4,22 @@ pub mod messenger;
 pub mod sender;
 pub mod state;
 
+use std::mem;
+
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
     game::messages::{GameMessage, ServerGame},
-    general::{General, messages::ServerGeneral},
+    general::{self, messages::ServerGeneral},
     lobby::messages::{LobbyMessage, ServerLobby},
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
     room::{
-        clients::Clients,
+        clients::{Client, Clients},
         handler::Handler,
-        messenger::{ClientMessenger, RoomMessenger, client_submessenger, room_submessenger},
+        messenger::{
+            ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
+        },
         sender::RoomSender,
         state::State,
     },
@@ -72,6 +76,75 @@ impl Room {
 
     fn handle_message(&mut self, message: RoomMessage) -> anyhow::Result<Option<State>> {
         match message {
+            RoomMessage::Join { uuid, client } => {
+                self.add_client(uuid, client);
+
+                Ok(None)
+            }
+            RoomMessage::JoinWithRejoinToken {
+                rejoin_token,
+                client,
+                response,
+            } => {
+                let uuid = if let Some(player) = self
+                    .state
+                    .try_in_game()
+                    .ok()
+                    .and_then(|game| game.lookup_rejoin_token(rejoin_token))
+                {
+                    if let Some(old) = self.clients.get_mut(player) {
+                        let old = mem::replace(old, client);
+                        old.close("Reconnected on another client.");
+
+                        self.clients.send(player, self.info_message(player));
+                        response.send(player).ok();
+
+                        return Ok(None);
+                    }
+
+                    player
+                } else {
+                    Uuid::new_v4()
+                };
+
+                self.add_client(uuid, client);
+                response.send(uuid).ok();
+
+                Ok(None)
+            }
+            RoomMessage::Leave { uuid, socket } => {
+                if !self
+                    .clients
+                    .get(uuid)
+                    .is_some_and(|client| client.socket_uuid_eq(socket))
+                {
+                    return Ok(None);
+                }
+
+                match self.state {
+                    State::Lobby(_) => self.clients.remove(uuid),
+                    State::InGame(_) => self.clients.disconnect(uuid),
+                    State::Ended => unreachable!(),
+                }
+
+                if self.clients.is_empty() {
+                    return Ok(Some(State::Ended));
+                }
+
+                let new_owner = if uuid == self.settings.owner {
+                    let random = *self.clients.random().0;
+                    self.settings.owner = random;
+
+                    Some(random)
+                } else {
+                    None
+                };
+
+                self.clients
+                    .broadcast(ServerMessage::Leave { uuid, new_owner });
+
+                Ok(None)
+            }
             RoomMessage::Client { uuid, message } => match self.handle_client(uuid, message) {
                 Ok(state) => Ok(state),
                 Err(err) => {
@@ -85,11 +158,6 @@ impl Room {
                     Err(err)
                 }
             },
-            RoomMessage::General(message) => General::new(&mut self.state).handle_message(
-                &mut self.settings,
-                client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
-                message,
-            ),
             RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::Lobby(ServerLobby)),
@@ -111,7 +179,7 @@ impl Room {
         message: ClientMessage,
     ) -> anyhow::Result<Option<State>> {
         match message {
-            ClientMessage::General(message) => General::new(&mut self.state).handle_client(
+            ClientMessage::General(message) => general::handle_client(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
                 (uuid, message),
@@ -130,6 +198,38 @@ impl Room {
             ),
         }
     }
+
+    fn info_message(&self, uuid: Uuid) -> ServerMessage {
+        ServerMessage::Info {
+            uuid,
+            clients: self
+                .clients
+                .iter()
+                .map(|(uuid, client)| (*uuid, client.into()))
+                .collect(),
+            settings: self.settings,
+            state: Box::new(self.state.state()),
+        }
+    }
+
+    fn add_client(&mut self, uuid: Uuid, client: Client) {
+        if self.settings.owner == Uuid::default() {
+            self.settings.owner = uuid;
+        }
+
+        let client_data = (&client).into();
+
+        self.clients.add(uuid, client);
+
+        self.clients.send(uuid, self.info_message(uuid));
+        self.clients.broadcast_except(
+            uuid,
+            ServerMessage::Join {
+                uuid,
+                client: client_data,
+            },
+        );
+    }
 }
 
 #[cfg(test)]
@@ -140,8 +240,8 @@ mod tests {
     use tokio::sync::mpsc::UnboundedReceiver;
 
     use crate::{
-        general::messages::{Context, GeneralMessage, ServerClient, ServerState},
         lobby::messages::LobbyState,
+        messages::{ServerClient, ServerState},
         room::clients::Client,
     };
 
@@ -187,19 +287,15 @@ mod tests {
         let mut id = 0;
         let (mut one, one_client) = FakeClient::new(&mut id);
 
-        room.send(RoomMessage::General(GeneralMessage::Join {
+        room.send(RoomMessage::Join {
             uuid: one.uuid,
             client: one_client,
-        }));
+        });
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Context {
+            ServerMessage::Info {
                 uuid: one.uuid,
-                settings: RoomSettings {
-                    owner: one.uuid,
-                    ..RoomSettings::default()
-                },
                 clients: HashMap::from([(
                     one.uuid,
                     ServerClient {
@@ -207,12 +303,16 @@ mod tests {
                         avatar_url: None
                     }
                 )]),
-                state: ServerState::Lobby(LobbyState {
+                settings: RoomSettings {
+                    owner: one.uuid,
+                    ..RoomSettings::default()
+                },
+                state: Box::new(ServerState::Lobby(LobbyState {
                     ready: vec![],
                     timer_start: None,
                     prev_game: None
-                })
-            }))
+                }))
+            }
         );
 
         Ok(())
@@ -226,19 +326,15 @@ mod tests {
         let (mut one, one_client) = FakeClient::new(&mut id);
         let (mut two, two_client) = FakeClient::new(&mut id);
 
-        room.send(RoomMessage::General(GeneralMessage::Join {
+        room.send(RoomMessage::Join {
             uuid: one.uuid,
             client: one_client,
-        }));
+        });
 
         assert_eq!(
             one.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Context {
+            ServerMessage::Info {
                 uuid: one.uuid,
-                settings: RoomSettings {
-                    owner: one.uuid,
-                    ..RoomSettings::default()
-                },
                 clients: HashMap::from([(
                     one.uuid,
                     ServerClient {
@@ -246,27 +342,27 @@ mod tests {
                         avatar_url: None
                     }
                 )]),
-                state: ServerState::Lobby(LobbyState {
-                    ready: vec![],
-                    timer_start: None,
-                    prev_game: None
-                })
-            }))
-        );
-
-        room.send(RoomMessage::General(GeneralMessage::Join {
-            uuid: two.uuid,
-            client: two_client,
-        }));
-
-        assert_eq!(
-            two.recv().await?,
-            ServerMessage::General(ServerGeneral::Info(Context {
-                uuid: two.uuid,
                 settings: RoomSettings {
                     owner: one.uuid,
                     ..RoomSettings::default()
                 },
+                state: Box::new(ServerState::Lobby(LobbyState {
+                    ready: vec![],
+                    timer_start: None,
+                    prev_game: None
+                }))
+            }
+        );
+
+        room.send(RoomMessage::Join {
+            uuid: two.uuid,
+            client: two_client,
+        });
+
+        assert_eq!(
+            two.recv().await?,
+            ServerMessage::Info {
+                uuid: two.uuid,
                 clients: HashMap::from([
                     (
                         one.uuid,
@@ -283,12 +379,16 @@ mod tests {
                         }
                     )
                 ]),
-                state: ServerState::Lobby(LobbyState {
+                settings: RoomSettings {
+                    owner: one.uuid,
+                    ..RoomSettings::default()
+                },
+                state: Box::new(ServerState::Lobby(LobbyState {
                     ready: vec![],
                     timer_start: None,
                     prev_game: None
-                })
-            }))
+                }))
+            }
         );
 
         Ok(())
