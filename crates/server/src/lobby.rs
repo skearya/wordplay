@@ -86,9 +86,9 @@ use crate::{
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     messages::RoomSettings,
     room::{
+        State,
         handler::Handler,
         messenger::{ClientMessenger, ClientUtils, RoomMessenger},
-        state::State,
     },
     task,
 };

@@ -108,11 +108,11 @@ use crate::{
     lobby::Lobby,
     messages::{GameType, RoomSettings},
     room::{
+        State as RoomState,
         handler::{GameHandler, Handler},
         messenger::{
             ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
         },
-        state::State as RoomState,
     },
 };
 

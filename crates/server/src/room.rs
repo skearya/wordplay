@@ -2,7 +2,6 @@ pub mod clients;
 pub mod handler;
 pub mod messenger;
 pub mod sender;
-pub mod state;
 
 use std::mem;
 
@@ -10,10 +9,16 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    game::messages::{GameMessage, ServerGame},
+    game::{
+        Game,
+        messages::{GameMessage, ServerGame},
+    },
     general::{self, messages::ServerGeneral},
-    lobby::messages::{LobbyMessage, ServerLobby},
-    messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage},
+    lobby::{
+        Lobby,
+        messages::{LobbyMessage, ServerLobby},
+    },
+    messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
     room::{
         clients::{Client, Clients},
         handler::Handler,
@@ -21,10 +26,56 @@ use crate::{
             ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
         },
         sender::RoomSender,
-        state::State,
     },
     task,
 };
+
+pub enum State {
+    Lobby(Lobby),
+    InGame(Game),
+    /// Indicator that the room task should end.
+    Ended,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self::Lobby(Lobby::default())
+    }
+}
+
+impl State {
+    pub fn try_lobby(&mut self) -> anyhow::Result<&mut Lobby> {
+        if let Self::Lobby(v) = self {
+            Ok(v)
+        } else {
+            Err(anyhow::anyhow!("expected lobby",))
+        }
+    }
+
+    pub fn try_in_game(&mut self) -> anyhow::Result<&mut Game> {
+        if let Self::InGame(v) = self {
+            Ok(v)
+        } else {
+            Err(anyhow::anyhow!("expected in game"))
+        }
+    }
+
+    pub fn state(&self) -> ServerState {
+        match self {
+            Self::Lobby(lobby) => ServerState::Lobby(lobby.state()),
+            Self::InGame(in_game) => ServerState::Game(in_game.state()),
+            Self::Ended => unreachable!(),
+        }
+    }
+
+    pub fn end(&mut self) {
+        match self {
+            Self::Lobby(lobby) => lobby.end(),
+            Self::InGame(in_game) => in_game.end(),
+            Self::Ended => unreachable!(),
+        }
+    }
+}
 
 pub struct Room {
     state: State,

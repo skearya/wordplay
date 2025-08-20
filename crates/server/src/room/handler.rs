@@ -3,8 +3,8 @@ use uuid::Uuid;
 use crate::{
     messages::RoomSettings,
     room::{
+        State,
         messenger::{ClientMessenger, ClientUtils, RoomMessenger},
-        state::State,
     },
 };
 

@@ -45,8 +45,8 @@ use crate::{
     general::messages::{ClientGeneral, ServerGeneral},
     messages::RoomSettings,
     room::{
+        State,
         messenger::{ClientMessenger, ClientUtils},
-        state::State,
     },
 };
 
