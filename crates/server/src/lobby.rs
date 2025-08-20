@@ -114,6 +114,36 @@ impl Lobby {
             prev_game,
         }
     }
+
+    fn update_countdown(&mut self, room: impl RoomMessenger<LobbyMessage>) -> TimerAction {
+        match &mut self.countdown {
+            None if self.ready.len() >= 2 => {
+                let start = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("time has gone backwards")
+                    .as_millis() as u64;
+
+                let timer = task::spawn(async move {
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    room.send(LobbyMessage::GameStart);
+
+                    Ok(())
+                })
+                .abort_handle();
+
+                self.countdown = Some(Countdown { start, timer });
+
+                TimerAction::Start
+            }
+            Some(countdown) if self.ready.len() < 2 => {
+                countdown.timer.abort();
+                self.countdown = None;
+
+                TimerAction::Stop
+            }
+            Some(_) | None => TimerAction::None,
+        }
+    }
 }
 
 impl Handler for Lobby {
@@ -191,38 +221,6 @@ impl Handler for Lobby {
     fn end(&mut self) {
         if let Some(countdown) = &self.countdown {
             countdown.timer.abort();
-        }
-    }
-}
-
-impl Lobby {
-    fn update_countdown(&mut self, room: impl RoomMessenger<LobbyMessage>) -> TimerAction {
-        match &mut self.countdown {
-            None if self.ready.len() >= 2 => {
-                let start = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .expect("time has gone backwards")
-                    .as_millis() as u64;
-
-                let timer = task::spawn(async move {
-                    tokio::time::sleep(Duration::from_secs(10)).await;
-                    room.send(LobbyMessage::GameStart);
-
-                    Ok(())
-                })
-                .abort_handle();
-
-                self.countdown = Some(Countdown { start, timer });
-
-                TimerAction::Start
-            }
-            Some(countdown) if self.ready.len() < 2 => {
-                countdown.timer.abort();
-                self.countdown = None;
-
-                TimerAction::Stop
-            }
-            Some(_) | None => TimerAction::None,
         }
     }
 }
