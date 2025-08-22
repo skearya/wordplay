@@ -27,7 +27,12 @@ pub enum ClientMessage {
 
 #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
 #[derive(Serialize, TS)]
-#[serde(tag = "kind", content = "data", rename_all = "camelCase")]
+#[serde(
+    tag = "kind",
+    content = "data",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum ServerMessage {
     /// First message sent after establishing connection, sent only once.

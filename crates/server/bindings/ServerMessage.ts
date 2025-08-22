@@ -22,4 +22,4 @@ settings: RoomSettings,
 /**
  * State variant data of the room (lobby | game -> (game kind)).
  */
-state: ServerState, } } | { "kind": "join", "data": { uuid: string, client: ServerClient, } } | { "kind": "leave", "data": { uuid: string, new_owner: string | null, } } | { "kind": "general", "data": ServerGeneral } | { "kind": "lobby", "data": ServerLobby } | { "kind": "game", "data": ServerGame };
+state: ServerState, } } | { "kind": "join", "data": { uuid: string, client: ServerClient, } } | { "kind": "leave", "data": { uuid: string, newOwner: string | null, } } | { "kind": "general", "data": ServerGeneral } | { "kind": "lobby", "data": ServerLobby } | { "kind": "game", "data": ServerGame };

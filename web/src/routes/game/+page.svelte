@@ -1,21 +1,24 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import type { Context } from '@bindings/Context';
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
+	import type { Context } from '$lib/context';
 	import { onMount } from 'svelte';
 	import Wordplay from '$lib/components/Wordplay.svelte';
-	import { handleServerMessage } from '$lib/handlers';
+	import { defaultClientContext } from '$lib/context';
+	import { serverMessageEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
-	type State = { kind: 'loading' } | { kind: 'connected' } | { kind: 'ready' } | { kind: 'error' };
+	type State =
+		| { kind: 'loading' }
+		| { kind: 'connected' }
+		| { kind: 'ready'; context: Context }
+		| { kind: 'error' };
 
 	let socket: WebSocket | undefined;
-	// Can't name this variable "state"
 	let connection = $state<State>({ kind: 'loading' });
-	let context = $state<Context>();
 
 	onMount(() => {
 		const room = 'one';
@@ -43,11 +46,17 @@
 				console.log('Message', message, e.data);
 			}
 
-			if (connection.kind === 'ready') {
-				handleServerMessage(context!, message);
-			} else if (message.kind === 'general' && message.data.kind === 'info') {
-				context = message.data;
-				connection = { kind: 'ready' };
+			if (message.kind === 'info') {
+				connection = {
+					kind: 'ready',
+					context: {
+						...message.data,
+						client: defaultClientContext(message.data.state),
+						send: (message) => socket!.send(JSON.stringify(message))
+					}
+				};
+			} else {
+				serverMessageEmitter.emit(message);
 			}
 		});
 
@@ -82,7 +91,7 @@
 {:else if connection.kind === 'connected'}
 	<h1>Loading (established connection)</h1>
 {:else if connection.kind === 'ready'}
-	<Wordplay context={context!} send={(message) => socket!.send(JSON.stringify(message))} />
+	<Wordplay {...connection.context} />
 {:else if connection.kind === 'error'}
 	<h1>Error</h1>
 {:else if connection satisfies never}

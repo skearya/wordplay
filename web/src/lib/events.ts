@@ -1,33 +1,28 @@
-import type { Variant } from './utils';
 import type { ServerMessage } from '@bindings/ServerMessage';
 
-export const serverMessageEmitter = eventEmitter<{
-	[Kind in ServerMessage['kind']]: Variant<ServerMessage, Kind>;
-}>();
+export const serverMessageEmitter = eventEmitter<ServerMessage>();
 
-function eventEmitter<Events extends { [kind: string]: any }>() {
-	const subscriptions: Map<keyof Events, Set<(data: any) => void>> = new Map();
+function eventEmitter<Message>() {
+	const subscriptions: Set<(data: Message) => void> = new Set();
+	const unhandled: Message[] = [];
 
 	return {
-		on: <Kind extends keyof Events>(kind: Kind, handler: (data: Events[Kind]) => void) => {
-			const kindSubscriptions = subscriptions.get(kind);
+		on: (handler: (data: Message) => void) => {
+			subscriptions.add(handler);
 
-			if (kindSubscriptions) {
-				kindSubscriptions.add(handler);
-			} else {
-				subscriptions.set(kind, new Set([handler]));
-			}
-
-			return () => void subscriptions.get(kind)?.delete(handler);
+			return () => {
+				subscriptions.delete(handler);
+			};
 		},
 
-		emit: <Kind extends keyof Events>(message: { kind: Kind } & Events[Kind]) => {
-			const kindSubscriptions = subscriptions.get(message.kind);
+		emit: (message: Message) => {
+			if (subscriptions.size === 0) {
+				unhandled.push(message);
+				return;
+			}
 
-			if (kindSubscriptions) {
-				for (const handlers of kindSubscriptions) {
-					handlers(message);
-				}
+			for (const handlers of subscriptions) {
+				handlers(message);
 			}
 		}
 	};
