@@ -78,7 +78,6 @@ pub struct ServerClient {
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[ts(export)]
 /// Room variant state sent to clients when they join.
-/// All state that can be rolled back on the client.
 pub enum ServerState {
     Lobby(LobbyState),
     Game(GameState),

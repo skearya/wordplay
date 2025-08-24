@@ -93,14 +93,21 @@ impl GameHandler for Anagrams {
     type StateMessage = AnagramsState;
     type PostGameMessage = AnagramsPostGame;
 
-    fn new(settings: &AnagramsSettings, players: &[Uuid]) -> Self {
+    fn new(
+        settings: &Self::GameSettings,
+        players: &[Uuid],
+        room: impl RoomMessenger<Self::RoomMessage>,
+    ) -> Self {
+        todo!()
+    }
+
+    fn state(&self) -> Self::StateMessage {
         todo!()
     }
 
     fn handle_client(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
-        room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         todo!()
@@ -109,17 +116,12 @@ impl GameHandler for Anagrams {
     fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
-        room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         todo!()
     }
 
-    fn state(&self) -> Self::StateMessage {
-        todo!()
-    }
-
-    fn end(&mut self) -> Self::PostGameMessage {
+    fn abort(&mut self) {
         todo!()
     }
 }

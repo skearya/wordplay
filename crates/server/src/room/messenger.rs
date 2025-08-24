@@ -11,16 +11,11 @@ pub trait ClientUtils {
     fn random(&self) -> (&Uuid, &Client);
     fn is_empty(&self) -> bool;
     fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client>;
-
-    fn add(&mut self, uuid: Uuid, client: Client);
-    fn remove(&mut self, uuid: Uuid);
-    fn disconnect(&mut self, uuid: Uuid);
-    fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client>;
     fn keep_connected(&mut self);
 }
 
-// `Send + 'static` needed to allow `RoomMessenger` to be used in futures.
-pub trait RoomMessenger<Msg>: Send + 'static {
+// `Send + Sync + 'static` needed to allow `RoomMessenger` to be used in futures.
+pub trait RoomMessenger<Msg>: Send + Sync + 'static {
     fn send(&self, message: Msg);
 }
 
@@ -79,22 +74,6 @@ macro_rules! client_submessenger {
                 self.0.iter()
             }
 
-            fn add(&mut self, uuid: Uuid, client: Client) {
-                self.0.add(uuid, client)
-            }
-
-            fn remove(&mut self, uuid: Uuid) {
-                self.0.remove(uuid)
-            }
-
-            fn disconnect(&mut self, uuid: Uuid) {
-                self.0.disconnect(uuid)
-            }
-
-            fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
-                self.0.get_mut(uuid)
-            }
-
             fn keep_connected(&mut self) {
                 self.0.keep_connected()
             }
@@ -132,6 +111,15 @@ macro_rules! room_submessenger {
         }
 
         RoomMessengerImpl($messenger)
+    }};
+    () => {{
+        struct DummyRoomMessengerImpl;
+
+        impl RoomMessenger<()> for DummyRoomMessengerImpl {
+            fn send(&self, _message: ()) {}
+        }
+
+        DummyRoomMessengerImpl
     }};
 }
 

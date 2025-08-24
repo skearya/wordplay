@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     messages::RoomSettings,
     room::{
-        State,
+        StateChange,
         messenger::{ClientMessenger, ClientUtils, RoomMessenger},
     },
 };
@@ -22,7 +22,7 @@ pub trait Handler {
         clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<State>>;
+    ) -> anyhow::Result<StateChange>;
 
     fn handle_message(
         &mut self,
@@ -30,9 +30,9 @@ pub trait Handler {
         clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<State>>;
+    ) -> anyhow::Result<StateChange>;
 
-    fn end(&mut self);
+    fn abort(&mut self);
 }
 
 pub trait GameHandler {
@@ -43,23 +43,25 @@ pub trait GameHandler {
     type StateMessage;
     type PostGameMessage;
 
-    fn new(settings: &Self::GameSettings, players: &[Uuid]) -> Self;
+    fn new(
+        settings: &Self::GameSettings,
+        players: &[Uuid],
+        room: impl RoomMessenger<Self::RoomMessage>,
+    ) -> Self;
 
     fn state(&self) -> Self::StateMessage;
 
     fn handle_client(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
-        room: impl RoomMessenger<Self::RoomMessage>,
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Option<Self::PostGameMessage>>;
 
     fn handle_message(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
-        room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<Self::PostGameMessage>>;
 
-    fn end(&mut self) -> Self::PostGameMessage;
+    fn abort(&mut self);
 }

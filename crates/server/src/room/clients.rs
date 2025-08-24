@@ -56,12 +56,21 @@ impl Clients {
     }
 }
 
-impl From<&ServerMessage> for ws::Message {
-    fn from(message: &ServerMessage) -> Self {
-        let text = serde_json::to_string(message)
-            .expect("ServerMessage serialization shouldn't ever fail?");
+impl Clients {
+    pub fn add(&mut self, uuid: Uuid, client: Client) {
+        self.clients.insert(uuid, client);
+    }
 
-        ws::Message::Text(Utf8Bytes::from(text))
+    pub fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
+        self.clients.get_mut(&uuid)
+    }
+
+    pub fn remove(&mut self, uuid: Uuid) {
+        self.clients.remove(&uuid);
+    }
+
+    pub fn disconnect(&mut self, uuid: Uuid) {
+        self.clients.get_mut(&uuid).unwrap().socket = None;
     }
 }
 
@@ -121,23 +130,16 @@ impl ClientUtils for Clients {
         self.clients.iter()
     }
 
-    fn add(&mut self, uuid: Uuid, client: Client) {
-        self.clients.insert(uuid, client);
-    }
-
-    fn remove(&mut self, uuid: Uuid) {
-        self.clients.remove(&uuid);
-    }
-
-    fn disconnect(&mut self, uuid: Uuid) {
-        self.clients.get_mut(&uuid).unwrap().socket = None;
-    }
-
-    fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
-        self.clients.get_mut(&uuid)
-    }
-
     fn keep_connected(&mut self) {
         self.clients.retain(|_, client| client.socket.is_some());
+    }
+}
+
+impl From<&ServerMessage> for ws::Message {
+    fn from(message: &ServerMessage) -> Self {
+        let text = serde_json::to_string(message)
+            .expect("ServerMessage serialization shouldn't ever fail?");
+
+        ws::Message::Text(Utf8Bytes::from(text))
     }
 }

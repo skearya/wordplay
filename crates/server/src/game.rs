@@ -105,10 +105,9 @@ use crate::{
             messages::{ServerWordBomb, WordBombMessage},
         },
     },
-    lobby::Lobby,
     messages::{GameType, RoomSettings},
     room::{
-        State as RoomState,
+        StateChange,
         handler::{GameHandler, Handler},
         messenger::{
             ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
@@ -145,10 +144,10 @@ impl State {
         }
     }
 
-    fn end(&mut self) -> PostGameInfo {
+    fn end(&mut self) {
         match self {
-            Self::WordBomb(word_bomb) => PostGameInfo::WordBomb(word_bomb.end()),
-            Self::Anagrams(anagrams) => PostGameInfo::Anagrams(anagrams.end()),
+            Self::WordBomb(word_bomb) => word_bomb.abort(),
+            Self::Anagrams(anagrams) => anagrams.abort(),
         }
     }
 }
@@ -160,11 +159,23 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(settings: &RoomSettings, players: &[Uuid]) -> Self {
+    pub fn new(
+        settings: &RoomSettings,
+        players: &[Uuid],
+        room: impl RoomMessenger<GameMessage>,
+    ) -> Self {
         Self {
             state: match settings.game {
-                GameType::WordBomb => State::WordBomb(WordBomb::new(&settings.word_bomb, players)),
-                GameType::Anagrams => State::Anagrams(Anagrams::new(&settings.anagrams, players)),
+                GameType::WordBomb => State::WordBomb(WordBomb::new(
+                    &settings.word_bomb,
+                    players,
+                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
+                )),
+                GameType::Anagrams => State::Anagrams(Anagrams::new(
+                    &settings.anagrams,
+                    players,
+                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
+                )),
             },
             rejoin_tokens: players.iter().map(|&uuid| (uuid, Uuid::new_v4())).collect(),
             requesting_end: vec![],
@@ -179,7 +190,7 @@ impl Game {
         settings: &mut RoomSettings,
         clients: &mut (impl ClientMessenger<ServerGame> + ClientUtils),
         post_game_info: Option<PostGameInfo>,
-    ) -> Option<RoomState> {
+    ) -> StateChange {
         match post_game_info {
             Some(post_game_info) => {
                 clients.keep_connected();
@@ -198,9 +209,9 @@ impl Game {
                     new_owner,
                 });
 
-                Some(RoomState::Lobby(Lobby::new(Some(post_game_info))))
+                StateChange::Lobby(Some(post_game_info))
             }
-            None => None,
+            None => StateChange::None,
         }
     }
 }
@@ -215,16 +226,15 @@ impl Handler for Game {
         &mut self,
         settings: &mut RoomSettings,
         mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        room: impl RoomMessenger<Self::RoomMessage>,
+        _room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<RoomState>> {
+    ) -> anyhow::Result<StateChange> {
         let post_game_info = match message {
             ClientGame::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
                 .handle_client(
                     client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     (uuid, message),
                 )?
                 .map(PostGameInfo::WordBomb),
@@ -233,7 +243,6 @@ impl Handler for Game {
                 .try_anagrams()?
                 .handle_client(
                     client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     (uuid, message),
                 )?
                 .map(PostGameInfo::Anagrams),
@@ -242,13 +251,13 @@ impl Handler for Game {
 
                 // If everyone in game has requested to end early, end.
                 if self.requesting_end.len() == self.rejoin_tokens.len() {
-                    Some(self.state.end())
+                    return Ok(StateChange::Lobby(None));
                 } else {
                     clients.broadcast(ServerGame::EndRequest { uuid });
                     None
                 }
             }
-            ClientGame::ForceEnd => Some(self.state.end()),
+            ClientGame::ForceEnd => return Ok(StateChange::Lobby(None)),
         };
 
         Ok(Game::handle_post_game_info(
@@ -262,16 +271,15 @@ impl Handler for Game {
         &mut self,
         settings: &mut RoomSettings,
         mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        room: impl RoomMessenger<Self::RoomMessage>,
+        _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<RoomState>> {
+    ) -> anyhow::Result<StateChange> {
         let post_game_info = match message {
             GameMessage::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
                 .handle_message(
                     client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
-                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                     message,
                 )?
                 .map(PostGameInfo::WordBomb),
@@ -280,7 +288,6 @@ impl Handler for Game {
                 .try_anagrams()?
                 .handle_message(
                     client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
-                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                     message,
                 )?
                 .map(PostGameInfo::Anagrams),
@@ -300,7 +307,7 @@ impl Handler for Game {
         }
     }
 
-    fn end(&mut self) {
+    fn abort(&mut self) {
         self.state.end();
     }
 }

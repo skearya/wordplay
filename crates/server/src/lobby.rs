@@ -76,17 +76,20 @@ pub mod messages {
     }
 }
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    mem,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
-    game::{Game, messages::PostGameInfo},
+    game::messages::PostGameInfo,
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     messages::RoomSettings,
     room::{
-        State,
+        StateChange,
         handler::Handler,
         messenger::{ClientMessenger, ClientUtils, RoomMessenger},
     },
@@ -97,7 +100,7 @@ use crate::{
 pub struct Lobby {
     ready: Vec<Uuid>,
     countdown: Option<Countdown>,
-    prev_game: Option<PostGameInfo>,
+    prev_game_info: Option<PostGameInfo>,
 }
 
 struct Countdown {
@@ -107,11 +110,11 @@ struct Countdown {
 }
 
 impl Lobby {
-    pub fn new(prev_game: Option<PostGameInfo>) -> Self {
+    pub fn new(prev_game_info: Option<PostGameInfo>) -> Self {
         Self {
             ready: vec![],
             countdown: None,
-            prev_game,
+            prev_game_info,
         }
     }
 
@@ -156,7 +159,7 @@ impl Handler for Lobby {
         LobbyState {
             ready: self.ready.clone(),
             timer_start: self.countdown.as_ref().map(|countdown| countdown.start),
-            prev_game: self.prev_game.clone(),
+            prev_game: self.prev_game_info.clone(),
         }
     }
 
@@ -166,11 +169,11 @@ impl Handler for Lobby {
         clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<State>> {
+    ) -> anyhow::Result<StateChange> {
         match message {
             ClientLobby::Ready => {
                 if self.ready.contains(&uuid) {
-                    return Ok(None);
+                    return Ok(StateChange::None);
                 }
 
                 self.ready.push(uuid);
@@ -182,14 +185,14 @@ impl Handler for Lobby {
             }
             ClientLobby::StartEarly => {
                 if settings.owner != uuid || self.ready.len() < 2 {
-                    return Ok(None);
+                    return Ok(StateChange::None);
                 }
 
-                return Ok(Some(State::InGame(Game::new(settings, &self.ready))));
+                return Ok(StateChange::Game(mem::take(&mut self.ready)));
             }
             ClientLobby::Unready => {
                 let Some(index) = self.ready.iter().position(|client| *client == uuid) else {
-                    return Ok(None);
+                    return Ok(StateChange::None);
                 };
 
                 self.ready.remove(index);
@@ -203,22 +206,22 @@ impl Handler for Lobby {
             ClientLobby::PracticeSubmission { prompt, input } => todo!(),
         }
 
-        Ok(None)
+        Ok(StateChange::None)
     }
 
     fn handle_message(
         &mut self,
-        settings: &mut RoomSettings,
+        _settings: &mut RoomSettings,
         _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
         _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<State>> {
+    ) -> anyhow::Result<StateChange> {
         match message {
-            LobbyMessage::GameStart => Ok(Some(State::InGame(Game::new(settings, &self.ready)))),
+            LobbyMessage::GameStart => Ok(StateChange::Game(mem::take(&mut self.ready))),
         }
     }
 
-    fn end(&mut self) {
+    fn abort(&mut self) {
         if let Some(countdown) = &self.countdown {
             countdown.timer.abort();
         }

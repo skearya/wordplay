@@ -1,5 +1,6 @@
 mod game;
 mod general;
+mod global;
 mod lobby;
 mod messages;
 mod room;
@@ -11,10 +12,12 @@ use axum::{Router, routing::get};
 use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{socket::handler, state::AppState};
+use crate::{global::init_globals, socket::handler, state::AppState};
 
 #[tokio::main]
 async fn main() {
+    init_globals();
+
     tracing_subscriber::registry()
         .with(fmt::layer().with_file(true).with_line_number(true))
         .with(EnvFilter::from_default_env())

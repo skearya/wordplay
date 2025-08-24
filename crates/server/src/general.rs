@@ -45,36 +45,62 @@ use crate::{
     general::messages::{ClientGeneral, ServerGeneral},
     messages::RoomSettings,
     room::{
-        State,
-        messenger::{ClientMessenger, ClientUtils},
+        StateChange,
+        handler::Handler,
+        messenger::{ClientMessenger, ClientUtils, RoomMessenger},
     },
 };
 
-pub fn handle_client(
-    settings: &mut RoomSettings,
-    clients: impl ClientMessenger<ServerGeneral> + ClientUtils,
-    (uuid, message): (Uuid, ClientGeneral),
-) -> anyhow::Result<Option<State>> {
-    match message {
-        ClientGeneral::Ping { timestamp } => {
-            clients.send(uuid, ServerGeneral::Pong { timestamp });
-        }
-        ClientGeneral::Chat { content } => {
-            clients.broadcast(ServerGeneral::Chat {
-                author: uuid,
-                content,
-            });
-        }
-        ClientGeneral::Settings(new) => {
-            if uuid != settings.owner {
-                return Ok(None);
+pub struct General;
+
+impl Handler for General {
+    type ClientMessage = ClientGeneral;
+    type ServerMessage = ServerGeneral;
+    type RoomMessage = ();
+    type StateMessage = ();
+
+    fn state(&self) -> Self::StateMessage {}
+
+    fn handle_client(
+        &mut self,
+        settings: &mut RoomSettings,
+        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _room: impl RoomMessenger<Self::RoomMessage>,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<StateChange> {
+        match message {
+            ClientGeneral::Ping { timestamp } => {
+                clients.send(uuid, ServerGeneral::Pong { timestamp });
             }
+            ClientGeneral::Chat { content } => {
+                clients.broadcast(ServerGeneral::Chat {
+                    author: uuid,
+                    content,
+                });
+            }
+            ClientGeneral::Settings(new) => {
+                if uuid != settings.owner {
+                    return Ok(StateChange::None);
+                }
 
-            *settings = new;
+                *settings = new;
 
-            clients.broadcast(ServerGeneral::Settings(*settings));
+                clients.broadcast(ServerGeneral::Settings(*settings));
+            }
         }
+
+        Ok(StateChange::None)
     }
 
-    Ok(None)
+    fn handle_message(
+        &mut self,
+        _settings: &mut RoomSettings,
+        _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _room: impl RoomMessenger<Self::RoomMessage>,
+        _message: Self::RoomMessage,
+    ) -> anyhow::Result<StateChange> {
+        Ok(StateChange::None)
+    }
+
+    fn abort(&mut self) {}
 }

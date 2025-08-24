@@ -11,9 +11,9 @@ use uuid::Uuid;
 use crate::{
     game::{
         Game,
-        messages::{GameMessage, ServerGame},
+        messages::{GameMessage, PostGameInfo, ServerGame},
     },
-    general::{self, messages::ServerGeneral},
+    general::{General, messages::ServerGeneral},
     lobby::{
         Lobby,
         messages::{LobbyMessage, ServerLobby},
@@ -33,8 +33,6 @@ use crate::{
 pub enum State {
     Lobby(Lobby),
     InGame(Game),
-    /// Indicator that the room task should end.
-    Ended,
 }
 
 impl Default for State {
@@ -64,17 +62,22 @@ impl State {
         match self {
             Self::Lobby(lobby) => ServerState::Lobby(lobby.state()),
             Self::InGame(in_game) => ServerState::Game(in_game.state()),
-            Self::Ended => unreachable!(),
         }
     }
 
     pub fn end(&mut self) {
         match self {
-            Self::Lobby(lobby) => lobby.end(),
-            Self::InGame(in_game) => in_game.end(),
-            Self::Ended => unreachable!(),
+            Self::Lobby(lobby) => lobby.abort(),
+            Self::InGame(in_game) => in_game.abort(),
         }
     }
+}
+
+pub enum StateChange {
+    Lobby(Option<PostGameInfo>),
+    Game(Vec<Uuid>),
+    End,
+    None,
 }
 
 pub struct Room {
@@ -112,12 +115,23 @@ impl Room {
     async fn run(mut self) -> anyhow::Result<()> {
         while let Some(message) = self.reciever.recv().await {
             match self.handle_message(message) {
-                Ok(Some(State::Ended)) => {
-                    self.state.end();
-                    break;
-                }
-                Ok(Some(state)) => self.state = state,
-                Ok(None) => (),
+                Ok(change) => match change {
+                    StateChange::Lobby(prev_game_info) => {
+                        self.state = State::Lobby(Lobby::new(prev_game_info));
+                    }
+                    StateChange::Game(uuids) => {
+                        self.state = State::InGame(Game::new(
+                            &self.settings,
+                            &uuids,
+                            room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
+                        ));
+                    }
+                    StateChange::End => {
+                        self.state.end();
+                        break;
+                    }
+                    StateChange::None => (),
+                },
                 Err(err) => tracing::error!(?err),
             }
         }
@@ -125,12 +139,12 @@ impl Room {
         Ok(())
     }
 
-    fn handle_message(&mut self, message: RoomMessage) -> anyhow::Result<Option<State>> {
+    fn handle_message(&mut self, message: RoomMessage) -> anyhow::Result<StateChange> {
         match message {
             RoomMessage::Join { uuid, client } => {
                 self.add_client(uuid, client);
 
-                Ok(None)
+                Ok(StateChange::None)
             }
             RoomMessage::JoinWithRejoinToken {
                 rejoin_token,
@@ -150,7 +164,7 @@ impl Room {
                         self.clients.send(player, self.info_message(player));
                         response.send(player).ok();
 
-                        return Ok(None);
+                        return Ok(StateChange::None);
                     }
 
                     player
@@ -161,7 +175,7 @@ impl Room {
                 self.add_client(uuid, client);
                 response.send(uuid).ok();
 
-                Ok(None)
+                Ok(StateChange::None)
             }
             RoomMessage::Leave { uuid, socket } => {
                 if !self
@@ -169,17 +183,16 @@ impl Room {
                     .get(uuid)
                     .is_some_and(|client| client.socket_uuid_eq(socket))
                 {
-                    return Ok(None);
+                    return Ok(StateChange::None);
                 }
 
                 match self.state {
                     State::Lobby(_) => self.clients.remove(uuid),
                     State::InGame(_) => self.clients.disconnect(uuid),
-                    State::Ended => unreachable!(),
                 }
 
                 if self.clients.is_empty() {
-                    return Ok(Some(State::Ended));
+                    return Ok(StateChange::End);
                 }
 
                 let new_owner = if uuid == self.settings.owner {
@@ -194,7 +207,7 @@ impl Room {
                 self.clients
                     .broadcast(ServerMessage::Leave { uuid, new_owner });
 
-                Ok(None)
+                Ok(StateChange::None)
             }
             RoomMessage::Client { uuid, message } => match self.handle_client(uuid, message) {
                 Ok(state) => Ok(state),
@@ -224,15 +237,12 @@ impl Room {
         }
     }
 
-    fn handle_client(
-        &mut self,
-        uuid: Uuid,
-        message: ClientMessage,
-    ) -> anyhow::Result<Option<State>> {
+    fn handle_client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<StateChange> {
         match message {
-            ClientMessage::General(message) => general::handle_client(
+            ClientMessage::General(message) => General.handle_client(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
+                room_submessenger!(),
                 (uuid, message),
             ),
             ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(

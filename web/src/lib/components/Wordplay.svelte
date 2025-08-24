@@ -4,7 +4,7 @@
 	import type { ServerGeneral } from '@bindings/ServerGeneral';
 	import type { ServerLobby } from '@bindings/ServerLobby';
 	import type { TimerAction } from '@bindings/TimerAction';
-	import type { ClientState, Context } from '$lib/context';
+	import type { ClientLobbyState, ClientState, Context } from '$lib/context';
 	import { serverMessageEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
 	import Lobby from './Lobby.svelte';
@@ -181,18 +181,18 @@
 
 	<hr />
 
-	{#if context.state.kind === 'lobby' && client.state.kind === 'lobby'}
+	{#if context.state.kind === 'lobby'}
 		<Lobby
 			{...{
 				...context,
 				state: context.state,
-				client: client.state,
+				client: client.state as ClientLobbyState,
 				send: (data) => context.send({ kind: 'lobby', data })
 			}}
 		/>
 	{:else if context.state.kind === 'game'}
 		<pre>(game)</pre>
-	{:else}
+	{:else if context.state satisfies never}
 		{unreachable(context.state)}
 	{/if}
 </section>
