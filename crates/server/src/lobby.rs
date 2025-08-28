@@ -91,13 +91,14 @@ use crate::{
     room::{
         StateChange,
         handler::Handler,
-        messenger::{ClientMessenger, ClientUtils, RoomMessenger},
+        messenger::{ClientMessenger, ClientUtils},
+        sender::LobbySender,
     },
     task,
 };
 
-#[derive(Default)]
 pub struct Lobby {
+    room: LobbySender,
     ready: Vec<Uuid>,
     countdown: Option<Countdown>,
     prev_game_info: Option<PostGameInfo>,
@@ -110,21 +111,24 @@ struct Countdown {
 }
 
 impl Lobby {
-    pub fn new(prev_game_info: Option<PostGameInfo>) -> Self {
+    pub fn new(room: LobbySender, prev_game_info: Option<PostGameInfo>) -> Self {
         Self {
+            room,
             ready: vec![],
             countdown: None,
             prev_game_info,
         }
     }
 
-    fn update_countdown(&mut self, room: impl RoomMessenger<LobbyMessage>) -> TimerAction {
+    fn update_countdown(&mut self) -> TimerAction {
         match &mut self.countdown {
             None if self.ready.len() >= 2 => {
                 let start = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .expect("time has gone backwards")
                     .as_millis() as u64;
+
+                let room = self.room.clone();
 
                 let timer = task::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(10)).await;
@@ -163,11 +167,10 @@ impl Handler for Lobby {
         }
     }
 
-    fn handle_client(
+    fn client(
         &mut self,
         settings: &mut RoomSettings,
         clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
         match message {
@@ -180,7 +183,7 @@ impl Handler for Lobby {
 
                 clients.broadcast(ServerLobby::Ready {
                     uuid,
-                    timer: self.update_countdown(room),
+                    timer: self.update_countdown(),
                 });
             }
             ClientLobby::StartEarly => {
@@ -199,7 +202,7 @@ impl Handler for Lobby {
 
                 clients.broadcast(ServerLobby::Unready {
                     uuid,
-                    timer: self.update_countdown(room),
+                    timer: self.update_countdown(),
                 });
             }
             ClientLobby::PracticeRequest => todo!(),
@@ -209,11 +212,10 @@ impl Handler for Lobby {
         Ok(StateChange::None)
     }
 
-    fn handle_message(
+    fn room(
         &mut self,
         _settings: &mut RoomSettings,
         _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
         match message {
@@ -225,24 +227,5 @@ impl Handler for Lobby {
         if let Some(countdown) = &self.countdown {
             countdown.timer.abort();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct Dummy;
-
-    impl RoomMessenger<LobbyMessage> for Dummy {
-        fn send(&self, _message: LobbyMessage) {}
-    }
-
-    #[test]
-    fn countdown_none() {
-        let mut lobby = Lobby::new(None);
-
-        assert_eq!(lobby.update_countdown(Dummy), TimerAction::None);
-        assert!(lobby.countdown.is_none())
     }
 }

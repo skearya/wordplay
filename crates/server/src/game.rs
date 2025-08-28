@@ -93,25 +93,18 @@ use uuid::Uuid;
 
 use crate::{
     game::{
-        anagrams::{
-            Anagrams,
-            messages::{AnagramsMessage, ServerAnagrams},
-        },
+        anagrams::{Anagrams, messages::ServerAnagrams},
         messages::{
             ClientGame, GameMessage, GameState, GameVariantState, PostGameInfo, ServerGame,
         },
-        word_bomb::{
-            WordBomb,
-            messages::{ServerWordBomb, WordBombMessage},
-        },
+        word_bomb::{WordBomb, messages::ServerWordBomb},
     },
     messages::{GameType, RoomSettings},
     room::{
         StateChange,
         handler::{GameHandler, Handler},
-        messenger::{
-            ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
-        },
+        messenger::{ClientMessenger, ClientUtils, client_submessenger},
+        sender::{AnagramsSender, GameSender, WordBombSender},
     },
 };
 
@@ -153,30 +146,28 @@ impl State {
 }
 
 pub struct Game {
+    room: GameSender,
     state: State,
     rejoin_tokens: HashMap<Uuid, Uuid>,
     requesting_end: Vec<Uuid>,
 }
 
 impl Game {
-    pub fn new(
-        settings: &RoomSettings,
-        players: &[Uuid],
-        room: impl RoomMessenger<GameMessage>,
-    ) -> Self {
+    pub fn new(room: GameSender, settings: &RoomSettings, players: &[Uuid]) -> Self {
         Self {
             state: match settings.game {
                 GameType::WordBomb => State::WordBomb(WordBomb::new(
+                    WordBombSender::new(room.clone()),
                     &settings.word_bomb,
                     players,
-                    room_submessenger!(room, GameMessage::WordBomb(WordBombMessage)),
                 )),
                 GameType::Anagrams => State::Anagrams(Anagrams::new(
+                    AnagramsSender::new(room.clone()),
                     &settings.anagrams,
                     players,
-                    room_submessenger!(room, GameMessage::Anagrams(AnagramsMessage)),
                 )),
             },
+            room,
             rejoin_tokens: players.iter().map(|&uuid| (uuid, Uuid::new_v4())).collect(),
             requesting_end: vec![],
         }
@@ -222,18 +213,17 @@ impl Handler for Game {
     type RoomMessage = GameMessage;
     type StateMessage = GameState;
 
-    fn handle_client(
+    fn client(
         &mut self,
         settings: &mut RoomSettings,
         mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        _room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
         let post_game_info = match message {
             ClientGame::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
-                .handle_client(
+                .client(
                     client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
                     (uuid, message),
                 )?
@@ -241,7 +231,7 @@ impl Handler for Game {
             ClientGame::Anagrams(message) => self
                 .state
                 .try_anagrams()?
-                .handle_client(
+                .client(
                     client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
                     (uuid, message),
                 )?
@@ -267,18 +257,17 @@ impl Handler for Game {
         ))
     }
 
-    fn handle_message(
+    fn room(
         &mut self,
         settings: &mut RoomSettings,
         mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        _room: impl RoomMessenger<Self::RoomMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
         let post_game_info = match message {
             GameMessage::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
-                .handle_message(
+                .room(
                     client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
                     message,
                 )?
@@ -286,7 +275,7 @@ impl Handler for Game {
             GameMessage::Anagrams(message) => self
                 .state
                 .try_anagrams()?
-                .handle_message(
+                .room(
                     client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
                     message,
                 )?

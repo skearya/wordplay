@@ -47,7 +47,7 @@ use crate::{
     room::{
         StateChange,
         handler::Handler,
-        messenger::{ClientMessenger, ClientUtils, RoomMessenger},
+        messenger::{ClientMessenger, ClientUtils},
     },
 };
 
@@ -61,11 +61,10 @@ impl Handler for General {
 
     fn state(&self) -> Self::StateMessage {}
 
-    fn handle_client(
+    fn client(
         &mut self,
         settings: &mut RoomSettings,
         clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        _room: impl RoomMessenger<Self::RoomMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
         match message {
@@ -92,11 +91,10 @@ impl Handler for General {
         Ok(StateChange::None)
     }
 
-    fn handle_message(
+    fn room(
         &mut self,
         _settings: &mut RoomSettings,
         _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
-        _room: impl RoomMessenger<Self::RoomMessage>,
         _message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
         Ok(StateChange::None)

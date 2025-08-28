@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use rand::seq::IndexedRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 
 static WORDS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
     let mut words: Vec<&'static str> = include_str!("res/words_alpha.txt").lines().collect();
@@ -36,4 +36,21 @@ pub fn random_prompt(min_wpp: usize) -> &'static str {
     let (_, prompts) = PROMPTS[index..].choose(&mut rand::rng()).unwrap();
 
     prompts.choose(&mut rand::rng()).unwrap()
+}
+
+pub fn random_anagram() -> (&'static str, String) {
+    let word = loop {
+        let word = *WORDS.choose(&mut rand::rng()).unwrap();
+
+        if word.len() == 6 {
+            break word;
+        }
+    };
+
+    let mut anagram = word.to_owned().into_bytes();
+    anagram.shuffle(&mut rand::rng());
+
+    let anagram = String::from_utf8(anagram).expect("word shuffled should've still been utf-8");
+
+    return (word, anagram);
 }

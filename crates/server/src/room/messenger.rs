@@ -1,5 +1,7 @@
 use uuid::Uuid;
 
+use crate::room::clients::Client;
+
 pub trait ClientMessenger<Msg> {
     fn send(&self, uuid: Uuid, message: Msg);
     fn broadcast(&self, message: Msg);
@@ -14,12 +16,7 @@ pub trait ClientUtils {
     fn keep_connected(&mut self);
 }
 
-// `Send + Sync + 'static` needed to allow `RoomMessenger` to be used in futures.
-pub trait RoomMessenger<Msg>: Send + Sync + 'static {
-    fn send(&self, message: Msg);
-}
-
-/// Creates an implementation of `ClientMessenger` that can **only** send sub-enums of `ServerMessage`.
+/// Creates an anonymous implementation of `ClientMessenger` that can **only** send sub-enums of `ServerMessage`.
 ///
 /// ### Usage
 /// ```
@@ -84,45 +81,3 @@ macro_rules! client_submessenger {
 }
 
 pub(crate) use client_submessenger;
-
-/// Creates an implementation of `RoomMessenger` that can **only** send sub-enums of `RoomMessage`.
-///
-/// ### Usage
-/// ```
-/// room_submessenger!(&Clients, RoomMessage::Variant(SubEnum))
-/// ```
-///
-/// ### Example
-/// ```
-/// // Send messages of `ServerMessage::Lobby` variant, which hold `ServerLobby` enums.
-/// let sub = client_submessenger!(&self.clients, RoomMessage::Lobby(LobbyMessage));
-///
-/// // Equivalent to `clients.broadcast(RoomMessage::Lobby(LobbyMessage::GameStart))`
-/// sub.broadcast(LobbyMessage::GameStart);
-/// ```
-macro_rules! room_submessenger {
-    ($messenger:expr, $room_type:ident :: $variant:ident( $subtype:ty )) => {{
-        struct RoomMessengerImpl<T: RoomMessenger<$room_type>>(T);
-
-        impl<T: RoomMessenger<$room_type>> RoomMessenger<$subtype> for RoomMessengerImpl<T> {
-            fn send(&self, message: $subtype) {
-                self.0.send($room_type::$variant(message));
-            }
-        }
-
-        RoomMessengerImpl($messenger)
-    }};
-    () => {{
-        struct DummyRoomMessengerImpl;
-
-        impl RoomMessenger<()> for DummyRoomMessengerImpl {
-            fn send(&self, _message: ()) {}
-        }
-
-        DummyRoomMessengerImpl
-    }};
-}
-
-pub(crate) use room_submessenger;
-
-use crate::room::clients::Client;

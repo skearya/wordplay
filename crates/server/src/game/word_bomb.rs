@@ -98,7 +98,6 @@ pub mod messages {
 
 use std::{
     collections::HashMap,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -112,15 +111,12 @@ use crate::{
         WordBombSettings, WordBombState,
     },
     global::{is_english, random_prompt},
-    room::{
-        handler::GameHandler,
-        messenger::{ClientMessenger, RoomMessenger},
-    },
+    room::{handler::GameHandler, messenger::ClientMessenger, sender::WordBombSender},
     task,
 };
 
 pub struct WordBomb {
-    room: Arc<dyn RoomMessenger<WordBombMessage>>,
+    room: WordBombSender,
     settings: WordBombSettings,
 
     players: HashMap<Uuid, Player>,
@@ -133,6 +129,8 @@ pub struct WordBomb {
     /// Handle to task that sends `WordBombMessage::Exploded`, time spawned.
     timer: Timer,
 
+    /// Record of when the game started. Used to calculate game length.
+    start: Instant,
     /// Player, used word.
     used: Vec<(Uuid, String)>,
     /// Player, prompt that they exploded to.
@@ -201,6 +199,50 @@ impl Player {
 }
 
 impl WordBomb {
+    pub fn new(room: WordBombSender, settings: &WordBombSettings, players: &[Uuid]) -> Self {
+        let mut order = players.to_owned();
+        order.shuffle(&mut rand::rng());
+
+        let start = Instant::now();
+        let length = rand::random_range(10.0..=30.0);
+
+        let task = {
+            let room = room.clone();
+
+            task::spawn(async move {
+                tokio::time::sleep_until((start + Duration::from_secs_f64(length)).into()).await;
+                room.send(WordBombMessage::Exploded);
+
+                Ok(())
+            })
+            .abort_handle()
+        };
+
+        Self {
+            room,
+            settings: *settings,
+            players: players
+                .iter()
+                .copied()
+                .map(|uuid| (uuid, Player::new()))
+                .collect(),
+            order,
+            turn: 0,
+            prompt: Prompt {
+                text: random_prompt(settings.min_wpm),
+                uses: 0,
+            },
+            timer: Timer {
+                task,
+                start,
+                length,
+            },
+            start,
+            used: vec![],
+            exploded: vec![],
+        }
+    }
+
     /// Returns `Ok(life)` or `Err(reason)`.
     fn submission(&mut self, mut word: String) -> Result<bool, &'static str> {
         word.make_ascii_lowercase();
@@ -323,62 +365,37 @@ impl WordBomb {
 }
 
 impl GameHandler for WordBomb {
-    type GameSettings = WordBombSettings;
     type ClientMessage = ClientWordBomb;
     type ServerMessage = ServerWordBomb;
     type RoomMessage = WordBombMessage;
     type StateMessage = WordBombState;
     type PostGameMessage = WordBombPostGame;
 
-    fn new(
-        settings: &WordBombSettings,
-        players: &[Uuid],
-        room: impl RoomMessenger<Self::RoomMessage>,
-    ) -> Self {
-        let mut order = players.to_owned();
-        order.shuffle(&mut rand::rng());
-
-        let start = Instant::now();
-        let length = rand::random_range(10.0..=30.0);
-        let room = Arc::new(room);
-
-        let task = {
-            let room = room.clone();
-
-            task::spawn(async move {
-                tokio::time::sleep_until((start + Duration::from_secs_f64(length)).into()).await;
-                room.send(WordBombMessage::Exploded);
-
-                Ok(())
-            })
-            .abort_handle()
-        };
-
-        Self {
-            room,
-            settings: *settings,
-            players: players
+    fn state(&self) -> Self::StateMessage {
+        WordBombState {
+            players: self
+                .players
                 .iter()
-                .copied()
-                .map(|uuid| (uuid, Player::new()))
+                .map(|(&uuid, player)| {
+                    (
+                        uuid,
+                        WordBombPlayer {
+                            input: player.input.clone(),
+                            lives: player.lives,
+                            letters: (0..26)
+                                .map(|i| (player.letters >> i & 1) as u8)
+                                .map(|value| (value + b'a') as char)
+                                .collect(),
+                        },
+                    )
+                })
                 .collect(),
-            order,
-            turn: 0,
-            prompt: Prompt {
-                text: random_prompt(settings.min_wpm),
-                uses: 0,
-            },
-            timer: Timer {
-                task,
-                start,
-                length,
-            },
-            used: vec![],
-            exploded: vec![],
+            turn: self.order[self.turn],
+            prompt: self.prompt.text.to_owned(),
         }
     }
 
-    fn handle_client(
+    fn client(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
@@ -419,7 +436,7 @@ impl GameHandler for WordBomb {
         Ok(None)
     }
 
-    fn handle_message(
+    fn room(
         &mut self,
         clients: impl ClientMessenger<Self::ServerMessage>,
         message: Self::RoomMessage,
@@ -440,30 +457,6 @@ impl GameHandler for WordBomb {
         };
 
         Ok(info)
-    }
-
-    fn state(&self) -> Self::StateMessage {
-        WordBombState {
-            players: self
-                .players
-                .iter()
-                .map(|(uuid, player)| {
-                    (
-                        *uuid,
-                        WordBombPlayer {
-                            input: player.input.clone(),
-                            lives: player.lives,
-                            letters: (0..26)
-                                .map(|i| (player.letters >> i & 1) as u8)
-                                .map(|value| (value + b'a') as char)
-                                .collect(),
-                        },
-                    )
-                })
-                .collect(),
-            turn: self.order[self.turn],
-            prompt: self.prompt.text.to_owned(),
-        }
     }
 
     fn abort(&mut self) {

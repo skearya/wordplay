@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     messages::RoomMessage,
-    room::{Room, clients::Client, messenger::RoomMessenger},
+    room::{Room, clients::Client},
     state::AppState,
     task,
 };

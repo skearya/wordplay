@@ -11,21 +11,16 @@ use uuid::Uuid;
 use crate::{
     game::{
         Game,
-        messages::{GameMessage, PostGameInfo, ServerGame},
+        messages::{PostGameInfo, ServerGame},
     },
     general::{General, messages::ServerGeneral},
-    lobby::{
-        Lobby,
-        messages::{LobbyMessage, ServerLobby},
-    },
+    lobby::{Lobby, messages::ServerLobby},
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
     room::{
         clients::{Client, Clients},
         handler::Handler,
-        messenger::{
-            ClientMessenger, ClientUtils, RoomMessenger, client_submessenger, room_submessenger,
-        },
-        sender::RoomSender,
+        messenger::{ClientMessenger, ClientUtils, client_submessenger},
+        sender::{GameSender, LobbySender, RoomSender},
     },
     task,
 };
@@ -33,12 +28,6 @@ use crate::{
 pub enum State {
     Lobby(Lobby),
     InGame(Game),
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self::Lobby(Lobby::default())
-    }
 }
 
 impl State {
@@ -93,9 +82,9 @@ pub struct Room {
 impl Room {
     pub fn new(sender: RoomSender, reciever: mpsc::UnboundedReceiver<RoomMessage>) -> Self {
         Self {
-            state: State::default(),
+            state: State::Lobby(Lobby::new(LobbySender::new(sender.clone()), None)),
             // Warning: settings.owner is initialized to `Uuid::default()` (nil).
-            // Should immediately be overwritten by the owner joining.
+            // Currently should immediately be overwritten by the owner joining.
             settings: RoomSettings::default(),
             clients: Clients::new(),
             sender,
@@ -117,13 +106,16 @@ impl Room {
             match self.handle_message(message) {
                 Ok(change) => match change {
                     StateChange::Lobby(prev_game_info) => {
-                        self.state = State::Lobby(Lobby::new(prev_game_info));
+                        self.state = State::Lobby(Lobby::new(
+                            LobbySender::new(self.sender.clone()),
+                            prev_game_info,
+                        ));
                     }
                     StateChange::Game(uuids) => {
                         self.state = State::InGame(Game::new(
+                            GameSender::new(self.sender.clone()),
                             &self.settings,
                             &uuids,
-                            room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
                         ));
                     }
                     StateChange::End => {
@@ -222,16 +214,14 @@ impl Room {
                     Err(err)
                 }
             },
-            RoomMessage::Lobby(message) => self.state.try_lobby()?.handle_message(
+            RoomMessage::Lobby(message) => self.state.try_lobby()?.room(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::Lobby(ServerLobby)),
-                room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 message,
             ),
-            RoomMessage::Game(message) => self.state.try_in_game()?.handle_message(
+            RoomMessage::Game(message) => self.state.try_in_game()?.room(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::Game(ServerGame)),
-                room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
                 message,
             ),
         }
@@ -239,22 +229,19 @@ impl Room {
 
     fn handle_client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<StateChange> {
         match message {
-            ClientMessage::General(message) => General.handle_client(
+            ClientMessage::General(message) => General.client(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::General(ServerGeneral)),
-                room_submessenger!(),
                 (uuid, message),
             ),
-            ClientMessage::Lobby(message) => self.state.try_lobby()?.handle_client(
+            ClientMessage::Lobby(message) => self.state.try_lobby()?.client(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::Lobby(ServerLobby)),
-                room_submessenger!(self.sender.clone(), RoomMessage::Lobby(LobbyMessage)),
                 (uuid, message),
             ),
-            ClientMessage::Game(message) => self.state.try_in_game()?.handle_client(
+            ClientMessage::Game(message) => self.state.try_in_game()?.client(
                 &mut self.settings,
                 client_submessenger!(&mut self.clients, ServerMessage::Game(ServerGame)),
-                room_submessenger!(self.sender.clone(), RoomMessage::Game(GameMessage)),
                 (uuid, message),
             ),
         }
