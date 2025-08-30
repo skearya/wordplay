@@ -5,10 +5,7 @@ use rand::{rng, seq::IteratorRandom};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{
-    messages::ServerMessage,
-    room::messenger::{ClientMessenger, ClientUtils},
-};
+use crate::{messages::ServerMessage, room::messenger::ClientMessenger};
 
 pub struct Client {
     /// 0: UUID unique to the client's socket task. **Not** client UUID.
@@ -65,12 +62,41 @@ impl Clients {
         self.clients.get_mut(&uuid)
     }
 
+    pub fn disconnect(&mut self, uuid: Uuid) {
+        if let Some(client) = self.clients.get_mut(&uuid) {
+            client.socket = None;
+        }
+    }
+
     pub fn remove(&mut self, uuid: Uuid) {
         self.clients.remove(&uuid);
     }
 
-    pub fn disconnect(&mut self, uuid: Uuid) {
-        self.clients.get_mut(&uuid).unwrap().socket = None;
+    pub fn get(&self, uuid: Uuid) -> Option<&Client> {
+        self.clients.get(&uuid)
+    }
+
+    pub fn random(&self) -> (&Uuid, &Client) {
+        self.clients
+            .iter()
+            .choose(&mut rng())
+            .expect("should always be at least one client")
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
+        self.clients.iter()
+    }
+
+    pub fn uuids(&self) -> impl Iterator<Item = &Uuid> {
+        self.clients.keys()
+    }
+
+    pub fn keep_connected(&mut self) {
+        self.clients.retain(|_, client| client.socket.is_some());
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.clients.is_empty() || self.clients.values().all(|client| client.socket.is_none())
     }
 }
 
@@ -108,30 +134,6 @@ impl ClientMessenger<ServerMessage> for Clients {
         {
             socket.send(message.clone()).ok();
         }
-    }
-}
-
-impl ClientUtils for Clients {
-    fn get(&self, uuid: Uuid) -> Option<&Client> {
-        self.clients.get(&uuid)
-    }
-
-    fn random(&self) -> (&Uuid, &Client) {
-        self.iter()
-            .choose(&mut rng())
-            .expect("should always be at least one client")
-    }
-
-    fn is_empty(&self) -> bool {
-        self.clients.is_empty() || self.clients.values().all(|client| client.socket.is_none())
-    }
-
-    fn iter(&self) -> std::collections::hash_map::Iter<'_, Uuid, Client> {
-        self.clients.iter()
-    }
-
-    fn keep_connected(&mut self) {
-        self.clients.retain(|_, client| client.socket.is_some());
     }
 }
 

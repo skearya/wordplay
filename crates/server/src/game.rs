@@ -43,13 +43,6 @@ pub mod messages {
         EndRequest {
             uuid: Uuid,
         },
-        /// Broadcasted when the current game has ended.
-        Ended {
-            post_game_info: PostGameInfo,
-            /// Is `Some` with a random client's uuid if the previous room owner
-            /// left during game and hasn't come back.
-            new_owner: Option<Uuid>,
-        },
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -67,7 +60,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct GameState {
@@ -78,7 +71,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     #[ts(export)]
     pub enum GameVariantState {
@@ -103,7 +96,7 @@ use crate::{
     room::{
         StateChange,
         handler::{GameHandler, Handler},
-        messenger::{ClientMessenger, ClientUtils, client_submessenger},
+        messenger::{ClientMessenger, client_submessenger},
         sender::{AnagramsSender, GameSender, WordBombSender},
     },
 };
@@ -173,37 +166,8 @@ impl Game {
         }
     }
 
-    pub fn lookup_rejoin_token(&self, rejoin_token: Uuid) -> Option<Uuid> {
-        self.rejoin_tokens.get(&rejoin_token).copied()
-    }
-
-    fn handle_post_game_info(
-        settings: &mut RoomSettings,
-        clients: &mut (impl ClientMessenger<ServerGame> + ClientUtils),
-        post_game_info: Option<PostGameInfo>,
-    ) -> StateChange {
-        match post_game_info {
-            Some(post_game_info) => {
-                clients.keep_connected();
-
-                let new_owner = if clients.get(settings.owner).is_none() {
-                    let random = *clients.random().0;
-                    settings.owner = random;
-
-                    Some(random)
-                } else {
-                    None
-                };
-
-                clients.broadcast(ServerGame::Ended {
-                    post_game_info: post_game_info.clone(),
-                    new_owner,
-                });
-
-                StateChange::Lobby(Some(post_game_info))
-            }
-            None => StateChange::None,
-        }
+    pub fn rejoin_tokens(&self) -> &HashMap<Uuid, Uuid> {
+        &self.rejoin_tokens
     }
 }
 
@@ -215,11 +179,11 @@ impl Handler for Game {
 
     fn client(
         &mut self,
-        settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _settings: &mut RoomSettings,
+        mut clients: impl ClientMessenger<Self::ServerMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
-        let post_game_info = match message {
+        let info = match message {
             ClientGame::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
@@ -237,6 +201,10 @@ impl Handler for Game {
                 )?
                 .map(PostGameInfo::Anagrams),
             ClientGame::EndRequest => {
+                if !self.rejoin_tokens.contains_key(&uuid) || self.requesting_end.contains(&uuid) {
+                    return Ok(StateChange::None);
+                }
+
                 self.requesting_end.push(uuid);
 
                 // If everyone in game has requested to end early, end.
@@ -250,20 +218,19 @@ impl Handler for Game {
             ClientGame::ForceEnd => return Ok(StateChange::Lobby(None)),
         };
 
-        Ok(Game::handle_post_game_info(
-            settings,
-            &mut clients,
-            post_game_info,
-        ))
+        Ok(info
+            .map(Some)
+            .map(StateChange::Lobby)
+            .unwrap_or(StateChange::None))
     }
 
     fn room(
         &mut self,
-        settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _settings: &mut RoomSettings,
+        mut clients: impl ClientMessenger<Self::ServerMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
-        let post_game_info = match message {
+        let info = match message {
             GameMessage::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
@@ -282,11 +249,10 @@ impl Handler for Game {
                 .map(PostGameInfo::Anagrams),
         };
 
-        Ok(Game::handle_post_game_info(
-            settings,
-            &mut clients,
-            post_game_info,
-        ))
+        Ok(info
+            .map(Some)
+            .map(StateChange::Lobby)
+            .unwrap_or(StateChange::None))
     }
 
     fn state(&self) -> Self::StateMessage {

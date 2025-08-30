@@ -44,7 +44,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct AnagramsState {
@@ -53,7 +53,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct AnagramsPlayer {
@@ -65,10 +65,10 @@ pub mod messages {
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct AnagramsPostGame {
-        original_word: String,
-        leaderboard: Vec<(Uuid, u32)>,
-        words: Vec<(Uuid, Vec<String>)>,
-        guesses: Vec<(Uuid, u32)>,
+        pub original: String,
+        pub leaderboard: Vec<(Uuid, u32)>,
+        // pub words: Vec<(Uuid, Vec<String>)>,
+        // pub gues -> Postses: Vec<(Uuid, u32)>,
     }
 }
 
@@ -119,10 +119,18 @@ impl Player {
     fn incorrect(&mut self) {
         self.incorrect += 1;
     }
+
+    fn points(&self) -> u32 {
+        self.used.iter().map(|word| points(word)).sum()
+    }
+}
+
+fn points(word: &str) -> u32 {
+    50 * 2_u32.pow(word.len() as u32 - 2)
 }
 
 impl Anagrams {
-    pub fn new(room: AnagramsSender, settings: &AnagramsSettings, players: &[Uuid]) -> Self {
+    pub fn new(room: AnagramsSender, _settings: &AnagramsSettings, players: &[Uuid]) -> Self {
         let (original, anagram) = random_anagram();
 
         let timer = task::spawn(async move {
@@ -168,7 +176,7 @@ impl Anagrams {
 
             Err(error)
         } else {
-            let points = Self::points(&word);
+            let points = points(&word);
 
             player.valid(word);
 
@@ -176,8 +184,15 @@ impl Anagrams {
         }
     }
 
-    fn points(word: &str) -> u32 {
-        50 * 2_u32.pow(word.len() as u32 - 2)
+    fn post_game(&self) -> AnagramsPostGame {
+        AnagramsPostGame {
+            original: self.original.to_owned(),
+            leaderboard: self
+                .players
+                .iter()
+                .map(|(&uuid, player)| (uuid, player.points()))
+                .collect(),
+        }
     }
 }
 
@@ -197,7 +212,7 @@ impl GameHandler for Anagrams {
                     (
                         uuid,
                         AnagramsPlayer {
-                            points: player.used.iter().map(|word| Self::points(&word)).sum(),
+                            points: player.points(),
                         },
                     )
                 })
@@ -242,7 +257,7 @@ impl GameHandler for Anagrams {
         message: Self::RoomMessage,
     ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         match message {
-            AnagramsMessage::TimerEnd => todo!(),
+            AnagramsMessage::TimerEnd => Ok(Some(self.post_game())),
         }
     }
 

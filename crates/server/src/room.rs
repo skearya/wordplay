@@ -19,7 +19,7 @@ use crate::{
     room::{
         clients::{Client, Clients},
         handler::Handler,
-        messenger::{ClientMessenger, ClientUtils, client_submessenger},
+        messenger::{ClientMessenger, client_submessenger},
         sender::{GameSender, LobbySender, RoomSender},
     },
     task,
@@ -105,24 +105,47 @@ impl Room {
         while let Some(message) = self.reciever.recv().await {
             match self.handle_message(message) {
                 Ok(change) => match change {
+                    StateChange::None => (),
                     StateChange::Lobby(prev_game_info) => {
+                        self.clients.keep_connected();
+
+                        let new_owner = self.new_owner();
+
+                        self.clients.broadcast(ServerMessage::GameEnd {
+                            post_game_info: prev_game_info.clone(),
+                            new_owner,
+                        });
+
                         self.state = State::Lobby(Lobby::new(
                             LobbySender::new(self.sender.clone()),
                             prev_game_info,
                         ));
                     }
-                    StateChange::Game(uuids) => {
-                        self.state = State::InGame(Game::new(
+                    StateChange::Game(players) => {
+                        let game = Game::new(
                             GameSender::new(self.sender.clone()),
                             &self.settings,
-                            &uuids,
-                        ));
+                            &players,
+                        );
+
+                        let state = game.state();
+
+                        for uuid in self.clients.uuids() {
+                            self.clients.send(
+                                *uuid,
+                                ServerMessage::GameStart {
+                                    rejoin_token: game.rejoin_tokens().get(uuid).copied(),
+                                    state: state.clone(),
+                                },
+                            );
+                        }
+
+                        self.state = State::InGame(game);
                     }
                     StateChange::End => {
                         self.state.end();
                         break;
                     }
-                    StateChange::None => (),
                 },
                 Err(err) => tracing::error!(?err),
             }
@@ -143,12 +166,19 @@ impl Room {
                 client,
                 response,
             } => {
-                let uuid = if let Some(player) = self
-                    .state
-                    .try_in_game()
-                    .ok()
-                    .and_then(|game| game.lookup_rejoin_token(rejoin_token))
-                {
+                // Previous player UUID, retrieved from rejoin token.
+                let player = self.state.try_in_game().ok().and_then(|game| {
+                    game.rejoin_tokens().iter().find_map(|(uuid, token)| {
+                        if rejoin_token == *token {
+                            Some(*uuid)
+                        } else {
+                            None
+                        }
+                    })
+                });
+
+                let uuid = if let Some(player) = player {
+                    // If we try using a rejoin token while they still seem to be connected, end the old connection.
                     if let Some(old) = self.clients.get_mut(player) {
                         let old = mem::replace(old, client);
                         old.close("Reconnected on another client.");
@@ -187,14 +217,7 @@ impl Room {
                     return Ok(StateChange::End);
                 }
 
-                let new_owner = if uuid == self.settings.owner {
-                    let random = *self.clients.random().0;
-                    self.settings.owner = random;
-
-                    Some(random)
-                } else {
-                    None
-                };
+                let new_owner = self.new_owner();
 
                 self.clients
                     .broadcast(ServerMessage::Leave { uuid, new_owner });
@@ -277,6 +300,17 @@ impl Room {
                 client: client_data,
             },
         );
+    }
+
+    fn new_owner(&mut self) -> Option<Uuid> {
+        if self.clients.get(self.settings.owner).is_none() {
+            let random = *self.clients.random().0;
+            self.settings.owner = random;
+
+            Some(random)
+        } else {
+            None
+        }
     }
 }
 

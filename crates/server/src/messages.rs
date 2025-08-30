@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     game::{
         anagrams::messages::AnagramsSettings,
-        messages::{ClientGame, GameMessage, GameState, ServerGame},
+        messages::{ClientGame, GameMessage, GameState, PostGameInfo, ServerGame},
         word_bomb::messages::WordBombSettings,
     },
     general::messages::{ClientGeneral, ServerGeneral},
@@ -54,7 +54,20 @@ pub enum ServerMessage {
     /// If they don't rejoin before the game ends, the game ending message will
     /// broadcast the new owner.
     Leave { uuid: Uuid, new_owner: Option<Uuid> },
-    /// Can be sent from any state.
+    /// Sent when the game (based on room settings) has started.
+    GameStart {
+        /// Contains the player's rejoin token. Is `None` if client is spectating.
+        rejoin_token: Option<Uuid>,
+        state: GameState,
+    },
+    /// Broadcasted when the current game has ended.
+    GameEnd {
+        post_game_info: Option<PostGameInfo>,
+        /// Is `Some` with a random client's uuid if the previous room owner
+        /// left during game and hasn't come back.
+        new_owner: Option<Uuid>,
+    },
+    /// General messages. Can be sent from any state.
     General(ServerGeneral),
     /// All lobby messages.
     Lobby(ServerLobby),

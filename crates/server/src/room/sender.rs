@@ -26,20 +26,12 @@ impl RoomSender {
     }
 }
 
-/// Creates an implementation of `RoomMessenger` that can **only** send sub-enums of `RoomMessage`.
-///
-/// ### Usage
-/// ```
-/// room_submessenger!(&Clients, RoomMessage::Variant(SubEnum))
-/// ```
+/// Defines an implementation of `RoomMessenger` that can **only** send sub-enums of `RoomMessage`.
 ///
 /// ### Example
 /// ```
-/// // Send messages of `ServerMessage::Lobby` variant, which hold `ServerLobby` enums.
-/// let sub = client_submessenger!(&self.clients, RoomMessage::Lobby(LobbyMessage));
-///
-/// // Equivalent to `clients.broadcast(RoomMessage::Lobby(LobbyMessage::GameStart))`
-/// sub.broadcast(LobbyMessage::GameStart);
+/// // Makes `LobbySender` struct which can only send `LobbyMessage`s.
+/// room_submessenger!(name: LobbySender, RoomMessage::Lobby(LobbyMessage));
 /// ```
 macro_rules! room_submessenger {
     (name: $name:ident, inherits: $sender:ty, $root:ident :: $variant:ident( $subtype:ty )) => {

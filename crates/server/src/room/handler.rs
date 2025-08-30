@@ -2,10 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     messages::RoomSettings,
-    room::{
-        StateChange,
-        messenger::{ClientMessenger, ClientUtils},
-    },
+    room::{StateChange, messenger::ClientMessenger},
 };
 
 pub trait Handler {
@@ -19,14 +16,14 @@ pub trait Handler {
     fn client(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        clients: impl ClientMessenger<Self::ServerMessage>,
         message: (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange>;
 
     fn room(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        clients: impl ClientMessenger<Self::ServerMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange>;
 

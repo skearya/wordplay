@@ -62,7 +62,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombState {
@@ -72,7 +72,7 @@ pub mod messages {
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
-    #[derive(Serialize, TS)]
+    #[derive(Serialize, TS, Clone)]
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombPlayer {

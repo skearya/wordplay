@@ -44,11 +44,7 @@ use uuid::Uuid;
 use crate::{
     general::messages::{ClientGeneral, ServerGeneral},
     messages::RoomSettings,
-    room::{
-        StateChange,
-        handler::Handler,
-        messenger::{ClientMessenger, ClientUtils},
-    },
+    room::{StateChange, handler::Handler, messenger::ClientMessenger},
 };
 
 pub struct General;
@@ -64,7 +60,7 @@ impl Handler for General {
     fn client(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        clients: impl ClientMessenger<Self::ServerMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
         match message {
@@ -94,7 +90,7 @@ impl Handler for General {
     fn room(
         &mut self,
         _settings: &mut RoomSettings,
-        _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _clients: impl ClientMessenger<Self::ServerMessage>,
         _message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
         Ok(StateChange::None)

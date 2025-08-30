@@ -3,7 +3,7 @@ pub mod messages {
     use ts_rs::TS;
     use uuid::Uuid;
 
-    use crate::game::messages::{GameState, PostGameInfo};
+    use crate::game::messages::PostGameInfo;
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -40,12 +40,6 @@ pub mod messages {
         /// Send result of practice guess based on current gamemode.
         PracticeResult {
             correct: bool,
-        },
-        /// Sent when the game (based on room settings) has started.
-        GameStarted {
-            /// Contains the player's rejoin token. Is `None` if client is spectating.
-            rejoin_token: Option<Uuid>,
-            state: GameState,
         },
     }
 
@@ -88,12 +82,7 @@ use crate::{
     game::messages::PostGameInfo,
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     messages::RoomSettings,
-    room::{
-        StateChange,
-        handler::Handler,
-        messenger::{ClientMessenger, ClientUtils},
-        sender::LobbySender,
-    },
+    room::{StateChange, handler::Handler, messenger::ClientMessenger, sender::LobbySender},
     task,
 };
 
@@ -170,7 +159,7 @@ impl Handler for Lobby {
     fn client(
         &mut self,
         settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        clients: impl ClientMessenger<Self::ServerMessage>,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<StateChange> {
         match message {
@@ -215,7 +204,7 @@ impl Handler for Lobby {
     fn room(
         &mut self,
         _settings: &mut RoomSettings,
-        _clients: impl ClientMessenger<Self::ServerMessage> + ClientUtils,
+        _clients: impl ClientMessenger<Self::ServerMessage>,
         message: Self::RoomMessage,
     ) -> anyhow::Result<StateChange> {
         match message {
