@@ -4,6 +4,22 @@
 	--color-background: #040605;
 }
 
-body {
-	@apply bg-background text-white;
+@layer base {
+	body {
+		font-family: 'Inter Variable', sans-serif;
+		@apply bg-background text-white;
+	}
+
+	@keyframes background-scroll-keyframes {
+		0% {
+			background-position: 0px 0px;
+		}
+		100% {
+			background-position: -100vw 100vh;
+		}
+	}
+
+	.background-scroll {
+		animation: 120s linear infinite background-scroll-keyframes;
+	}
 }

@@ -3,8 +3,9 @@ pub mod handler;
 pub mod messenger;
 pub mod sender;
 
-use std::mem;
+use std::{mem, num::NonZero};
 
+use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -77,6 +78,8 @@ pub struct Room {
     sender: RoomSender,
     /// Reciever of `RoomMessages`.
     reciever: mpsc::UnboundedReceiver<RoomMessage>,
+    /// Rate limiter of client messages.
+    limiter: DefaultKeyedRateLimiter<Uuid>,
 }
 
 impl Room {
@@ -89,6 +92,7 @@ impl Room {
             clients: Clients::new(),
             sender,
             reciever,
+            limiter: RateLimiter::keyed(Quota::per_second(NonZero::new(20).unwrap())),
         }
     }
 
@@ -251,6 +255,12 @@ impl Room {
     }
 
     fn handle_client(&mut self, uuid: Uuid, message: ClientMessage) -> anyhow::Result<StateChange> {
+        if self.limiter.check_key(&uuid).is_err() {
+            return Err(anyhow::anyhow!(
+                "rate limited, you're sending messages too fast"
+            ));
+        }
+
         match message {
             ClientMessage::General(message) => General.client(
                 &mut self.settings,

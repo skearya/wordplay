@@ -17,5 +17,6 @@
 		}
 	],
 	"tailwindStylesheet": "./src/app.css",
+	"tailwindPreserveWhitespace": false,
 	"importOrder": ["<TYPES>", "<BUILTIN_MODULES>", "<THIRD_PARTY_MODULES>", "^\\$lib(/.*)$", "^[.]"]
 }
