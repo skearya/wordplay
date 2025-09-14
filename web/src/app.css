@@ -10,6 +10,10 @@
 		@apply bg-background text-white;
 	}
 
+	.background-scroll {
+		animation: 120s linear infinite background-scroll-keyframes;
+	}
+
 	@keyframes background-scroll-keyframes {
 		0% {
 			background-position: 0px 0px;
@@ -19,7 +23,31 @@
 		}
 	}
 
-	.background-scroll {
-		animation: 120s linear infinite background-scroll-keyframes;
+	/* https://stackoverflow.com/questions/13014808/is-there-any-way-to-animate-an-ellipsis-with-css-animations */
+
+	.loading:after {
+		overflow: hidden;
+		display: inline-block;
+		vertical-align: bottom;
+		animation: ellipsis steps(4, end) 2000ms infinite alternate;
+		content: '\2026';
+		width: 0px;
+	}
+
+	@keyframes ellipsis {
+		to {
+			width: 20px;
+		}
+	}
+
+	.striped {
+		opacity: 0.8;
+		background: repeating-linear-gradient(
+			-45deg,
+			rgba(71, 93, 80, 0.8),
+			rgba(71, 93, 80, 0.8) 1px,
+			transparent 1px,
+			transparent 8px
+		);
 	}
 }
