@@ -177,7 +177,7 @@
 	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), #040605"
 	class="flex h-screen flex-col overflow-y-hidden"
 >
-	<nav class="flex items-center justify-between p-5">
+	<nav class="flex items-center justify-between px-5 py-4">
 		{@render wordplayLogo()}
 		<div class="flex items-center gap-x-4">
 			<div class="flex -space-x-6">
@@ -274,7 +274,7 @@
 			</div>
 		</section>
 		<section
-			class="relative flex flex-[70%] flex-col overflow-hidden border border-[#475D50] bg-[#475D50]/15"
+			class="relative flex flex-[70%] flex-col overflow-clip border border-[#475D50] bg-[#475D50]/15"
 		>
 			<div class="pointer-events-none absolute -bottom-6 -right-6 opacity-50">
 				{@render wordBombIcon({
@@ -289,11 +289,11 @@
 			<div class="absolute right-3 top-3 w-min text-nowrap text-[#62E297]">
 				<p>97 slots left</p>
 			</div>
-			<div class="flex flex-1 items-center justify-center gap-x-20">
+			<div class="flex flex-1 items-center justify-center gap-x-20 px-12">
 				<div class="relative size-[304px]">
 					<div
-						in:fly|global={{ x: 48, y: 48, duration: 400, delay: 150 }}
-						out:fly|global={{ x: 48, y: -48, duration: 400 }}
+						in:fly={{ x: 48, y: 48, duration: 400, delay: 150 }}
+						out:fly={{ x: 48, y: -48, duration: 400 }}
 						class={[
 							readyPlayers.length === 0 ? 'delay-400 opacity-100' : 'opacity-0',
 							'absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-y-4 text-[#B1C1AE] transition-opacity'
@@ -313,8 +313,8 @@
 						{@const x = Math.cos(angle) * distanceFromCenter}
 						{@const y = Math.sin(angle) * distanceFromCenter - 32}
 						<div
-							in:fly|global={{ x: 48, y: 48, duration: 400, delay: 150 }}
-							out:fly|global={{ x: 48, y: -48, duration: 400 }}
+							in:fly={{ x: 48, y: 48, duration: 400, delay: 150 }}
+							out:fly={{ x: 48, y: -48, duration: 400 }}
 							style={readyPlayers.length === 1
 								? `translate: -50% -50%;`
 								: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px); scale: ${100 - Math.log2(readyPlayers.length) * 8}%; transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);`}
