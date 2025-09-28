@@ -11,12 +11,10 @@
 	let { data }: PageProps = $props();
 
 	let unreadMessages = $state(0);
-
-	// let readyPlayers = $state([crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()]);
 	let readyPlayers = $state<string[]>([]);
 
 	$effect(() => {
-		setInterval(() => {
+		const intervalId = setInterval(() => {
 			unreadMessages += 1;
 		}, 1500);
 
@@ -31,6 +29,8 @@
 			},
 			{ signal: getAbortSignal() }
 		);
+
+		return () => clearInterval(intervalId);
 	});
 </script>
 
