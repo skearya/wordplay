@@ -56,3 +56,6 @@ export function setupCanvas(
 		canvasResizeObserver.disconnect();
 	};
 }
+
+export const lerp = (start: number, end: number, amount: number) =>
+	start * (1 - amount) + end * amount;

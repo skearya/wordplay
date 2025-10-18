@@ -245,8 +245,8 @@ impl WordBomb {
 
     /// Returns `Ok(life)` or `Err(reason)`.
     fn submission(&mut self, mut word: String) -> Result<bool, &'static str> {
-        word.make_ascii_lowercase();
         word.retain(|c| c.is_ascii_alphabetic());
+        word.make_ascii_lowercase();
 
         let error = if !word.contains(self.prompt.text) {
             Some("word doesn't contain prompt")
