@@ -16,7 +16,7 @@
 	let arrowElements = $state<HTMLElement[]>([]);
 
 	let unreadMessages = $state(0);
-	let readyPlayers = $state<string[]>([crypto.randomUUID()]);
+	let readyPlayers = $state<string[]>([crypto.randomUUID(), crypto.randomUUID()]);
 	let activePlayer = $state(0);
 
 	$effect(() => {
@@ -98,11 +98,10 @@
 		const arrowElement =
 			arrowElements[activePlayer - 1 === -1 ? readyPlayers.length - 1 : activePlayer - 1];
 
-		arrowElement.animate(
+		(arrowElement.firstChild as HTMLElement).animate(
 			{
-				opacity: ['100%', '25%'],
-				transform: ['scale(1.25)', 'scale(1)'],
-				color: ['#62E297', 'transparent']
+				translate: [`0px 0px`, `0px 40px`],
+				opacity: ['100%', '0%']
 			},
 			{
 				fill: 'forwards',
@@ -112,6 +111,22 @@
 		);
 	});
 </script>
+
+<svg height="0">
+	<filter id="noiseFilter">
+		<feTurbulence type="turbulence" baseFrequency="0.2" numOctaves="1" seed="1" result="turbulence">
+			<animate
+				attributeName="seed"
+				values="1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;"
+				dur="2000ms"
+				repeatCount="indefinite"
+			/>
+		</feTurbulence>
+		<feComposite operator="in" in="turbulence" in2="SourceAlpha" result="composite" />
+		<feBlend in="SourceGraphic" in2="composite" mode="normal" result="blended" />
+		<feDisplacementMap in="blended" in2="turbulence" scale="8" />
+	</filter>
+</svg>
 
 <main
 	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), #040605"
@@ -141,9 +156,9 @@
 	</nav>
 	<div class="flex flex-1 items-center justify-center gap-4 overflow-y-hidden p-4 pt-0">
 		<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-			{@render bomb()}
+			{@render bombIcon()}
 			<div class="absolute right-0 top-0 -translate-y-[4.8rem] translate-x-[4.8rem]">
-				{@render bombWire()}
+				{@render bombWireIcon()}
 			</div>
 			<div
 				style="font-family: 'PP Editorial New';"
@@ -175,13 +190,29 @@
 					`}
 					class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 				>
-					<img
-						src={`https://avatar.vercel.sh/${i}`}
-						alt="avatar"
-						width="120"
-						height="120"
-						class="mb-2 size-24 rounded-full"
-					/>
+					<div class="relative mb-2">
+						<img
+							src={`https://avatar.vercel.sh/${i}`}
+							alt="avatar"
+							width="120"
+							height="120"
+							class="size-24 rounded-full"
+						/>
+						<div class="absolute bottom-0 left-0 flex flex-col gap-y-1.5 mix-blend-plus-lighter">
+							{@render heartIcon()}
+							{@render heartIcon()}
+						</div>
+						{#if i === 0}
+							<div class="absolute right-0 top-0 -translate-y-1/2 translate-x-1/2">
+								{@render starIcon()}
+								<span
+									class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
+								>
+									x<span class="text-2xl font-semibold">10</span>
+								</span>
+							</div>
+						{/if}
+					</div>
 					<p>skeary</p>
 					<p>ovens</p>
 				</div>
@@ -199,16 +230,38 @@
 					style={`
 						translate: calc(-50% + ${x}px) calc(-50% + ${-y}px);
 						scale: ${100 - Math.log2(readyPlayers.length) * 8}%;
-						rotate: ${Math.PI + Math.PI / 2 - angle}rad;
+						rotate: ${(2 * Math.PI) / 2 - angle}rad;
 					`}
-					class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center p-2 text-transparent opacity-25 transition-transform duration-[400ms]"
+					class="timing-function-0 absolute left-1/2 top-1/2 text-transparent transition-transform duration-[400ms]"
 				>
-					{@render doubleRightArrowIcon()}
+					<div class="opacity-0">
+						{#each { length: 3 }}
+							{@render downArrowIcon()}
+						{/each}
+					</div>
 				</div>
 			{/each}
 		</div>
 	</div>
 </main>
+
+{#snippet heartIcon()}
+	<svg width="26" height="22" viewBox="0 0 25 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<path
+			d="M0 7.13885C0 13.0709 5.02429 16.2321 8.70216 19.0615C10 20.06 11.25 21 12.5 21C13.75 21 15 20.06 16.2979 19.0615C19.9757 16.2321 25 13.0709 25 7.13885C25 1.20675 18.1248 -3.00018 12.5 2.70287C6.8752 -3.00018 0 1.20675 0 7.13885Z"
+			fill="#DA5858"
+		/>
+	</svg>
+{/snippet}
+
+{#snippet starIcon()}
+	<svg width="76" height="76" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<path
+			d="M27.3244 13.2814C32.0743 4.76049 34.4491 0.5 38 0.5C41.5509 0.5 43.9258 4.76045 48.6755 13.2814L49.9044 15.4859C51.2544 17.9072 51.929 19.118 52.9816 19.9168C54.0339 20.7156 55.3441 21.0121 57.9654 21.6052L60.3519 22.1451C69.5754 24.2321 74.1875 25.2756 75.2848 28.804C76.382 32.3323 73.238 36.0091 66.9496 43.3621L65.3229 45.2645C63.536 47.354 62.6424 48.3988 62.2404 49.6914C61.8387 50.984 61.9738 52.3779 62.2438 55.166L62.4897 57.704C63.4404 67.5147 63.9159 72.4201 61.0434 74.6008C58.1705 76.7814 53.8524 74.7931 45.2161 70.817L42.9819 69.788C40.5279 68.6581 39.3009 68.093 38 68.093C36.6991 68.093 35.4721 68.6581 33.0181 69.788L30.7839 70.817C22.1476 74.7931 17.8294 76.7814 14.9568 74.6008C12.0842 72.4201 12.5596 67.5147 13.5103 57.704L13.7562 55.166C14.0264 52.3779 14.1614 50.984 13.7595 49.6914C13.3576 48.3988 12.4641 47.354 10.6772 45.2645L9.05038 43.3621C2.76219 36.0091 -0.381918 32.3323 0.715332 28.804C1.81258 25.2756 6.42448 24.2321 15.6483 22.1451L18.0346 21.6052C20.6557 21.0121 21.9662 20.7156 23.0185 19.9168C24.0708 19.118 24.7457 17.9073 26.0955 15.4859L27.3244 13.2814Z"
+			fill="#F6F5B4"
+		/>
+	</svg>
+{/snippet}
 
 {#snippet wordplayLogo()}
 	<svg width="96" height="61" viewBox="0 0 96 61" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -278,13 +331,20 @@
 	</svg>
 {/snippet}
 
-{#snippet downArrowIcon()}
-	<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-		<path d="M21.1695 6L22.5 7.182L12 18L1.5 7.182L2.8305 6L12 15.447L21.1695 6Z" fill="#8BA698" />
+{#snippet downArrowIcon(props: SVGAttributes<SVGSVGElement> = {})}
+	<svg
+		width="24"
+		height="24"
+		viewBox="0 0 24 24"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		{...props}
+	>
+		<path d="M21.1695 6L22.5 7.182L12 18L1.5 7.182L2.8305 6L12 15.447L21.1695 6Z" fill="#FAE1DD" />
 	</svg>
 {/snippet}
 
-{#snippet wordBombIcon(props: SVGAttributes<SVGSVGElement>)}
+{#snippet wordBombIcon(props: SVGAttributes<SVGSVGElement> = {})}
 	<svg
 		width="901"
 		height="916"
@@ -350,7 +410,7 @@
 	</svg>
 {/snippet}
 
-{#snippet bomb()}
+{#snippet bombIcon()}
 	<svg
 		width="224"
 		height="228"
@@ -397,13 +457,14 @@
 	</svg>
 {/snippet}
 
-{#snippet bombWire()}
+{#snippet bombWireIcon()}
 	<svg
 		width="112"
 		height="114"
 		viewBox="0 0 112 114"
 		fill="none"
 		xmlns="http://www.w3.org/2000/svg"
+		filter="url(#noiseFilter)"
 	>
 		<path
 			d="M34.5003 78.7314L4.7002 109.024L34.5003 78.7314Z"
@@ -420,7 +481,7 @@
 			fill="url(#paint2_linear_0_1)"
 			fill-opacity="0.3"
 			stroke="url(#paint3_linear_0_1)"
-			stroke-opacity="0.7"
+			stroke-opacity="0.8"
 			stroke-width="6"
 		/>
 		<defs>
