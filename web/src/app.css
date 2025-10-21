@@ -54,21 +54,21 @@
 	.rotating-border {
 		border-width: 4px;
 		border-style: solid;
-		border-image: conic-gradient(from var(--angle), #cbc9fc, #79789627) 1;
-		rotate: var(--angle);
+		border-image: conic-gradient(from var(--rotating-border-angle), #cbc9fc, #79789627) 1;
+		rotate: var(--rotating-border-angle);
 		animation: 8s rotating-border-keyframes linear infinite;
 	}
 
 	@keyframes rotating-border-keyframes {
 		from {
-			--angle: 0deg;
+			--rotating-border-angle: 0deg;
 		}
 		to {
-			--angle: -360deg;
+			--rotating-border-angle: -360deg;
 		}
 	}
 
-	@property --angle {
+	@property --rotating-border-angle {
 		syntax: '<angle>';
 		initial-value: 0deg;
 		inherits: false;
