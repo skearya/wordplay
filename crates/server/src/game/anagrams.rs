@@ -68,7 +68,6 @@ pub mod messages {
         pub original: String,
         pub leaderboard: Vec<(Uuid, u32)>,
         // pub words: Vec<(Uuid, Vec<String>)>,
-        // pub gues -> Postses: Vec<(Uuid, u32)>,
     }
 }
 
@@ -99,6 +98,7 @@ pub struct Anagrams {
 }
 
 struct Player {
+    /// Player's correctly guessed words.
     used: Vec<String>,
     /// Amount of times player guessed incorrectly.
     incorrect: u32,
@@ -228,7 +228,7 @@ impl GameHandler for Anagrams {
     ) -> anyhow::Result<Option<Self::PostGameMessage>> {
         if !self.players.contains_key(&uuid) {
             return Err(anyhow::anyhow!("you aren't a player"));
-        };
+        }
 
         match message {
             ClientAnagrams::Guess { word } => {

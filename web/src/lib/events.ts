@@ -1,29 +1,12 @@
+import type { ServerAnagrams } from '@bindings/ServerAnagrams';
+import type { ServerGame } from '@bindings/ServerGame';
+import type { ServerLobby } from '@bindings/ServerLobby';
 import type { ServerMessage } from '@bindings/ServerMessage';
+import type { ServerWordBomb } from '@bindings/ServerWordBomb';
+import { EventEmitter } from './eventemitter';
 
-export const serverMessageEmitter = eventEmitter<ServerMessage>();
-
-function eventEmitter<Message>() {
-	const subscriptions: Set<(data: Message) => void> = new Set();
-	const unhandled: Message[] = [];
-
-	return {
-		on: (handler: (data: Message) => void) => {
-			subscriptions.add(handler);
-
-			return () => {
-				subscriptions.delete(handler);
-			};
-		},
-
-		emit: (message: Message) => {
-			if (subscriptions.size === 0) {
-				unhandled.push(message);
-				return;
-			}
-
-			for (const handlers of subscriptions) {
-				handlers(message);
-			}
-		}
-	};
-}
+export const rootEmitter = new EventEmitter<ServerMessage>();
+export const lobbyEmitter = new EventEmitter<ServerLobby>();
+export const gameEmitter = new EventEmitter<ServerGame>();
+export const wordBombEmitter = new EventEmitter<ServerWordBomb>();
+export const anagramsEmitter = new EventEmitter<ServerAnagrams>();

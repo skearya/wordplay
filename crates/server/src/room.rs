@@ -134,7 +134,7 @@ impl Room {
 
                         let state = game.state();
 
-                        for uuid in self.clients.uuids() {
+                        for (uuid, _) in self.clients.iter() {
                             self.clients.send(
                                 *uuid,
                                 ServerMessage::GameStart {

@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import type { Attachment } from 'svelte/attachments';
 	import Matter from 'matter-js';
+	import { onMount } from 'svelte';
 	import bombSvg from '$lib/assets/bomb.svg';
 	import githubSvg from '$lib/assets/github.svg';
 	import gridSvg from '$lib/assets/grid.svg';
@@ -9,15 +10,44 @@
 	import meSvg from '$lib/assets/me.svg';
 	import searchSvg from '$lib/assets/search.svg';
 	import settingsSvg from '$lib/assets/settings.svg';
-	import { setupCanvas } from '$lib/utils';
-
-	const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
+	import { lerp, setupCanvas } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
-	const backgroundCanvas: Attachment<HTMLCanvasElement> = (canvas) => {
-		const originalWidth = canvas.clientWidth;
-		const originalHeight = canvas.clientHeight;
+	const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
+
+	let backgroundCanvasElement: HTMLCanvasElement;
+	let headerTextElement: HTMLElement;
+	let contentElement: HTMLElement;
+
+	onMount(() => {
+		const animation = contentElement.animate(
+			{
+				translate: ['0px 50vh', '0px 0px']
+			},
+			{
+				fill: 'forwards',
+				delay: 500,
+				duration: 1000,
+				easing: 'cubic-bezier(0.87, 0, 0.13, 1)'
+			}
+		);
+
+		headerTextElement.animate(
+			{
+				opacity: '100%',
+				translate: '0px -50vh'
+			},
+			{
+				fill: 'forwards',
+				delay: 1000,
+				duration: 750,
+				easing: 'ease-in'
+			}
+		);
+
+		const originalWidth = backgroundCanvasElement.clientWidth;
+		const originalHeight = backgroundCanvasElement.clientHeight;
 
 		const engine = Engine.create({ gravity: { y: 0.01 } });
 
@@ -26,13 +56,15 @@
 		const letters = new Map(
 			['wordplay', 'byskeary.me', 'abcdefghijkl'].toReversed().flatMap((line, lineIndex) =>
 				line.split('').map((letter, letterIndex) => {
-					const lineWidth = line.length * 64;
+					const lineWidth = line.length * (letterWidth + 4);
 					const start = originalWidth / 2 - lineWidth / 2;
 
-					const x = start + letterIndex * 64 + letterWidth / 2;
-					const y = originalHeight - lineIndex * 64 - letterHeight / 2;
+					const x = start + letterIndex * (letterWidth + 4) + letterWidth / 2;
+					const y = originalHeight - lineIndex * letterHeight - letterHeight / 2;
 
-					const letterBody = Bodies.rectangle(x, y, letterWidth, letterHeight);
+					const letterBody = Bodies.rectangle(x, y, letterWidth, letterHeight, {
+						angle: (Math.random() - 0.5) * 0.05
+					});
 
 					return [letterBody, letter] as const;
 				})
@@ -75,7 +107,7 @@
 
 		Composite.add(engine.world, [leftWall, rightWall, topWall, bottomWall]);
 
-		const mouse = Mouse.create(canvas);
+		const mouse = Mouse.create(backgroundCanvasElement);
 
 		// https://github.com/liabru/matter-js/issues/678
 		// https://github.com/liabru/matter-js/issues/929
@@ -103,13 +135,16 @@
 
 		Composite.add(engine.world, mouseConstraint);
 
-		const cleanupCanvas = setupCanvas(canvas, (ctx, dt, width, height) => {
+		const cleanupCanvas = setupCanvas(backgroundCanvasElement, (ctx, dt, width, height) => {
+			const timing = animation?.effect?.getComputedTiming().progress ?? 0;
+			const bottom = lerp(height, height / 2, timing);
+
 			Body.setPosition(leftWall, Vector.create(0 - wallThickness / 2, height / 2));
 			Body.setPosition(rightWall, Vector.create(width + wallThickness / 2, height / 2));
 			Body.setPosition(topWall, Vector.create(width / 2, 0 - wallThickness / 2));
 			Body.setPosition(
 				bottomWall,
-				Vector.create(width / 2, height + wallThickness / 2),
+				Vector.create(width / 2, bottom + wallThickness / 2),
 				// @ts-expect-error Sets velocity. Not typed for some reason.
 				true
 			);
@@ -126,7 +161,7 @@
 
 			Engine.update(engine, Math.min(dt, 60));
 
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.clearRect(0, 0, width, bottom);
 
 			ctx.lineWidth = 1;
 			ctx.textBaseline = 'middle';
@@ -156,31 +191,27 @@
 		});
 
 		return () => cleanupCanvas();
-	};
+	});
 </script>
 
 <header
-	{@attach (header) =>
-		// When the animation ends the `height: 50vh` that gets applied isn't actually a live 50vh.
-		header.addEventListener('animationend', () => {
-			header.style.animation = 'none';
-			header.style.height = '50vh';
-		})}
 	style={`background-image: url("${homepageNoiseImage}");`}
-	class="intro-background relative h-screen bg-cover"
+	class="absolute left-0 top-0 -z-10 h-screen w-screen bg-cover"
 >
-	<canvas {@attach backgroundCanvas} class="h-full w-full"></canvas>
+	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
 	<h1
+		bind:this={headerTextElement}
 		style="font-family: 'PP Editorial New';"
-		class="intro-background-text text-background pointer-events-none absolute bottom-0 left-0 p-4 text-8xl opacity-0"
+		class="text-background pointer-events-none absolute bottom-0 left-0 p-4 text-8xl opacity-0"
 	>
 		Wordplay
 	</h1>
 </header>
 
 <section
+	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll inset-shadow-[0_20px_20px] inset-shadow-black bg-background flex min-h-[64rem] items-start gap-2.5 bg-repeat p-4"
+	class="inset-shadow-[0_20px_20px] background-scroll inset-shadow-black bg-background mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
 >
 	<div style="font-family: 'Mona Sans';" class="text-background sticky top-4 w-[325px] space-y-2.5">
 		<button class="block w-full bg-[#FEC5BB] py-7 text-2xl font-medium">Join room</button>
@@ -232,32 +263,6 @@
 </section>
 
 <style>
-	@keyframes intro-background-keyframes {
-		from {
-			height: 100vh;
-		}
-		to {
-			height: 50vh;
-		}
-	}
-
-	.intro-background {
-		animation: 1000ms cubic-bezier(0.87, 0, 0.13, 1) 500ms both intro-background-keyframes;
-	}
-
-	@keyframes intro-background-text-keyframes {
-		from {
-			opacity: 0%;
-		}
-		to {
-			opacity: 100%;
-		}
-	}
-
-	.intro-background-text {
-		animation: 750ms ease-in 1500ms both intro-background-text-keyframes;
-	}
-
 	@keyframes background-scroll-keyframes {
 		0% {
 			background-position: 0px 0px;

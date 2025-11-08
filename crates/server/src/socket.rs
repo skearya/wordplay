@@ -51,7 +51,7 @@ async fn socket(
     let (mut sink, mut stream) = socket.split();
     let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
 
-    // Room message -> WebSocket Sink
+    // Room message -> WebSocket Sink.
     task::spawn(async move {
         while let Some(message) = reciever.recv().await {
             sink.send(message).await?;

@@ -350,8 +350,7 @@ impl WordBomb {
             winner: *self
                 .players
                 .iter()
-                .filter(|player| player.1.alive())
-                .next()
+                .find(|player| player.1.alive())
                 .expect("one player should be alive")
                 .0,
         }

@@ -210,18 +210,15 @@ impl Handler for Game {
                 // If everyone in game has requested to end early, end.
                 if self.requesting_end.len() == self.rejoin_tokens.len() {
                     return Ok(StateChange::Lobby(None));
-                } else {
-                    clients.broadcast(ServerGame::EndRequest { uuid });
-                    None
                 }
+
+                clients.broadcast(ServerGame::EndRequest { uuid });
+                None
             }
             ClientGame::ForceEnd => return Ok(StateChange::Lobby(None)),
         };
 
-        Ok(info
-            .map(Some)
-            .map(StateChange::Lobby)
-            .unwrap_or(StateChange::None))
+        Ok(info.map(Some).map_or(StateChange::None, StateChange::Lobby))
     }
 
     fn room(
@@ -249,10 +246,7 @@ impl Handler for Game {
                 .map(PostGameInfo::Anagrams),
         };
 
-        Ok(info
-            .map(Some)
-            .map(StateChange::Lobby)
-            .unwrap_or(StateChange::None))
+        Ok(info.map(Some).map_or(StateChange::None, StateChange::Lobby))
     }
 
     fn state(&self) -> Self::StateMessage {

@@ -52,5 +52,5 @@ pub fn random_anagram() -> (&'static str, String) {
 
     let anagram = String::from_utf8(anagram).expect("word shuffled should've still been utf-8");
 
-    return (word, anagram);
+    (word, anagram)
 }

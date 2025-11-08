@@ -87,10 +87,6 @@ impl Clients {
         self.clients.iter()
     }
 
-    pub fn uuids(&self) -> impl Iterator<Item = &Uuid> {
-        self.clients.keys()
-    }
-
     pub fn keep_connected(&mut self) {
         self.clients.retain(|_, client| client.socket.is_some());
     }

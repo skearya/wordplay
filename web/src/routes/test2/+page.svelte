@@ -58,8 +58,6 @@
 		const playerDistanceX = playerX - window.innerWidth / 2;
 		const playerDistanceY = playerY - window.innerHeight / 2;
 
-		console.log(playersContainer.style.translate);
-
 		const [prevContainerTransformX, prevContainerTransformY] = (
 			playersContainer.style.translate || '0px 0px'
 		)
@@ -67,11 +65,11 @@
 			.map((value) => value.substring(0, value.length - 2))
 			.map((value) => parseFloat(value));
 
-		const containerTransformX = -playerDistanceX * 0.008;
-		const containerTransformY = -playerDistanceY * 0.008;
+		const containerTransformX = -playerDistanceX * 0.006;
+		const containerTransformY = -playerDistanceY * 0.006;
 
-		const bombTransformX = -playerDistanceX * 0.005;
-		const bombTransformY = -playerDistanceY * 0.005;
+		const bombTransformX = -playerDistanceX * 0.003;
+		const bombTransformY = -playerDistanceY * 0.003;
 
 		playersContainer.style.translate = `${containerTransformX}px ${containerTransformY}px`;
 		bombElement.style.translate = `calc(-50% + ${bombTransformX}px) calc(-50% + ${bombTransformY}px)`;
@@ -129,27 +127,11 @@
 			},
 			{
 				easing: 'ease-out',
-				duration: 450
+				duration: 400
 			}
 		);
 	});
 </script>
-
-<svg height="0">
-	<filter id="noiseFilter">
-		<feTurbulence type="turbulence" baseFrequency="0.2" numOctaves="1" seed="1" result="turbulence">
-			<animate
-				attributeName="seed"
-				values="1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;"
-				dur="2000ms"
-				repeatCount="indefinite"
-			/>
-		</feTurbulence>
-		<feComposite operator="in" in="turbulence" in2="SourceAlpha" result="composite" />
-		<feBlend in="SourceGraphic" in2="composite" mode="normal" result="blended" />
-		<feDisplacementMap in="blended" in2="turbulence" scale="10" />
-	</filter>
-</svg>
 
 <main
 	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), #040605"
@@ -192,6 +174,13 @@
 			>
 				VEN
 			</div>
+		</div>
+		<div class="absolute left-0 top-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
+			{#each { length: 26 } as _, i}
+				<div class="size-12 content-center border border-[#475D50] text-center">
+					{String.fromCharCode(i + 'A'.charCodeAt(0))}
+				</div>
+			{/each}
 		</div>
 		<div bind:this={activeOutlineElement} class="absolute left-0 top-0">
 			<div
@@ -548,6 +537,25 @@
 				<stop stop-color="#F6F5B4" />
 				<stop offset="1" stop-color="#DF4A2D" />
 			</linearGradient>
+			<filter id="noiseFilter">
+				<feTurbulence
+					type="turbulence"
+					baseFrequency="0.2"
+					numOctaves="1"
+					seed="1"
+					result="turbulence"
+				>
+					<animate
+						attributeName="seed"
+						values="1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;"
+						dur="2000ms"
+						repeatCount="indefinite"
+					/>
+				</feTurbulence>
+				<feComposite operator="in" in="turbulence" in2="SourceAlpha" result="composite" />
+				<feBlend in="SourceGraphic" in2="composite" mode="normal" result="blended" />
+				<feDisplacementMap in="blended" in2="turbulence" scale="10" />
+			</filter>
 		</defs>
 	</svg>
 {/snippet}

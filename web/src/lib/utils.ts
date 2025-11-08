@@ -7,6 +7,17 @@ export function unreachable(message: any) {
 	throw new Error(message);
 }
 
+export function getOrSet<K, V>(map: Map<K, V>, key: K, val: V) {
+	const stored = map.get(key);
+
+	if (stored) {
+		return stored;
+	} else {
+		map.set(key, val);
+		return val;
+	}
+}
+
 export function setupCanvas(
 	canvas: HTMLCanvasElement,
 	onFrame: (ctx: CanvasRenderingContext2D, dt: number, width: number, height: number) => void
