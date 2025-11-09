@@ -134,7 +134,7 @@
 </script>
 
 <main
-	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), #040605"
+	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), var(--color-background)"
 	class="relative flex h-screen overflow-hidden"
 >
 	<nav class="hidden items-center justify-between px-5 py-4">
@@ -151,7 +151,7 @@
 					/>
 				{/each}
 				<div
-					class="size-12 content-center rounded-full border-2 border-[#1D1F1E] bg-black text-center"
+					class="border-dark-green size-12 content-center rounded-full border-2 bg-black text-center"
 				>
 					+2
 				</div>
@@ -169,15 +169,14 @@
 				{@render bombWireIcon()}
 			</div>
 			<div
-				style="font-family: 'PP Editorial New';"
-				class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] text-7xl"
+				class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] font-serif text-7xl"
 			>
 				VEN
 			</div>
 		</div>
 		<div class="absolute left-0 top-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
 			{#each { length: 26 } as _, i}
-				<div class="size-12 content-center border border-[#475D50] text-center">
+				<div class="border-green size-12 content-center border text-center">
 					{String.fromCharCode(i + 'A'.charCodeAt(0))}
 				</div>
 			{/each}
@@ -569,7 +568,7 @@
 	</svg>
 {/snippet}
 
-<button class="fixed bottom-0 left-0 flex items-center justify-center bg-[#ACAAFF] p-1.5">
+<button class="fixed bottom-0 left-0 flex items-center justify-center bg-purple p-1.5">
 	{@render chatMessageSvg()}
 
 	{#if unreadMessages !== 0}

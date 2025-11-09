@@ -35,12 +35,11 @@
 
 		headerTextElement.animate(
 			{
-				opacity: '100%',
-				translate: '0px -50vh'
+				opacity: '100%'
 			},
 			{
 				fill: 'forwards',
-				delay: 1000,
+				delay: 1500,
 				duration: 750,
 				easing: 'ease-in'
 			}
@@ -201,8 +200,7 @@
 	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
 	<h1
 		bind:this={headerTextElement}
-		style="font-family: 'PP Editorial New';"
-		class="text-background pointer-events-none absolute bottom-0 left-0 p-4 text-8xl opacity-0"
+		class="text-background pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl opacity-0"
 	>
 		Wordplay
 	</h1>
@@ -214,9 +212,9 @@
 	class="inset-shadow-[0_20px_20px] background-scroll inset-shadow-black bg-background mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
 >
 	<div style="font-family: 'Mona Sans';" class="text-background sticky top-4 w-[325px] space-y-2.5">
-		<button class="block w-full bg-[#FEC5BB] py-7 text-2xl font-medium">Join room</button>
-		<button class="block w-full bg-[#FAE1DD] py-7 text-2xl font-medium">Create room</button>
-		<button class="block w-full bg-[#E8E8E4] py-7 text-2xl font-medium">Singleplayer</button>
+		<button class="bg-pastel-red block w-full py-7 text-2xl font-medium">Join room</button>
+		<button class="bg-pastel-light-red block w-full py-7 text-2xl font-medium">Create room</button>
+		<button class="bg-pastel-green block w-full py-7 text-2xl font-medium">Singleplayer</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
 			<img src={settingsSvg} alt="Settings" />
 			<img src={githubSvg} alt="Github" />
@@ -224,7 +222,7 @@
 		</div>
 	</div>
 	<div class="flex-1 space-y-2.5 p-2.5">
-		<div style="font-family: 'PP Editorial New';" class="flex items-center justify-between">
+		<div class="flex items-center justify-between font-serif">
 			<h1 class="text-2xl">Public rooms</h1>
 			<div class="flex min-w-[185px] items-center justify-between text-[#B0B0B0]">
 				<h1 class="text-xl">Search...</h1>
@@ -236,7 +234,7 @@
 				<a
 					href="/"
 					style="font-family: 'Mona Sans';"
-					class="relative border border-[#545A4F] bg-[#1D1F1E] p-2.5"
+					class="border-faded-green bg-dark-green relative border p-2.5"
 				>
 					<h1 class="mb-10 text-lg">Stupid Room Name</h1>
 					<div class="flex -space-x-2">

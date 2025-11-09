@@ -1,13 +1,77 @@
 @import 'tailwindcss';
 
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-Italic.otf') format('opentype');
+	font-weight: normal;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-Regular.otf') format('opentype');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-Ultrabold.otf') format('opentype');
+	font-weight: bold;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-UltraboldItalic.otf') format('opentype');
+	font-weight: bold;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-Ultralight.otf') format('opentype');
+	font-weight: lighter;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('PPEditorialNew-UltralightItalic.otf') format('opentype');
+	font-weight: lighter;
+	font-style: italic;
+}
+
 @theme {
+	--font-sans:
+		'Inter Variable', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+		'Segoe UI Symbol', 'Noto Color Emoji';
+	--font-serif: 'PP Editorial New', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+
 	--color-background: #040605;
+	--color-foreground: #ffffff;
+
+	--color-pastel-red: #fec5bb;
+	--color-pastel-light-red: #fae1dd;
+	--color-pastel-green: #e8e8e4;
+	--color-pastel-pink: #e9b8ff;
+
+	--color-green: #475d50;
+	--color-dark-dark-green: #161a15;
+	--color-dark-green: #1d1f1e;
+	--color-faded-green: #545a4f;
+	--color-light-green: #8ba698;
+	--color-bright-green: #62e297;
+
+	--color-pink: #f3acff;
+	--color-purple: #acaaff;
+	--color-yellow: #f6f5b4;
 }
 
 @layer base {
 	body {
-		font-family: 'Inter Variable', sans-serif;
-		@apply bg-background text-white;
+		background-color: var(--color-background);
+		color: var(--color-white);
 	}
 
 	.background-scroll {
@@ -25,6 +89,12 @@
 
 	/* https://stackoverflow.com/questions/13014808/is-there-any-way-to-animate-an-ellipsis-with-css-animations */
 
+	@keyframes ellipsis {
+		to {
+			width: 20px;
+		}
+	}
+
 	.loading:after {
 		overflow: hidden;
 		display: inline-block;
@@ -32,12 +102,6 @@
 		animation: ellipsis steps(4, end) 2000ms infinite alternate;
 		content: '\2026';
 		width: 0px;
-	}
-
-	@keyframes ellipsis {
-		to {
-			width: 20px;
-		}
 	}
 
 	.striped {
@@ -51,14 +115,6 @@
 		);
 	}
 
-	.rotating-border {
-		border-width: 4px;
-		border-style: solid;
-		border-image: conic-gradient(from var(--rotating-border-angle), #cbc9fc, #79789627) 1;
-		rotate: var(--rotating-border-angle);
-		animation: 8s rotating-border-keyframes linear infinite;
-	}
-
 	@keyframes rotating-border-keyframes {
 		from {
 			--rotating-border-angle: 0deg;
@@ -66,6 +122,14 @@
 		to {
 			--rotating-border-angle: -360deg;
 		}
+	}
+
+	.rotating-border {
+		border-width: 4px;
+		border-style: solid;
+		border-image: conic-gradient(from var(--rotating-border-angle), #cbc9fc, #79789627) 1;
+		rotate: var(--rotating-border-angle);
+		animation: 8s rotating-border-keyframes linear infinite;
 	}
 
 	@property --rotating-border-angle {

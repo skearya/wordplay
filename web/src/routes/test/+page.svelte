@@ -174,7 +174,7 @@
 {/snippet}
 
 <main
-	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), #040605"
+	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), var(--color-background)"
 	class="flex h-screen flex-col overflow-y-hidden"
 >
 	<nav class="flex items-center justify-between px-5 py-4">
@@ -191,7 +191,7 @@
 					/>
 				{/each}
 				<div
-					class="size-12 content-center rounded-full border-2 border-[#1D1F1E] bg-black text-center"
+					class="border-dark-green size-12 content-center rounded-full border-2 bg-black text-center"
 				>
 					+2
 				</div>
@@ -200,9 +200,7 @@
 		</div>
 	</nav>
 	<div class="flex flex-1 items-stretch gap-4 overflow-y-hidden p-4 pt-0">
-		<section
-			class="flex flex-[30%] flex-col overflow-y-clip border border-[#F3ACFF] bg-[#F3ACFF]/15"
-		>
+		<section class="border-pink bg-pink/15 flex flex-[30%] flex-col overflow-y-clip border">
 			<div
 				style={`background: url("${grid2Svg}"), #F3ACFF;`}
 				class="background-scroll p-4 pt-16 text-black"
@@ -222,12 +220,12 @@
 			<div class="flex flex-1 flex-col overflow-y-hidden p-4">
 				<div class="mb-4 flex items-center justify-between gap-x-8 px-8">
 					<div class="text-center">
-						<h1 style="font-family: 'PP Editorial New';" class="text-4xl text-[#F6F5B4]">21</h1>
+						<h1 class="text-yellow font-serif text-4xl">21</h1>
 						<p>Minutes Elapsed</p>
 					</div>
-					<div class="w-[1px] rotate-12 self-stretch bg-[#E9B8FF]"></div>
+					<div class="bg-pastel-pink w-[1px] rotate-12 self-stretch"></div>
 					<div class="text-center">
-						<h1 style="font-family: 'PP Editorial New';" class="text-4xl text-[#F6F5B4]">21</h1>
+						<h1 class="text-yellow font-serif text-4xl">21</h1>
 						<p>Words Used</p>
 					</div>
 				</div>
@@ -238,8 +236,8 @@
 								style={`z-index: ${4 - i};`}
 								class={[
 									i === 0
-										? 'border-[#E9B8FF] bg-[#E9B8FF] text-black'
-										: 'border-[#F3ACFF] bg-[#2B212C]',
+										? 'border-pastel-pink bg-pastel-pink text-black'
+										: 'border-pink bg-[#2B212C]',
 									'rounded-t-xl border border-b-0 px-2.5 py-1 text-sm'
 								]}
 							>
@@ -249,12 +247,12 @@
 					</div>
 					<div
 						style="background: linear-gradient(180deg, rgba(246, 245, 180, 0.08) 0%, rgba(243, 246, 245, 0) 100%);"
-						class="flex-1 divide-y overflow-y-auto border border-[#E9B8FF]"
+						class="border-pastel-pink flex-1 divide-y overflow-y-auto border"
 					>
 						{#each { length: 99 } as _, i}
-							<div class="relative flex items-center space-x-2.5 border-[#E9B8FF] p-2.5">
+							<div class="border-pastel-pink relative flex items-center space-x-2.5 p-2.5">
 								<div
-									class="absolute left-0 top-0 content-center bg-[#E9B8FF] px-1 py-0.5 text-center text-xs text-black"
+									class="bg-pastel-pink absolute left-0 top-0 content-center px-1 py-0.5 text-center text-xs text-black"
 								>
 									<p>{i + 1}</p>
 								</div>
@@ -274,7 +272,7 @@
 			</div>
 		</section>
 		<section
-			class="relative flex flex-[70%] flex-col overflow-clip border border-[#475D50] bg-[#475D50]/15"
+			class="border-green bg-green/15 relative flex flex-[70%] flex-col overflow-clip border"
 		>
 			<div class="pointer-events-none absolute -bottom-6 -right-6 opacity-50">
 				{@render wordBombIcon({
@@ -283,10 +281,10 @@
 					class: 'w-[calc(min(45vw,60vh))] aspect-[901/916] mix-blend-color-dodge'
 				})}
 			</div>
-			<div class="absolute left-0 top-0 w-min text-nowrap rounded-br-2xl bg-[#475D50] px-3 py-1">
+			<div class="bg-green absolute left-0 top-0 w-min text-nowrap rounded-br-2xl px-3 py-1">
 				<p>Ready Players</p>
 			</div>
-			<div class="absolute right-3 top-3 w-min text-nowrap text-[#62E297]">
+			<div class="text-bright-green absolute right-3 top-3 w-min text-nowrap">
 				<p>97 slots left</p>
 			</div>
 			<div class="flex flex-1 items-center justify-center gap-x-20 px-12">
@@ -317,8 +315,8 @@
 							out:fly={{ x: 48, y: -48, duration: 400 }}
 							style={readyPlayers.length === 1
 								? `translate: -50% -50%;`
-								: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px); scale: ${100 - Math.log2(readyPlayers.length) * 8}%; transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);`}
-							class="absolute left-1/2 top-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
+								: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px); scale: ${100 - Math.log2(readyPlayers.length) * 8}%;`}
+							class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
 						>
 							<img
 								src={`https://avatar.vercel.sh/${i}`}
@@ -337,31 +335,29 @@
 					class="z-10 w-72 space-y-2.5 border p-4 pt-5 backdrop-blur-sm backdrop-brightness-90 transition-all"
 				>
 					<div class="flex items-center justify-between">
-						<h1 style="font-family: 'PP Editorial New';" class="text-4xl text-[#F6F5B4]">
-							Word Bomb
-						</h1>
+						<h1 class="text-yellow font-serif text-4xl">Word Bomb</h1>
 						{@render downArrowIcon()}
 					</div>
-					<div class="h-[1px] w-full bg-[#475D50]"></div>
+					<div class="bg-green h-[1px] w-full"></div>
 					<div class="grid grid-cols-2 justify-between text-sm">
-						<p class="text-left font-medium text-[#8BA698]">Difficulty</p>
-						<p class="text-right text-[#8BA698]">Easy</p>
-						<p class="text-left font-medium text-[#8BA698]">Starting Lives</p>
-						<p class="text-right text-[#8BA698]">2</p>
+						<p class="text-light-green text-left font-medium">Difficulty</p>
+						<p class="text-light-green text-right">Easy</p>
+						<p class="text-light-green text-left font-medium">Starting Lives</p>
+						<p class="text-light-green text-right">2</p>
 					</div>
 				</button>
 			</div>
 			<div class="z-10 flex gap-x-4 p-4">
 				<button
 					style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25)"
-					class="flex-1 border border-[#E9B8FF] bg-[#161A15] p-4 text-xl text-[#E9B8FF] transition-all active:translate-y-1.5 active:bg-[#E9B8FF] active:text-[#161A15]"
+					class="border-pastel-pink bg-dark-dark-green text-pastel-pink active:bg-pastel-pink active:text-dark-dark-green flex-1 border p-4 text-xl transition-all active:translate-y-1.5"
 					onclick={() => readyPlayers.push(crypto.randomUUID())}
 				>
 					Ready
 				</button>
 				<button
 					style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25)"
-					class="flex-1 border border-[#C0E8FF] bg-[#161A15] p-4 text-xl text-[#C0E8FF] transition-all active:translate-y-1.5 active:bg-[#C0E8FF] active:text-[#161A15]"
+					class="bg-dark-dark-green active:text-dark-dark-green flex-1 border border-[#C0E8FF] p-4 text-xl text-[#C0E8FF] transition-all active:translate-y-1.5 active:bg-[#C0E8FF]"
 				>
 					Start Early
 				</button>
@@ -379,7 +375,7 @@
 	</svg>
 {/snippet}
 
-<button class="fixed bottom-0 left-0 flex items-center justify-center bg-[#ACAAFF] p-1.5">
+<button class="fixed bottom-0 left-0 flex items-center justify-center bg-purple p-1.5">
 	{@render chatMessageSvg()}
 
 	{#if unreadMessages !== 0}
