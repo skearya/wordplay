@@ -1,15 +1,14 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import type { Attachment } from 'svelte/attachments';
 	import Matter from 'matter-js';
 	import { onMount } from 'svelte';
-	import bombSvg from '$lib/assets/bomb.svg';
-	import githubSvg from '$lib/assets/github.svg';
 	import gridSvg from '$lib/assets/grid.svg';
 	import homepageNoiseImage from '$lib/assets/homepage-noise.png';
-	import meSvg from '$lib/assets/me.svg';
-	import searchSvg from '$lib/assets/search.svg';
-	import settingsSvg from '$lib/assets/settings.svg';
+	import Bomb from '$lib/icons/Bomb.svelte';
+	import Github from '$lib/icons/Github.svelte';
+	import Me from '$lib/icons/Me.svelte';
+	import Search from '$lib/icons/Search.svelte';
+	import Settings from '$lib/icons/Settings.svelte';
 	import { lerp, setupCanvas } from '$lib/utils';
 
 	const { data }: PageProps = $props();
@@ -209,33 +208,29 @@
 <section
 	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="inset-shadow-[0_20px_20px] background-scroll inset-shadow-black bg-background mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
+	class="background-scroll bg-background inset-shadow-[0_20px_20px] inset-shadow-black mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
 >
-	<div style="font-family: 'Mona Sans';" class="text-background sticky top-4 w-[325px] space-y-2.5">
+	<div class="text-background sticky top-4 w-[325px] space-y-2.5">
 		<button class="bg-pastel-red block w-full py-7 text-2xl font-medium">Join room</button>
 		<button class="bg-pastel-light-red block w-full py-7 text-2xl font-medium">Create room</button>
 		<button class="bg-pastel-green block w-full py-7 text-2xl font-medium">Singleplayer</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
-			<img src={settingsSvg} alt="Settings" />
-			<img src={githubSvg} alt="Github" />
-			<img src={meSvg} alt="Skeary" width="36px" height="36px" class="mt-[2px]" />
+			<Settings />
+			<Github />
+			<Me width={42} height={42} class="ml-auto" />
 		</div>
 	</div>
 	<div class="flex-1 space-y-2.5 p-2.5">
 		<div class="flex items-center justify-between font-serif">
 			<h1 class="text-2xl">Public rooms</h1>
-			<div class="flex min-w-[185px] items-center justify-between text-[#B0B0B0]">
-				<h1 class="text-xl">Search...</h1>
-				<img src={searchSvg} alt="Search" />
+			<div class="flex items-center justify-between gap-x-4 text-[#B0B0B0]">
+				<input type="text" placeholder="Search..." class="text-xl" />
+				<Search />
 			</div>
 		</div>
 		<div class="grid grid-cols-3 gap-2.5">
 			{#each { length: 12 }}
-				<a
-					href="/"
-					style="font-family: 'Mona Sans';"
-					class="border-faded-green bg-dark-green relative border p-2.5"
-				>
+				<a href="/" class="border-faded-green bg-dark-green relative border p-2.5">
 					<h1 class="mb-10 text-lg">Stupid Room Name</h1>
 					<div class="flex -space-x-2">
 						{#each { length: 3 }, i}
@@ -247,13 +242,13 @@
 								class="border-background aspect-square size-[38px] rounded-full border-2"
 							/>
 						{/each}
-						<div
+						<p
 							class="bg-background flex aspect-square size-[38px] items-center justify-center rounded-full"
 						>
 							+21
-						</div>
+						</p>
 					</div>
-					<img src={bombSvg} alt="Word bomb logo" class="absolute bottom-2.5 right-2.5" />
+					<Bomb class="absolute bottom-2.5 right-2.5" />
 				</a>
 			{/each}
 		</div>

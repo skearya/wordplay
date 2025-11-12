@@ -1,13 +1,48 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Voronoi from '$lib/voronoi/rhill-voronoi-core';
 
+	const width = 800;
+	const height = 600;
+
+	const diagram = new Voronoi().compute(
+		Array.from({ length: 5 }, () => ({ x: Math.random() * width, y: Math.random() * 600 })),
+		{ xl: 0, xr: width, yt: 0, yb: height }
+	);
+
+	let canvasElement: HTMLCanvasElement;
 	let target: HTMLElement;
 
 	onMount(() => {
+		const ctx = canvasElement.getContext('2d')!;
+
+		ctx.fillStyle = 'white';
+		ctx.fillRect(0, 0, width, height);
+
+		ctx.strokeStyle = 'black';
+		ctx.lineWidth = 1;
+
+		ctx.beginPath();
+
+		// for (let i = 0; i < diagram.edges.length; i++) {
+		// 	ctx.moveTo(diagram.edges[i].va.x, diagram.edges[i].va.y);
+		// 	ctx.lineTo(diagram.edges[i].vb.x, diagram.edges[i].vb.y);
+		// }
+
+		for (const cell of diagram.cells) {
+			for (const edge of cell.halfedges) {
+				ctx.moveTo(edge.getStartpoint().x, edge.getStartpoint().y);
+				ctx.lineTo(edge.getEndpoint().x, edge.getEndpoint().y);
+			}
+		}
+
+		ctx.stroke();
+
 		const clone = target.cloneNode(true) as HTMLElement;
 		clone.style.clipPath = 'polygon(0 0, 50% 0, 50% 50%, 0 50%)';
 
 		target.parentElement!.appendChild(clone);
+
 		clone.animate(
 			{
 				translate: 'calc(-50% + -40px) calc(-50% + -40px)'
@@ -29,6 +64,8 @@
 		/>
 	</svg>
 {/snippet}
+
+<canvas bind:this={canvasElement} width="800" height="600"></canvas>
 
 <div
 	bind:this={target}

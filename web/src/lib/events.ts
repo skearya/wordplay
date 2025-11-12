@@ -3,7 +3,7 @@ import type { ServerGame } from '@bindings/ServerGame';
 import type { ServerLobby } from '@bindings/ServerLobby';
 import type { ServerMessage } from '@bindings/ServerMessage';
 import type { ServerWordBomb } from '@bindings/ServerWordBomb';
-import { EventEmitter } from './eventemitter';
+import { EventEmitter } from './event-emitter';
 
 export const rootEmitter = new EventEmitter<ServerMessage>();
 export const lobbyEmitter = new EventEmitter<ServerLobby>();

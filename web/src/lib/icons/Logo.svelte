@@ -1,4 +1,19 @@
-<svg width="96" height="61" viewBox="0 0 96 61" fill="none" xmlns="http://www.w3.org/2000/svg">
+<script lang="ts">
+	const {
+		width = 96,
+		height = 61,
+		class: className
+	}: { width?: number; height?: number; class?: string } = $props();
+</script>
+
+<svg
+	{width}
+	{height}
+	viewBox="0 0 96 61"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
+	class={className}
+>
 	<path
 		d="M85.0191 58.6036L92.1336 18.5848L51.7866 11.5283L49.0137 27.1268L51.6351 42.339L46.1291 43.3531L44.6724 51.5471L85.0191 58.6036Z"
 		stroke="white"
