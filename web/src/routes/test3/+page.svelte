@@ -2,18 +2,28 @@
 	import { onMount } from 'svelte';
 	import Voronoi from '$lib/voronoi/rhill-voronoi-core';
 
-	const width = 800;
-	const height = 600;
-
-	const diagram = new Voronoi().compute(
-		Array.from({ length: 5 }, () => ({ x: Math.random() * width, y: Math.random() * 600 })),
-		{ xl: 0, xr: width, yt: 0, yb: height }
-	);
-
 	let canvasElement: HTMLCanvasElement;
-	let target: HTMLElement;
+	let targetElement: HTMLElement;
 
-	onMount(() => {
+	const POINTS = 10;
+
+	function explode(targetElement: HTMLElement) {
+		const bbox = targetElement.getBoundingClientRect();
+
+		const width = bbox.width;
+		const height = bbox.height;
+
+		canvasElement.width = width;
+		canvasElement.height = height;
+
+		const diagram = new Voronoi().compute(
+			Array.from({ length: POINTS }, () => ({
+				x: Math.random() * width,
+				y: Math.random() * height
+			})),
+			{ xl: 0, xr: width, yt: 0, yb: height }
+		);
+
 		const ctx = canvasElement.getContext('2d')!;
 
 		ctx.fillStyle = 'white';
@@ -24,11 +34,6 @@
 
 		ctx.beginPath();
 
-		// for (let i = 0; i < diagram.edges.length; i++) {
-		// 	ctx.moveTo(diagram.edges[i].va.x, diagram.edges[i].va.y);
-		// 	ctx.lineTo(diagram.edges[i].vb.x, diagram.edges[i].vb.y);
-		// }
-
 		for (const cell of diagram.cells) {
 			for (const edge of cell.halfedges) {
 				ctx.moveTo(edge.getStartpoint().x, edge.getStartpoint().y);
@@ -38,21 +43,67 @@
 
 		ctx.stroke();
 
-		const clone = target.cloneNode(true) as HTMLElement;
-		clone.style.clipPath = 'polygon(0 0, 50% 0, 50% 50%, 0 50%)';
+		const centerX = width / 2;
+		const centerY = height / 2;
 
-		target.parentElement!.appendChild(clone);
+		for (const cell of diagram.cells) {
+			const paths = [
+				`M${cell.halfedges[0].getStartpoint().x},${cell.halfedges[0].getStartpoint().y}`
+			];
 
-		clone.animate(
-			{
-				translate: 'calc(-50% + -40px) calc(-50% + -40px)'
-			},
-			{
-				fill: 'forwards',
-				easing: 'ease-out',
-				duration: 200
+			for (const edge of cell.halfedges) {
+				paths.push(`L${edge.getEndpoint().x},${edge.getEndpoint().y}`);
 			}
-		);
+
+			paths.push('Z');
+
+			const clone = targetElement.cloneNode(true) as HTMLElement;
+
+			clone.style.position = 'absolute';
+			clone.style.top = `${bbox.top}px`;
+			clone.style.left = `${bbox.left}px`;
+			clone.style.translate = `0px 0px`;
+			clone.style.clipPath = `path("${paths.join(' ')}")`;
+
+			const dist = Math.hypot(cell.site.y - centerY, cell.site.x - centerX);
+			const angle = Math.atan2(cell.site.y - centerY, cell.site.x - centerX);
+
+			const dx = Math.cos(angle) * dist * 1.5;
+			const dy = Math.sin(angle) * dist * 1.5;
+
+			document.body.appendChild(clone);
+
+			clone.animate(
+				{
+					translate: `${dx}px ${dy}px`,
+					rotate: `${Math.random() - 0.5}rad`
+				},
+				{
+					fill: 'forwards',
+					easing: 'cubic-bezier(0.7, 0, 0.3, 1)',
+					duration: 350
+				}
+			);
+
+			clone.animate(
+				{
+					opacity: '0%'
+				},
+				{
+					fill: 'forwards',
+					easing: 'ease-out',
+					duration: 5000
+				}
+			);
+		}
+
+		targetElement.style.display = 'none';
+	}
+
+	onMount(() => {
+		setTimeout(() => {
+			explode(targetElement);
+		}, 100);
 	});
 </script>
 
@@ -65,10 +116,10 @@
 	</svg>
 {/snippet}
 
-<canvas bind:this={canvasElement} width="800" height="600"></canvas>
+<canvas bind:this={canvasElement}></canvas>
 
 <div
-	bind:this={target}
+	bind:this={targetElement}
 	class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center border p-2"
 >
 	<div class="relative mb-2">
