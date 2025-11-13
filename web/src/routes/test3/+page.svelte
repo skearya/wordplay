@@ -2,46 +2,18 @@
 	import { onMount } from 'svelte';
 	import Voronoi from '$lib/voronoi/rhill-voronoi-core';
 
-	let canvasElement: HTMLCanvasElement;
 	let targetElement: HTMLElement;
 
-	const POINTS = 10;
-
-	function explode(targetElement: HTMLElement) {
-		const bbox = targetElement.getBoundingClientRect();
-
-		const width = bbox.width;
-		const height = bbox.height;
-
-		canvasElement.width = width;
-		canvasElement.height = height;
+	function explode(targetElement: HTMLElement, { pointCount = 10, distMultiplier = 2 } = {}) {
+		const { top, left, width, height } = targetElement.getBoundingClientRect();
 
 		const diagram = new Voronoi().compute(
-			Array.from({ length: POINTS }, () => ({
+			Array.from({ length: pointCount }, () => ({
 				x: Math.random() * width,
 				y: Math.random() * height
 			})),
 			{ xl: 0, xr: width, yt: 0, yb: height }
 		);
-
-		const ctx = canvasElement.getContext('2d')!;
-
-		ctx.fillStyle = 'white';
-		ctx.fillRect(0, 0, width, height);
-
-		ctx.strokeStyle = 'black';
-		ctx.lineWidth = 1;
-
-		ctx.beginPath();
-
-		for (const cell of diagram.cells) {
-			for (const edge of cell.halfedges) {
-				ctx.moveTo(edge.getStartpoint().x, edge.getStartpoint().y);
-				ctx.lineTo(edge.getEndpoint().x, edge.getEndpoint().y);
-			}
-		}
-
-		ctx.stroke();
 
 		const centerX = width / 2;
 		const centerY = height / 2;
@@ -60,16 +32,16 @@
 			const clone = targetElement.cloneNode(true) as HTMLElement;
 
 			clone.style.position = 'absolute';
-			clone.style.top = `${bbox.top}px`;
-			clone.style.left = `${bbox.left}px`;
+			clone.style.top = `${top}px`;
+			clone.style.left = `${left}px`;
 			clone.style.translate = `0px 0px`;
 			clone.style.clipPath = `path("${paths.join(' ')}")`;
 
 			const dist = Math.hypot(cell.site.y - centerY, cell.site.x - centerX);
 			const angle = Math.atan2(cell.site.y - centerY, cell.site.x - centerX);
 
-			const dx = Math.cos(angle) * dist * 1.5;
-			const dy = Math.sin(angle) * dist * 1.5;
+			const dx = Math.cos(angle) * dist * distMultiplier;
+			const dy = Math.sin(angle) * dist * distMultiplier;
 
 			document.body.appendChild(clone);
 
@@ -80,21 +52,36 @@
 				},
 				{
 					fill: 'forwards',
-					easing: 'cubic-bezier(0.7, 0, 0.3, 1)',
-					duration: 350
+					easing: 'cubic-bezier(0.1, 1.0, 0.9, 1)',
+					duration: 1000
 				}
 			);
 
 			clone.animate(
 				{
-					opacity: '0%'
+					translate: `${dx}px ${dy + 300}px`
 				},
 				{
 					fill: 'forwards',
-					easing: 'ease-out',
-					duration: 5000
+					easing: 'ease-in',
+					duration: 9000,
+					delay: 1000
 				}
 			);
+
+			clone
+				.animate(
+					{
+						opacity: '0%',
+						filter: 'brightness(200%) contrast(1000%)'
+					},
+					{
+						fill: 'forwards',
+						easing: 'ease-out',
+						duration: 10000
+					}
+				)
+				.finished.then(() => clone.remove());
 		}
 
 		targetElement.style.display = 'none';
@@ -103,7 +90,7 @@
 	onMount(() => {
 		setTimeout(() => {
 			explode(targetElement);
-		}, 100);
+		}, 200);
 	});
 </script>
 
@@ -115,8 +102,6 @@
 		/>
 	</svg>
 {/snippet}
-
-<canvas bind:this={canvasElement}></canvas>
 
 <div
 	bind:this={targetElement}
