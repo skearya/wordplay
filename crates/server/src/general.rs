@@ -43,58 +43,39 @@ use uuid::Uuid;
 
 use crate::{
     general::messages::{ClientGeneral, ServerGeneral},
-    messages::RoomSettings,
-    room::{StateChange, handler::Handler, messenger::ClientMessenger},
+    room::{StateChange, context::Context},
 };
 
 pub struct General;
 
-impl Handler for General {
-    type ClientMessage = ClientGeneral;
-    type ServerMessage = ServerGeneral;
-    type RoomMessage = ();
-    type StateMessage = ();
-
-    fn state(&self) -> Self::StateMessage {}
-
-    fn client(
+impl General {
+    pub fn on_client_message(
         &mut self,
-        settings: &mut RoomSettings,
-        clients: impl ClientMessenger<Self::ServerMessage>,
-        (uuid, message): (Uuid, Self::ClientMessage),
+        ctx: Context,
+        (uuid, message): (Uuid, ClientGeneral),
     ) -> anyhow::Result<StateChange> {
         match message {
             ClientGeneral::Ping { timestamp } => {
-                clients.send(uuid, ServerGeneral::Pong { timestamp });
+                ctx.clients.send(uuid, ServerGeneral::Pong { timestamp });
             }
             ClientGeneral::Chat { content } => {
-                clients.broadcast(ServerGeneral::Chat {
+                ctx.clients.broadcast(ServerGeneral::Chat {
                     author: uuid,
                     content,
                 });
             }
             ClientGeneral::Settings(new) => {
-                if uuid != settings.owner {
+                if uuid != ctx.settings.owner {
                     return Ok(StateChange::None);
                 }
 
-                *settings = new;
+                *ctx.settings = new;
 
-                clients.broadcast(ServerGeneral::Settings(*settings));
+                ctx.clients
+                    .broadcast(ServerGeneral::Settings(*ctx.settings));
             }
         }
 
         Ok(StateChange::None)
     }
-
-    fn room(
-        &mut self,
-        _settings: &mut RoomSettings,
-        _clients: impl ClientMessenger<Self::ServerMessage>,
-        _message: Self::RoomMessage,
-    ) -> anyhow::Result<StateChange> {
-        Ok(StateChange::None)
-    }
-
-    fn abort(&mut self) {}
 }

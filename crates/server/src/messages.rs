@@ -7,9 +7,9 @@ use uuid::Uuid;
 
 use crate::{
     game::{
-        anagrams::messages::AnagramsSettings,
+        anagrams::messages::{AnagramsMessage, AnagramsSettings, ServerAnagrams},
         messages::{ClientGame, GameMessage, GameState, PostGameInfo, ServerGame},
-        word_bomb::messages::WordBombSettings,
+        word_bomb::messages::{ServerWordBomb, WordBombMessage, WordBombSettings},
     },
     general::messages::{ClientGeneral, ServerGeneral},
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby},
@@ -96,7 +96,7 @@ pub enum ServerState {
     Game(GameState),
 }
 
-pub enum RoomMessage {
+pub enum CoreMessage {
     Join {
         uuid: Uuid,
         client: Client,
@@ -118,6 +118,10 @@ pub enum RoomMessage {
         uuid: Uuid,
         message: ClientMessage,
     },
+}
+
+pub enum RoomMessage {
+    Core(CoreMessage),
     Lobby(LobbyMessage),
     Game(GameMessage),
 }
@@ -150,5 +154,77 @@ impl From<&Client> for ServerClient {
             username: client.username.clone(),
             avatar_url: None,
         }
+    }
+}
+
+impl From<ServerGeneral> for ServerMessage {
+    fn from(value: ServerGeneral) -> Self {
+        Self::General(value)
+    }
+}
+
+impl From<ServerLobby> for ServerMessage {
+    fn from(value: ServerLobby) -> Self {
+        Self::Lobby(value)
+    }
+}
+
+impl From<ServerGame> for ServerMessage {
+    fn from(value: ServerGame) -> Self {
+        Self::Game(value)
+    }
+}
+
+impl From<ServerWordBomb> for ServerMessage {
+    fn from(value: ServerWordBomb) -> Self {
+        ServerGame::WordBomb(value).into()
+    }
+}
+
+impl From<ServerAnagrams> for ServerMessage {
+    fn from(value: ServerAnagrams) -> Self {
+        ServerGame::Anagrams(value).into()
+    }
+}
+
+impl From<CoreMessage> for RoomMessage {
+    fn from(value: CoreMessage) -> Self {
+        Self::Core(value)
+    }
+}
+
+impl From<LobbyMessage> for RoomMessage {
+    fn from(value: LobbyMessage) -> Self {
+        Self::Lobby(value)
+    }
+}
+
+impl From<GameMessage> for RoomMessage {
+    fn from(value: GameMessage) -> Self {
+        Self::Game(value)
+    }
+}
+
+impl From<WordBombMessage> for RoomMessage {
+    fn from(value: WordBombMessage) -> Self {
+        GameMessage::WordBomb(value).into()
+    }
+}
+
+impl From<AnagramsMessage> for RoomMessage {
+    fn from(value: AnagramsMessage) -> Self {
+        GameMessage::Anagrams(value).into()
+    }
+}
+
+impl From<LobbyState> for ServerState {
+    fn from(value: LobbyState) -> Self {
+        Self::Lobby(value)
+    }
+}
+
+impl From<GameState> for ServerState {
+    fn from(value: GameState) -> Self {
+        Self::Game(value)
     }
 }

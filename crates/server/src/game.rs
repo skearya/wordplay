@@ -86,20 +86,54 @@ use uuid::Uuid;
 
 use crate::{
     game::{
-        anagrams::{Anagrams, messages::ServerAnagrams},
+        anagrams::Anagrams,
         messages::{
             ClientGame, GameMessage, GameState, GameVariantState, PostGameInfo, ServerGame,
         },
-        word_bomb::{WordBomb, messages::ServerWordBomb},
+        word_bomb::WordBomb,
     },
     messages::{GameType, RoomSettings},
-    room::{
-        StateChange,
-        handler::{GameHandler, Handler},
-        messenger::{ClientMessenger, client_submessenger},
-        sender::{AnagramsSender, GameSender, WordBombSender},
-    },
+    room::{StateChange, clients::Clients, context::Context, sender::RoomSender},
 };
+
+pub struct GameContext<'a> {
+    pub room: &'a RoomSender,
+    pub clients: &'a Clients,
+    pub settings: &'a RoomSettings,
+}
+
+impl<'a> GameContext<'a> {
+    pub fn new(room: &'a RoomSender, clients: &'a Clients, settings: &'a RoomSettings) -> Self {
+        Self {
+            room,
+            clients,
+            settings,
+        }
+    }
+}
+
+pub trait GameHandler {
+    type ClientMessage;
+    type SelfMessage;
+    type Outcome: Into<PostGameInfo>;
+    type Snapshot: Into<GameVariantState>;
+
+    fn on_client_message(
+        &mut self,
+        ctx: GameContext,
+        message: (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<Self::Outcome>>;
+
+    fn on_self_message(
+        &mut self,
+        ctx: GameContext,
+        message: Self::SelfMessage,
+    ) -> anyhow::Result<Option<Self::Outcome>>;
+
+    fn on_abort(&mut self);
+
+    fn snapshot(&self) -> Self::Snapshot;
+}
 
 enum State {
     WordBomb(WordBomb),
@@ -123,44 +157,40 @@ impl State {
         }
     }
 
-    fn state(&self) -> GameVariantState {
+    fn on_abort(&mut self) {
         match self {
-            Self::WordBomb(word_bomb) => GameVariantState::WordBomb(word_bomb.state()),
-            Self::Anagrams(anagrams) => GameVariantState::Anagrams(anagrams.state()),
+            Self::WordBomb(word_bomb) => word_bomb.on_abort(),
+            Self::Anagrams(anagrams) => anagrams.on_abort(),
         }
     }
 
-    fn end(&mut self) {
+    fn snapshot(&self) -> GameVariantState {
         match self {
-            Self::WordBomb(word_bomb) => word_bomb.abort(),
-            Self::Anagrams(anagrams) => anagrams.abort(),
+            Self::WordBomb(word_bomb) => GameVariantState::WordBomb(word_bomb.snapshot()),
+            Self::Anagrams(anagrams) => GameVariantState::Anagrams(anagrams.snapshot()),
         }
     }
 }
 
 pub struct Game {
-    room: GameSender,
     state: State,
     rejoin_tokens: HashMap<Uuid, Uuid>,
     requesting_end: Vec<Uuid>,
 }
 
 impl Game {
-    pub fn new(room: GameSender, settings: &RoomSettings, players: &[Uuid]) -> Self {
+    pub fn new(ctx: Context, players: &[Uuid]) -> Self {
         Self {
-            state: match settings.game {
+            state: match ctx.settings.game {
                 GameType::WordBomb => State::WordBomb(WordBomb::new(
-                    WordBombSender::new(room.clone()),
-                    &settings.word_bomb,
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     players,
                 )),
                 GameType::Anagrams => State::Anagrams(Anagrams::new(
-                    AnagramsSender::new(room.clone()),
-                    &settings.anagrams,
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     players,
                 )),
             },
-            room,
             rejoin_tokens: players.iter().map(|&uuid| (uuid, Uuid::new_v4())).collect(),
             requesting_end: vec![],
         }
@@ -171,35 +201,29 @@ impl Game {
     }
 }
 
-impl Handler for Game {
-    type ClientMessage = ClientGame;
-    type ServerMessage = ServerGame;
-    type RoomMessage = GameMessage;
-    type StateMessage = GameState;
-
-    fn client(
+impl Game {
+    pub fn on_client_message(
         &mut self,
-        _settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<Self::ServerMessage>,
-        (uuid, message): (Uuid, Self::ClientMessage),
+        ctx: Context,
+        (uuid, message): (Uuid, ClientGame),
     ) -> anyhow::Result<StateChange> {
-        let info = match message {
+        let outcome = match message {
             ClientGame::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
-                .client(
-                    client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
+                .on_client_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     (uuid, message),
                 )?
-                .map(PostGameInfo::WordBomb),
+                .map(Into::into),
             ClientGame::Anagrams(message) => self
                 .state
                 .try_anagrams()?
-                .client(
-                    client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
+                .on_client_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     (uuid, message),
                 )?
-                .map(PostGameInfo::Anagrams),
+                .map(Into::into),
             ClientGame::EndRequest => {
                 if !self.rejoin_tokens.contains_key(&uuid) || self.requesting_end.contains(&uuid) {
                     return Ok(StateChange::None);
@@ -212,51 +236,55 @@ impl Handler for Game {
                     return Ok(StateChange::Lobby(None));
                 }
 
-                clients.broadcast(ServerGame::EndRequest { uuid });
+                ctx.clients.broadcast(ServerGame::EndRequest { uuid });
+
                 None
             }
             ClientGame::ForceEnd => return Ok(StateChange::Lobby(None)),
         };
 
-        Ok(info.map(Some).map_or(StateChange::None, StateChange::Lobby))
+        Ok(outcome.map_or(StateChange::None, |info| StateChange::Lobby(Some(info))))
     }
 
-    fn room(
+    pub fn on_self_message(
         &mut self,
-        _settings: &mut RoomSettings,
-        mut clients: impl ClientMessenger<Self::ServerMessage>,
-        message: Self::RoomMessage,
+        ctx: Context,
+        message: GameMessage,
     ) -> anyhow::Result<StateChange> {
-        let info = match message {
+        let outcome = match message {
             GameMessage::WordBomb(message) => self
                 .state
                 .try_word_bomb()?
-                .room(
-                    client_submessenger!(&mut clients, ServerGame::WordBomb(ServerWordBomb)),
+                .on_self_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     message,
                 )?
-                .map(PostGameInfo::WordBomb),
+                .map(Into::into),
             GameMessage::Anagrams(message) => self
                 .state
                 .try_anagrams()?
-                .room(
-                    client_submessenger!(&mut clients, ServerGame::Anagrams(ServerAnagrams)),
+                .on_self_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     message,
                 )?
-                .map(PostGameInfo::Anagrams),
+                .map(Into::into),
         };
 
-        Ok(info.map(Some).map_or(StateChange::None, StateChange::Lobby))
+        Ok(outcome.map_or(StateChange::None, |info| StateChange::Lobby(Some(info))))
     }
 
-    fn state(&self) -> Self::StateMessage {
+    pub fn on_client_leave(&mut self, ctx: Context, uuid: Uuid) {
+        ctx.clients.disconnect(uuid);
+    }
+
+    pub fn on_abort(&mut self) {
+        self.state.on_abort();
+    }
+
+    pub fn snapshot(&self) -> GameState {
         GameState {
-            state: self.state.state(),
+            state: self.state.snapshot(),
             requesting_end: self.requesting_end.clone(),
         }
-    }
-
-    fn abort(&mut self) {
-        self.state.end();
     }
 }

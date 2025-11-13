@@ -106,17 +106,21 @@ use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
-    game::word_bomb::messages::{
-        ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombPlayer, WordBombPostGame,
-        WordBombSettings, WordBombState,
+    game::{
+        GameContext, GameHandler,
+        messages::{GameVariantState, PostGameInfo},
+        word_bomb::messages::{
+            ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombPlayer, WordBombPostGame,
+            WordBombSettings, WordBombState,
+        },
     },
     global::{is_english, random_prompt},
-    room::{handler::GameHandler, messenger::ClientMessenger, sender::WordBombSender},
+    room::sender::RoomSender,
     task,
 };
 
 pub struct WordBomb {
-    room: WordBombSender,
+    room: RoomSender,
     settings: WordBombSettings,
 
     players: HashMap<Uuid, Player>,
@@ -199,7 +203,7 @@ impl Player {
 }
 
 impl WordBomb {
-    pub fn new(room: WordBombSender, settings: &WordBombSettings, players: &[Uuid]) -> Self {
+    pub fn new(ctx: GameContext, players: &[Uuid]) -> Self {
         let mut order = players.to_owned();
         order.shuffle(&mut rand::rng());
 
@@ -207,7 +211,7 @@ impl WordBomb {
         let length = rand::random_range(10.0..=30.0);
 
         let task = {
-            let room = room.clone();
+            let room = ctx.room.clone();
 
             task::spawn(async move {
                 tokio::time::sleep_until((start + Duration::from_secs_f64(length)).into()).await;
@@ -219,8 +223,8 @@ impl WordBomb {
         };
 
         Self {
-            room,
-            settings: *settings,
+            room: ctx.room.clone(),
+            settings: ctx.settings.word_bomb,
             players: players
                 .iter()
                 .copied()
@@ -229,7 +233,7 @@ impl WordBomb {
             order,
             turn: 0,
             prompt: Prompt {
-                text: random_prompt(settings.min_wpm),
+                text: random_prompt(ctx.settings.word_bomb.min_wpm),
                 uses: 0,
             },
             timer: Timer {
@@ -345,7 +349,7 @@ impl WordBomb {
         };
     }
 
-    fn post_game(&self) -> WordBombPostGame {
+    fn info(&self) -> WordBombPostGame {
         WordBombPostGame {
             winner: *self
                 .players
@@ -365,12 +369,79 @@ impl WordBomb {
 
 impl GameHandler for WordBomb {
     type ClientMessage = ClientWordBomb;
-    type ServerMessage = ServerWordBomb;
-    type RoomMessage = WordBombMessage;
-    type StateMessage = WordBombState;
-    type PostGameMessage = WordBombPostGame;
+    type SelfMessage = WordBombMessage;
+    type Outcome = WordBombPostGame;
+    type Snapshot = WordBombState;
 
-    fn state(&self) -> Self::StateMessage {
+    fn on_client_message(
+        &mut self,
+        ctx: super::GameContext,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<Self::Outcome>> {
+        let Some(player) = self.players.get_mut(&uuid) else {
+            return Err(anyhow::anyhow!("you aren't a player"));
+        };
+
+        if uuid != self.order[self.turn] {
+            return Err(anyhow::anyhow!("it's not your turn"));
+        }
+
+        match message {
+            ClientWordBomb::Input { input } => {
+                player.input = input;
+
+                ctx.clients.broadcast(ServerWordBomb::Input {
+                    input: player.input.clone(),
+                });
+            }
+            ClientWordBomb::Guess { word } => match self.submission(word.clone()) {
+                Ok(life) => {
+                    ctx.clients.broadcast(ServerWordBomb::Valid {
+                        guess: word,
+                        life,
+                        prompt: self.prompt.text.to_owned(),
+                        turn: self.order[self.turn],
+                    });
+                }
+                Err(reason) => {
+                    ctx.clients.broadcast(ServerWordBomb::Invalid {
+                        reason: reason.to_owned(),
+                    });
+                }
+            },
+        }
+
+        Ok(None)
+    }
+
+    fn on_self_message(
+        &mut self,
+        ctx: super::GameContext,
+        message: Self::SelfMessage,
+    ) -> anyhow::Result<Option<Self::Outcome>> {
+        let info = match message {
+            WordBombMessage::Exploded => {
+                if self.explosion() {
+                    ctx.clients.broadcast(ServerWordBomb::Exploded {
+                        prompt: self.prompt.text.to_owned(),
+                        turn: self.order[self.turn],
+                    });
+
+                    None
+                } else {
+                    Some(self.info())
+                }
+            }
+        };
+
+        Ok(info)
+    }
+
+    fn on_abort(&mut self) {
+        self.timer.task.abort();
+    }
+
+    fn snapshot(&self) -> Self::Snapshot {
         WordBombState {
             players: self
                 .players
@@ -393,72 +464,16 @@ impl GameHandler for WordBomb {
             prompt: self.prompt.text.to_owned(),
         }
     }
+}
 
-    fn client(
-        &mut self,
-        clients: impl ClientMessenger<Self::ServerMessage>,
-        (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
-        let Some(player) = self.players.get_mut(&uuid) else {
-            return Err(anyhow::anyhow!("you aren't a player"));
-        };
-
-        if uuid != self.order[self.turn] {
-            return Err(anyhow::anyhow!("it's not your turn"));
-        }
-
-        match message {
-            ClientWordBomb::Input { input } => {
-                player.input = input;
-
-                clients.broadcast(ServerWordBomb::Input {
-                    input: player.input.clone(),
-                });
-            }
-            ClientWordBomb::Guess { word } => match self.submission(word.clone()) {
-                Ok(life) => {
-                    clients.broadcast(ServerWordBomb::Valid {
-                        guess: word,
-                        life,
-                        prompt: self.prompt.text.to_owned(),
-                        turn: self.order[self.turn],
-                    });
-                }
-                Err(reason) => {
-                    clients.broadcast(ServerWordBomb::Invalid {
-                        reason: reason.to_owned(),
-                    });
-                }
-            },
-        }
-
-        Ok(None)
+impl From<WordBombState> for GameVariantState {
+    fn from(value: WordBombState) -> Self {
+        Self::WordBomb(value)
     }
+}
 
-    fn room(
-        &mut self,
-        clients: impl ClientMessenger<Self::ServerMessage>,
-        message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
-        let info = match message {
-            WordBombMessage::Exploded => {
-                if self.explosion() {
-                    clients.broadcast(ServerWordBomb::Exploded {
-                        prompt: self.prompt.text.to_owned(),
-                        turn: self.order[self.turn],
-                    });
-
-                    None
-                } else {
-                    Some(self.post_game())
-                }
-            }
-        };
-
-        Ok(info)
-    }
-
-    fn abort(&mut self) {
-        self.timer.task.abort();
+impl From<WordBombPostGame> for PostGameInfo {
+    fn from(value: WordBombPostGame) -> Self {
+        Self::WordBomb(value)
     }
 }

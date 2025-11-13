@@ -12,8 +12,11 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    messages::RoomMessage,
-    room::{Room, clients::Client},
+    messages::CoreMessage,
+    room::{
+        Room,
+        clients::{Client, SocketRef},
+    },
     state::AppState,
     task,
 };
@@ -67,9 +70,9 @@ async fn socket(
         (Some(room), Some(rejoin_token)) => {
             let (response, uuid) = oneshot::channel();
 
-            room.send(RoomMessage::JoinWithRejoinToken {
+            room.send(CoreMessage::JoinWithRejoinToken {
                 rejoin_token,
-                client: Client::new(socket, sender, username),
+                client: Client::new(SocketRef::new(socket, sender), username),
                 response,
             });
 
@@ -80,9 +83,9 @@ async fn socket(
         (Some(room), None) => {
             let uuid = Uuid::new_v4();
 
-            room.send(RoomMessage::Join {
+            room.send(CoreMessage::Join {
                 uuid,
-                client: Client::new(socket, sender, username),
+                client: Client::new(SocketRef::new(socket, sender), username),
             });
 
             (uuid, room)
@@ -92,9 +95,9 @@ async fn socket(
             let uuid = Uuid::new_v4();
             let room = Room::spawn();
 
-            room.send(RoomMessage::Join {
+            room.send(CoreMessage::Join {
                 uuid,
-                client: Client::new(socket, sender, username),
+                client: Client::new(SocketRef::new(socket, sender), username),
             });
 
             state.insert_room(room_name, room.clone());
@@ -108,14 +111,14 @@ async fn socket(
         while let Some(message) = stream.next().await {
             if let Ok(ws::Message::Text(bytes)) = message {
                 if let Ok(message) = serde_json::from_str(bytes.as_str()) {
-                    room.send(RoomMessage::Client { uuid, message });
+                    room.send(CoreMessage::Client { uuid, message });
                 } else {
                     tracing::error!("failed deserializing: {}", bytes.as_str());
                 }
             }
         }
 
-        room.send(RoomMessage::Leave { uuid, socket });
+        room.send(CoreMessage::Leave { uuid, socket });
 
         Ok(())
     });

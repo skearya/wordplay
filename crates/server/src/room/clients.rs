@@ -5,39 +5,67 @@ use rand::{rng, seq::IteratorRandom};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{messages::ServerMessage, room::messenger::ClientMessenger};
+use crate::messages::ServerMessage;
+
+pub struct SocketRef {
+    /// UUID unique to the client's socket task. **Not** client UUID.
+    uuid: Uuid,
+    /// Sender to the client's reciever task that proxies WebSocket messages.
+    sender: mpsc::UnboundedSender<ws::Message>,
+}
+
+impl SocketRef {
+    pub fn new(uuid: Uuid, sender: mpsc::UnboundedSender<ws::Message>) -> Self {
+        Self { uuid, sender }
+    }
+}
 
 pub struct Client {
-    /// 0: UUID unique to the client's socket task. **Not** client UUID.
-    /// 1: Sender to the client's reciever task that proxies WebSocket messages.
     /// `Some` if connected.
-    socket: Option<(Uuid, mpsc::UnboundedSender<ws::Message>)>,
+    socket: Option<SocketRef>,
     /// Client username.
     pub username: String,
 }
 
 impl Client {
-    pub fn new(socket: Uuid, sender: mpsc::UnboundedSender<ws::Message>, username: String) -> Self {
+    pub fn new(socket: SocketRef, username: String) -> Self {
         Self {
-            socket: Some((socket, sender)),
+            socket: Some(socket),
             username,
         }
     }
 
-    pub fn socket_uuid_eq(&self, other: Uuid) -> bool {
-        self.socket.as_ref().is_some_and(|(uuid, _)| *uuid == other)
+    pub fn send_raw(&self, message: ws::Message) {
+        let Some(socket) = &self.socket else { return };
+
+        socket.sender.send(message).ok();
+    }
+
+    pub fn send(&self, message: impl Into<ServerMessage>) {
+        let Some(socket) = &self.socket else { return };
+
+        let message: ServerMessage = message.into();
+        let message: ws::Message = (&message).into();
+
+        socket.sender.send(message).ok();
     }
 
     pub fn close(&self, reason: &'static str) {
         let Some(socket) = &self.socket else { return };
 
         socket
-            .1
+            .sender
             .send(ws::Message::Close(Some(CloseFrame {
                 code: close_code::ERROR,
                 reason: Utf8Bytes::from_static(reason),
             })))
             .ok();
+    }
+
+    pub fn socket_uuid_eq(&self, other: Uuid) -> bool {
+        self.socket
+            .as_ref()
+            .is_some_and(|socket| socket.uuid == other)
     }
 }
 
@@ -51,11 +79,13 @@ impl Clients {
             clients: HashMap::new(),
         }
     }
-}
 
-impl Clients {
-    pub fn add(&mut self, uuid: Uuid, client: Client) {
+    pub fn insert(&mut self, uuid: Uuid, client: Client) {
         self.clients.insert(uuid, client);
+    }
+
+    pub fn get(&self, uuid: Uuid) -> Option<&Client> {
+        self.clients.get(&uuid)
     }
 
     pub fn get_mut(&mut self, uuid: Uuid) -> Option<&mut Client> {
@@ -70,10 +100,6 @@ impl Clients {
 
     pub fn remove(&mut self, uuid: Uuid) {
         self.clients.remove(&uuid);
-    }
-
-    pub fn get(&self, uuid: Uuid) -> Option<&Client> {
-        self.clients.get(&uuid)
     }
 
     pub fn random(&self) -> (&Uuid, &Client) {
@@ -94,41 +120,28 @@ impl Clients {
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty() || self.clients.values().all(|client| client.socket.is_none())
     }
-}
 
-impl ClientMessenger<ServerMessage> for Clients {
-    fn send(&self, uuid: Uuid, message: ServerMessage) {
-        let Some((_, socket)) = self.clients[&uuid].socket.as_ref() else {
-            return;
-        };
-
-        let message: ws::Message = (&message).into();
-
-        socket.send(message).ok();
+    pub fn send(&self, uuid: Uuid, message: impl Into<ServerMessage>) {
+        self.clients[&uuid].send(message);
     }
 
-    fn broadcast(&self, message: ServerMessage) {
+    pub fn broadcast(&self, message: impl Into<ServerMessage>) {
+        let message: ServerMessage = message.into();
         let message: ws::Message = (&message).into();
 
-        for (_, socket) in self
-            .clients
-            .values()
-            .filter_map(|client| client.socket.as_ref())
-        {
-            socket.send(message.clone()).ok();
+        for client in self.clients.values() {
+            client.send_raw(message.clone());
         }
     }
 
-    fn broadcast_except(&self, exclude: Uuid, message: ServerMessage) {
+    pub fn broadcast_except(&self, exclude: Uuid, message: impl Into<ServerMessage>) {
+        let message: ServerMessage = message.into();
         let message: ws::Message = (&message).into();
 
-        for (_, socket) in self
-            .clients
-            .iter()
-            .filter(|&(uuid, _)| *uuid != exclude)
-            .filter_map(|(_, client)| client.socket.as_ref())
-        {
-            socket.send(message.clone()).ok();
+        for (&uuid, client) in &self.clients {
+            if uuid != exclude {
+                client.send_raw(message.clone());
+            }
         }
     }
 }

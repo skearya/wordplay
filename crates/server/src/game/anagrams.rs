@@ -77,12 +77,15 @@ use tokio::task::AbortHandle;
 use uuid::Uuid;
 
 use crate::{
-    game::anagrams::messages::{
-        AnagramsMessage, AnagramsPlayer, AnagramsPostGame, AnagramsSettings, AnagramsState,
-        ClientAnagrams, ServerAnagrams,
+    game::{
+        GameContext, GameHandler,
+        anagrams::messages::{
+            AnagramsMessage, AnagramsPlayer, AnagramsPostGame, AnagramsState, ClientAnagrams,
+            ServerAnagrams,
+        },
+        messages::{GameVariantState, PostGameInfo},
     },
     global::{is_english, random_anagram},
-    room::{handler::GameHandler, messenger::ClientMessenger, sender::AnagramsSender},
     task,
 };
 
@@ -130,8 +133,8 @@ fn points(word: &str) -> u32 {
 }
 
 impl Anagrams {
-    pub fn new(room: AnagramsSender, _settings: &AnagramsSettings, players: &[Uuid]) -> Self {
-        let (original, anagram) = random_anagram();
+    pub fn new(ctx: GameContext, players: &[Uuid]) -> Self {
+        let room = ctx.room.clone();
 
         let timer = task::spawn(async move {
             tokio::time::sleep(Duration::from_secs(30)).await;
@@ -140,6 +143,8 @@ impl Anagrams {
             Ok(())
         })
         .abort_handle();
+
+        let (original, anagram) = random_anagram();
 
         Self {
             players: players.iter().map(|&uuid| (uuid, Player::new())).collect(),
@@ -184,7 +189,7 @@ impl Anagrams {
         }
     }
 
-    fn post_game(&self) -> AnagramsPostGame {
+    fn info(&self) -> AnagramsPostGame {
         AnagramsPostGame {
             original: self.original.to_owned(),
             leaderboard: self
@@ -198,12 +203,54 @@ impl Anagrams {
 
 impl GameHandler for Anagrams {
     type ClientMessage = ClientAnagrams;
-    type ServerMessage = ServerAnagrams;
-    type RoomMessage = AnagramsMessage;
-    type StateMessage = AnagramsState;
-    type PostGameMessage = AnagramsPostGame;
+    type SelfMessage = AnagramsMessage;
+    type Outcome = AnagramsPostGame;
+    type Snapshot = AnagramsState;
 
-    fn state(&self) -> Self::StateMessage {
+    fn on_client_message(
+        &mut self,
+        ctx: GameContext,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Option<Self::Outcome>> {
+        if !self.players.contains_key(&uuid) {
+            return Err(anyhow::anyhow!("you aren't a player"));
+        }
+
+        match message {
+            ClientAnagrams::Guess { word } => match self.submission(uuid, word) {
+                Ok(points) => {
+                    ctx.clients
+                        .broadcast(ServerAnagrams::Valid { uuid, points });
+                }
+                Err(reason) => {
+                    ctx.clients.send(
+                        uuid,
+                        ServerAnagrams::Invalid {
+                            reason: reason.to_owned(),
+                        },
+                    );
+                }
+            },
+        }
+
+        todo!()
+    }
+
+    fn on_self_message(
+        &mut self,
+        _ctx: GameContext,
+        message: Self::SelfMessage,
+    ) -> anyhow::Result<Option<Self::Outcome>> {
+        match message {
+            AnagramsMessage::TimerEnd => Ok(Some(self.info())),
+        }
+    }
+
+    fn on_abort(&mut self) {
+        self.timer.abort();
+    }
+
+    fn snapshot(&self) -> Self::Snapshot {
         AnagramsState {
             players: self
                 .players
@@ -220,48 +267,16 @@ impl GameHandler for Anagrams {
             anagram: self.anagram.clone(),
         }
     }
+}
 
-    fn client(
-        &mut self,
-        clients: impl ClientMessenger<Self::ServerMessage>,
-        (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
-        if !self.players.contains_key(&uuid) {
-            return Err(anyhow::anyhow!("you aren't a player"));
-        }
-
-        match message {
-            ClientAnagrams::Guess { word } => {
-                match self.submission(uuid, word) {
-                    Ok(points) => {
-                        clients.broadcast(ServerAnagrams::Valid { uuid, points });
-                    }
-                    Err(reason) => {
-                        clients.send(
-                            uuid,
-                            ServerAnagrams::Invalid {
-                                reason: reason.to_owned(),
-                            },
-                        );
-                    }
-                };
-            }
-        }
-
-        todo!()
+impl From<AnagramsState> for GameVariantState {
+    fn from(value: AnagramsState) -> Self {
+        Self::Anagrams(value)
     }
+}
 
-    fn room(
-        &mut self,
-        _clients: impl ClientMessenger<Self::ServerMessage>,
-        message: Self::RoomMessage,
-    ) -> anyhow::Result<Option<Self::PostGameMessage>> {
-        match message {
-            AnagramsMessage::TimerEnd => Ok(Some(self.post_game())),
-        }
-    }
-
-    fn abort(&mut self) {
-        self.timer.abort();
+impl From<AnagramsPostGame> for PostGameInfo {
+    fn from(value: AnagramsPostGame) -> Self {
+        Self::Anagrams(value)
     }
 }
