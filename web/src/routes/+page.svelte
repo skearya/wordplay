@@ -194,12 +194,12 @@
 
 <header
 	style={`background-image: url("${homepageNoiseImage}");`}
-	class="absolute top-0 left-0 -z-10 h-screen w-screen bg-cover"
+	class="absolute left-0 top-0 -z-10 h-full w-full bg-cover"
 >
 	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
 	<h1
 		bind:this={headerTextElement}
-		class="pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl text-background opacity-0"
+		class="text-background pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl opacity-0"
 	>
 		Wordplay
 	</h1>
@@ -208,12 +208,12 @@
 <section
 	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black"
+	class="background-scroll bg-background inset-shadow-[0_20px_20px] inset-shadow-black mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
 >
-	<div class="sticky top-4 w-[325px] space-y-2.5 text-background">
-		<button class="block w-full bg-pastel-red py-7 text-2xl font-medium">Join room</button>
-		<button class="block w-full bg-pastel-light-red py-7 text-2xl font-medium">Create room</button>
-		<button class="block w-full bg-pastel-green py-7 text-2xl font-medium">Singleplayer</button>
+	<div class="text-background sticky top-4 w-[325px] space-y-2.5">
+		<button class="bg-pastel-red block w-full py-7 text-2xl font-medium">Join room</button>
+		<button class="bg-pastel-light-red block w-full py-7 text-2xl font-medium">Create room</button>
+		<button class="bg-pastel-green block w-full py-7 text-2xl font-medium">Singleplayer</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
 			<Settings />
 			<Github />
@@ -230,7 +230,7 @@
 		</div>
 		<div class="grid grid-cols-3 gap-2.5">
 			{#each { length: 12 }}
-				<a href="/" class="relative border border-faded-green bg-dark-green p-2.5">
+				<a href="/" class="border-faded-green bg-dark-green relative border p-2.5">
 					<h1 class="mb-10 text-lg">Stupid Room Name</h1>
 					<div class="flex -space-x-2">
 						{#each { length: 3 }, i}
@@ -239,16 +239,16 @@
 								width="38px"
 								height="38px"
 								alt="avatar"
-								class="aspect-square size-[38px] rounded-full border-2 border-background"
+								class="border-background aspect-square size-[38px] rounded-full border-2"
 							/>
 						{/each}
 						<p
-							class="flex aspect-square size-[38px] items-center justify-center rounded-full bg-background"
+							class="bg-background flex aspect-square size-[38px] items-center justify-center rounded-full"
 						>
 							+21
 						</p>
 					</div>
-					<Bomb class="absolute right-2.5 bottom-2.5" />
+					<Bomb class="absolute bottom-2.5 right-2.5" />
 				</a>
 			{/each}
 		</div>
