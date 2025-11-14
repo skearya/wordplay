@@ -1,30 +1,18 @@
 [package]
 name = "server"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2024"
 
 [dependencies]
-axum = { version = "0.8.4", features = ["macros", "ws"] }
-axum-extra = { version = "0.10.1", features = ["typed-header", "cookie"] }
-futures = "0.3.31"
-headers = "0.4.0"
-tokio = { version = "1.45.1", features = ["full"] }
-uuid = { version = "1.17.0", features = ["v4", "fast-rng", "serde"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-dotenvy = "0.15.7"
-rand = "0.9.1"
-tower-http = { version = "0.6.4", features = ["fs", "cors"] }
-sqlx = { version = "0.8.6", features = [
-    "runtime-tokio",
-    "tls-native-tls",
-    "sqlite",
-] }
-reqwest = { version = "0.12.15", features = ["json"] }
-cookie = "0.18.1"
-thiserror = "2.0.12"
-dashmap = "6.1.0"
-governor = "0.10.0"
-rustrict = "0.7.35"
+anyhow = "1.0"
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["full", "test-util"] }
+tracing = { version = "0.1", features = ["attributes"] }
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+futures = "0.3"
+uuid = { version = "1.17", features = ["v4", "serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ts-rs = { version = "11.0", features = ["uuid-impl"] }
+rand = "0.9"
+governor = "0.10.1"

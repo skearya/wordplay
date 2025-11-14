@@ -1,8 +1,19 @@
 <script lang="ts">
-	const { width = 224, height = 228, class: className }: { width?: number; height?: number, class?: string } = $props();
+	const {
+		width = 224,
+		height = 228,
+		class: className
+	}: { width?: number; height?: number; class?: string } = $props();
 </script>
 
-<svg {width} {height} viewBox="0 0 224 228" fill="none" xmlns="http://www.w3.org/2000/svg" class={className}>
+<svg
+	{width}
+	{height}
+	viewBox="0 0 224 228"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
+	class={className}
+>
 	<path
 		d="M223.501 114.329C223.501 51.5912 173.467 0.731445 111.749 0.731445C50.0296 0.731445 0 51.5912 0 114.329C0 177.066 50.0323 227.926 111.75 227.926C173.468 227.926 223.501 177.066 223.501 114.329Z"
 		fill="url(#paint0_linear_280_112)"

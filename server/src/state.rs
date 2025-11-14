@@ -1,89 +1,66 @@
-pub mod error;
-pub mod games;
-pub mod lobby;
-pub mod messages;
-pub mod room;
-
-use dashmap::{
-    mapref::one::{Ref, RefMut},
-    DashMap,
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
 };
-use error::{GameError, Result};
-use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
-use messages::ClientMessage;
-use room::Room;
-use sqlx::SqlitePool;
-use std::{num::NonZeroU32, sync::Arc};
-use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+use crate::room::sender::RoomSender;
+
+#[derive(Clone)]
 pub struct AppState {
-    pub db: SqlitePool,
-    pub rooms: Arc<DashMap<String, Room>>,
-    pub limiter: Arc<DefaultKeyedRateLimiter<Uuid>>,
+    inner: Arc<Mutex<AppStateInner>>,
 }
 
-#[derive(Clone, Copy)]
-pub struct SenderInfo<'a> {
-    pub uuid: Uuid,
-    pub room: &'a str,
+struct AppStateInner {
+    /// Room name -> Room task message sender.
+    rooms: HashMap<String, RoomSender>,
 }
 
 impl AppState {
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new() -> Self {
         Self {
-            db,
-            rooms: Arc::new(DashMap::new()),
-            // maybe generous? though typing can count as a message
-            limiter: Arc::new(RateLimiter::keyed(
-                Quota::per_second(NonZeroU32::new(8).unwrap())
-                    .allow_burst(NonZeroU32::new(24).unwrap()),
-            )),
+            inner: Arc::new(Mutex::new(AppStateInner::new())),
         }
     }
 
-    pub fn room(&self, room: &str) -> Result<Ref<String, Room>> {
-        self.rooms.get(room).ok_or(GameError::RoomNotFound {
-            room: room.to_string(),
-        })
+    pub fn get_room(&self, name: &str) -> Option<RoomSender> {
+        let mut lock = match self.inner.lock() {
+            Ok(lock) => lock,
+            Err(poison) => poison.into_inner(),
+        };
+
+        lock.get_room(name)
     }
 
-    pub fn room_mut(&self, room: &str) -> Result<RefMut<String, Room>> {
-        self.rooms.get_mut(room).ok_or(GameError::RoomNotFound {
-            room: room.to_string(),
-        })
+    pub fn insert_room(&self, name: String, room: RoomSender) {
+        let mut lock = match self.inner.lock() {
+            Ok(lock) => lock,
+            Err(poison) => poison.into_inner(),
+        };
+
+        lock.insert_room(name, room);
     }
+}
 
-    pub fn handle(&self, sender: SenderInfo, message: ClientMessage) {
-        let result = self
-            .limiter
-            .check_key(&sender.uuid)
-            .map_err(|_| GameError::RateLimited)
-            .and_then(|()| match message {
-                ClientMessage::Ping { timestamp } => self.client_ping(sender, timestamp),
-                ClientMessage::Ready => self.client_ready(sender),
-                ClientMessage::StartEarly => self.client_start_early(sender),
-                ClientMessage::Unready => self.client_unready(sender),
-                ClientMessage::PracticeRequest { game } => {
-                    self.client_practice_request(sender, game)
-                }
-                ClientMessage::PracticeSubmission {
-                    game,
-                    prompt,
-                    input,
-                } => self.client_practice_submission(sender, game, &prompt, &input),
-                ClientMessage::RoomSettings(settings) => {
-                    self.client_room_settings(sender, settings)
-                }
-                ClientMessage::ChatMessage { content } => self.client_chat_message(sender, content),
-                ClientMessage::WordBombInput { input } => self.word_bomb_input(sender, input),
-                ClientMessage::WordBombGuess { word } => self.word_bomb_guess(sender, word),
-                ClientMessage::AnagramsGuess { word } => self.anagrams_guess(sender, word),
-            });
-
-        if let Err(error) = result {
-            eprintln!("error: {} caused {:#?}", sender.uuid, error);
-            self.send_error_msg(sender, &error.to_string()).ok();
+impl AppStateInner {
+    fn new() -> Self {
+        Self {
+            rooms: HashMap::new(),
         }
+    }
+
+    fn get_room(&mut self, name: &str) -> Option<RoomSender> {
+        let room = self.rooms.get(name)?;
+
+        if room.is_closed() {
+            self.rooms.remove(name);
+
+            None
+        } else {
+            Some(room.clone())
+        }
+    }
+
+    fn insert_room(&mut self, name: String, room: RoomSender) {
+        self.rooms.insert(name, room);
     }
 }

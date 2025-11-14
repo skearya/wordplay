@@ -1,47 +1,36 @@
-mod db;
+mod game;
+mod general;
 mod global;
-mod routes;
+mod lobby;
+mod messages;
+mod room;
+mod socket;
 mod state;
-mod utils;
+mod task;
 
-use axum::http::HeaderValue;
-use axum::{routing::get, Router};
-use global::GLOBAL;
-use routes::{auth, game, info};
-use state::AppState;
-use std::path::Path;
-use std::sync::LazyLock;
-use tower_http::cors::CorsLayer;
+use axum::{Router, routing::get};
+use tokio::net::TcpListener;
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+
+use crate::{global::init_globals, socket::handler, state::AppState};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    LazyLock::force(&GLOBAL);
-    dotenvy::from_path(Path::new("../.env")).ok();
+async fn main() {
+    init_globals();
 
-    let db = db::create_pool().await?;
-    let state = AppState::new(db);
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_file(true).with_line_number(true))
+        .with(EnvFilter::from_default_env())
+        .init();
 
-    let mut app = Router::new().nest(
-        "/api",
-        Router::new()
-            .nest("/info", info::make_router())
-            .nest("/auth", auth::make_router(state.clone()))
-            .route("/room/{room}", get(game::ws_handler))
-            .with_state(state),
-    );
+    let state = AppState::new();
 
-    if cfg!(debug_assertions) {
-        app = app.layer(
-            CorsLayer::new()
-                .allow_origin("http://localhost:3000".parse::<HeaderValue>()?)
-                .allow_credentials(true),
-        );
-    }
+    let app = Router::new()
+        .route("/{room}", get(handler))
+        .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3021").await?;
-    println!("listening on {}", listener.local_addr()?);
+    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    tracing::info!("listening on {:#?}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app).await?;
-
-    Ok(())
+    axum::serve(listener, app).await.unwrap();
 }

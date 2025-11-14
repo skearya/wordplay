@@ -1,5 +1,9 @@
 <script lang="ts">
-	const { width = 112, height = 114, class: className }: { width?: number; height?: number, class?: string } = $props();
+	const {
+		width = 112,
+		height = 114,
+		class: className
+	}: { width?: number; height?: number; class?: string } = $props();
 </script>
 
 <svg
@@ -9,7 +13,8 @@
 	fill="none"
 	xmlns="http://www.w3.org/2000/svg"
 	filter="url(#noiseFilter)"
- class={className}>
+	class={className}
+>
 	<path
 		d="M34.5003 78.7314L4.7002 109.024L34.5003 78.7314Z"
 		fill="url(#paint0_linear_0_1)"
