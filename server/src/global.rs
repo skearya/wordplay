@@ -27,13 +27,11 @@ pub fn is_english(word: &str) -> bool {
 }
 
 pub fn random_prompt(min_wpp: usize) -> &'static str {
-    let (index, _) = PROMPTS
-        .iter()
-        .enumerate()
-        .min_by_key(|(_, (wpp, _))| wpp.abs_diff(min_wpp))
-        .unwrap();
+    let index = match PROMPTS.binary_search_by(|(wpp, _words)| wpp.cmp(&min_wpp)) {
+        Ok(index) | Err(index) => index,
+    };
 
-    let (_, prompts) = PROMPTS[index..].choose(&mut rand::rng()).unwrap();
+    let (_wpp, prompts) = PROMPTS[index..].choose(&mut rand::rng()).unwrap();
 
     prompts.choose(&mut rand::rng()).unwrap()
 }

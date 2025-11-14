@@ -1,19 +1,21 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::oneshot;
 use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
     game::{
         anagrams::messages::{AnagramsMessage, AnagramsSettings, ServerAnagrams},
-        messages::{ClientGame, GameMessage, GameState, PostGameInfo, ServerGame},
+        messages::{ClientGame, GameMessage, GameState, ServerGame},
         word_bomb::messages::{ServerWordBomb, WordBombMessage, WordBombSettings},
     },
     general::messages::{ClientGeneral, ServerGeneral},
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby},
-    room::clients::Client,
+    room::{
+        clients::Client,
+        messages::{CoreMessage, ServerCore},
+    },
 };
 
 #[derive(Deserialize, TS)]
@@ -46,27 +48,8 @@ pub enum ServerMessage {
         /// State variant data of the room (lobby | game -> (game kind)).
         state: Box<ServerState>,
     },
-    /// Broadcasted when a client joins/rejoins.
-    Join { uuid: Uuid, client: ServerClient },
-    /// Broadcasted when a client leaves.
-    /// `new_owner` will only be some if the owner leaves in lobby, if the owner
-    /// leaves in game, they will still be owner and have the chance to rejoin.
-    /// If they don't rejoin before the game ends, the game ending message will
-    /// broadcast the new owner.
-    Leave { uuid: Uuid, new_owner: Option<Uuid> },
-    /// Sent when the game (based on room settings) has started.
-    GameStart {
-        /// Contains the player's rejoin token. Is `None` if client is spectating.
-        rejoin_token: Option<Uuid>,
-        state: GameState,
-    },
-    /// Broadcasted when the current game has ended.
-    GameEnd {
-        post_game_info: Option<PostGameInfo>,
-        /// Is `Some` with a random client's uuid if the previous room owner
-        /// left during game and hasn't come back.
-        new_owner: Option<Uuid>,
-    },
+    /// Core room functionality related messages.
+    Core(ServerCore),
     /// General messages. Can be sent from any state.
     General(ServerGeneral),
     /// All lobby messages.
@@ -94,30 +77,6 @@ pub struct ServerClient {
 pub enum ServerState {
     Lobby(LobbyState),
     Game(GameState),
-}
-
-pub enum CoreMessage {
-    Join {
-        uuid: Uuid,
-        client: Client,
-    },
-    JoinWithRejoinToken {
-        rejoin_token: Uuid,
-        client: Client,
-        /// Response to the socket task that tried joining containing the client's designated UUID.
-        /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
-        /// Otherwise, the client will be given a randomly generated UUID.
-        response: oneshot::Sender<Uuid>,
-    },
-    Leave {
-        uuid: Uuid,
-        socket: Uuid,
-    },
-    /// Rooms also recieve client messages through the same channel as other room messages.
-    Client {
-        uuid: Uuid,
-        message: ClientMessage,
-    },
 }
 
 pub enum RoomMessage {
@@ -157,6 +116,12 @@ impl From<&Client> for ServerClient {
     }
 }
 
+impl From<ServerCore> for ServerMessage {
+    fn from(value: ServerCore) -> Self {
+        Self::Core(value)
+    }
+}
+
 impl From<ServerGeneral> for ServerMessage {
     fn from(value: ServerGeneral) -> Self {
         Self::General(value)
@@ -177,13 +142,13 @@ impl From<ServerGame> for ServerMessage {
 
 impl From<ServerWordBomb> for ServerMessage {
     fn from(value: ServerWordBomb) -> Self {
-        ServerGame::WordBomb(value).into()
+        ServerMessage::Game(ServerGame::WordBomb(value))
     }
 }
 
 impl From<ServerAnagrams> for ServerMessage {
     fn from(value: ServerAnagrams) -> Self {
-        ServerGame::Anagrams(value).into()
+        ServerMessage::Game(ServerGame::Anagrams(value))
     }
 }
 
@@ -207,13 +172,13 @@ impl From<GameMessage> for RoomMessage {
 
 impl From<WordBombMessage> for RoomMessage {
     fn from(value: WordBombMessage) -> Self {
-        GameMessage::WordBomb(value).into()
+        RoomMessage::Game(GameMessage::WordBomb(value))
     }
 }
 
 impl From<AnagramsMessage> for RoomMessage {
     fn from(value: AnagramsMessage) -> Self {
-        GameMessage::Anagrams(value).into()
+        RoomMessage::Game(GameMessage::Anagrams(value))
     }
 }
 

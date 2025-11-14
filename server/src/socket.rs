@@ -12,10 +12,10 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    messages::CoreMessage,
     room::{
         Room,
         clients::{Client, SocketRef},
+        messages::CoreMessage,
     },
     state::AppState,
     task,

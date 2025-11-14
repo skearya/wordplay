@@ -69,6 +69,10 @@
 }
 
 @layer base {
+	html {
+		overscroll-behavior-y: none;
+	}
+
 	body {
 		background-color: var(--color-background);
 		color: var(--color-white);

@@ -2,40 +2,33 @@
 	import type { PageProps } from './$types';
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
-	import type { Context } from '$lib/context';
 	import { onMount } from 'svelte';
-	import Wordplay from '$lib/components/Wordplay.svelte';
-	import { defaultClientContext } from '$lib/context';
-	import { serverMessageEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
 
-	const { data }: PageProps = $props();
+	const { data, params }: PageProps = $props();
 
 	type State =
-		| { kind: 'loading' }
+		| { kind: 'connecting' }
 		| { kind: 'connected' }
-		| { kind: 'ready'; context: Context }
-		| { kind: 'error' };
+		| { kind: 'ready' }
+		| { kind: 'error'; details: string };
 
 	let socket: WebSocket | undefined;
-	let connection = $state<State>({ kind: 'loading' });
+	let connection = $state<State>({ kind: 'connecting' });
 
 	onMount(() => {
-		const room = 'one';
-
-		const params: SocketParams = {
+		const socketParams: SocketParams = {
 			username: 'Client',
 			rejoinToken: null
 		};
 
 		const urlParams = new URLSearchParams(
-			Object.entries(params).filter((param): param is [string, string] => param[1] !== null)
+			Object.entries(socketParams).filter((param): param is [string, string] => param[1] !== null)
 		);
 
-		socket = new WebSocket(`ws://localhost:3000/${room}?${urlParams}`);
+		socket = new WebSocket(`ws://localhost:3000/${params.room}?${urlParams}`);
 
 		socket.addEventListener('open', () => {
-			console.log('Connected');
 			connection = { kind: 'connected' };
 		});
 
@@ -48,15 +41,8 @@
 
 			if (message.kind === 'info') {
 				connection = {
-					kind: 'ready',
-					context: {
-						...message.data,
-						client: defaultClientContext(message.data.state),
-						send: (message) => socket!.send(JSON.stringify(message))
-					}
+					kind: 'ready'
 				};
-			} else {
-				serverMessageEmitter.emit(message);
 			}
 		});
 
@@ -66,7 +52,7 @@
 
 		socket.addEventListener('close', (e) => {
 			console.log('WebSocket closed', e);
-			connection = { kind: 'error' };
+			connection = { kind: 'error', details: e.reason };
 		});
 
 		return () => socket?.close();
@@ -77,7 +63,7 @@
 			const id = setTimeout(() => {
 				if (connection.kind === 'connected') {
 					socket?.close();
-					connection = { kind: 'error' };
+					connection = { kind: 'error', details: 'Timed out waiting for server response' };
 				}
 			}, 5000);
 
@@ -86,14 +72,14 @@
 	});
 </script>
 
-{#if connection.kind === 'loading'}
-	<h1>Loading</h1>
+{#if connection.kind === 'connecting'}
+	<h1>Connecting</h1>
 {:else if connection.kind === 'connected'}
-	<h1>Loading (established connection)</h1>
+	<h1>Connected (awaiting details)</h1>
 {:else if connection.kind === 'ready'}
-	<Wordplay {...connection.context} />
+	<h1>Ready</h1>
 {:else if connection.kind === 'error'}
-	<h1>Error</h1>
+	<h1>Error {connection.details}</h1>
 {:else if connection satisfies never}
 	{unreachable(connection)}
 {/if}

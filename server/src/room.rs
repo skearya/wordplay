@@ -1,3 +1,74 @@
+pub mod messages {
+    #[allow(unused_imports)]
+    use serde::{Deserialize, Serialize};
+    use tokio::sync::oneshot;
+    use ts_rs::TS;
+    use uuid::Uuid;
+
+    use crate::{
+        game::messages::{GameState, PostGameInfo},
+        messages::{ClientMessage, ServerClient},
+        room::clients::Client,
+    };
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS)]
+    #[serde(
+        tag = "kind",
+        content = "data",
+        rename_all = "camelCase",
+        rename_all_fields = "camelCase"
+    )]
+    #[ts(export)]
+    pub enum ServerCore {
+        /// Broadcasted when a client joins/rejoins.
+        Join { uuid: Uuid, client: ServerClient },
+        /// Broadcasted when a client leaves.
+        /// `new_owner` will only be some if the owner leaves in lobby, if the owner
+        /// leaves in game, they will still be owner and have the chance to rejoin.
+        /// If they don't rejoin before the game ends, the game ending message will
+        /// broadcast the new owner.
+        Leave { uuid: Uuid, new_owner: Option<Uuid> },
+        /// Sent when the game (based on room settings) has started.
+        GameStart {
+            /// Contains the player's rejoin token. Is `None` if client is spectating.
+            rejoin_token: Option<Uuid>,
+            state: GameState,
+        },
+        /// Broadcasted when the current game has ended.
+        GameEnd {
+            post_game_info: Option<PostGameInfo>,
+            /// Is `Some` with a random client's uuid if the previous room owner
+            /// left during game and hasn't come back.
+            new_owner: Option<Uuid>,
+        },
+    }
+
+    pub enum CoreMessage {
+        Join {
+            uuid: Uuid,
+            client: Client,
+        },
+        JoinWithRejoinToken {
+            rejoin_token: Uuid,
+            client: Client,
+            /// Response to the socket task that tried joining containing the client's designated UUID.
+            /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
+            /// Otherwise, the client will be given a randomly generated UUID.
+            response: oneshot::Sender<Uuid>,
+        },
+        Leave {
+            uuid: Uuid,
+            socket: Uuid,
+        },
+        /// Rooms also recieve client messages through the same channel as other room messages.
+        Client {
+            uuid: Uuid,
+            message: ClientMessage,
+        },
+    }
+}
+
 pub mod clients;
 pub mod context;
 pub mod sender;
@@ -12,10 +83,11 @@ use crate::{
     game::{Game, messages::PostGameInfo},
     general::{General, messages::ServerGeneral},
     lobby::Lobby,
-    messages::{ClientMessage, CoreMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
+    messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
     room::{
         clients::{Client, Clients},
         context::Context,
+        messages::{CoreMessage, ServerCore},
         sender::RoomSender,
     },
     task,
@@ -117,7 +189,7 @@ impl Room {
 
                         let new_owner = self.maybe_new_owner();
 
-                        self.clients.broadcast(ServerMessage::GameEnd {
+                        self.clients.broadcast(ServerCore::GameEnd {
                             post_game_info: prev_game_info.clone(),
                             new_owner,
                         });
@@ -133,7 +205,7 @@ impl Room {
                         let state = game.snapshot();
 
                         for (&uuid, client) in self.clients.iter() {
-                            client.send(ServerMessage::GameStart {
+                            client.send(ServerCore::GameStart {
                                 rejoin_token: game.rejoin_tokens().get(&uuid).copied(),
                                 state: state.clone(),
                             });
@@ -234,7 +306,7 @@ impl Room {
                 let new_owner = self.maybe_new_owner();
 
                 self.clients
-                    .broadcast(ServerMessage::Leave { uuid, new_owner });
+                    .broadcast(ServerCore::Leave { uuid, new_owner });
 
                 Ok(StateChange::None)
             }
@@ -307,7 +379,7 @@ impl Room {
         self.clients.insert(uuid, client);
         self.clients.send(uuid, self.make_info_message(uuid));
         self.clients
-            .broadcast_except(uuid, ServerMessage::Join { uuid, client: data });
+            .broadcast_except(uuid, ServerCore::Join { uuid, client: data });
     }
 
     fn maybe_new_owner(&mut self) -> Option<Uuid> {
