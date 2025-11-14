@@ -86,6 +86,7 @@ use crate::{
         messages::{GameVariantState, PostGameInfo},
     },
     global::{is_english, random_anagram},
+    room::StateChange,
     task,
 };
 
@@ -204,14 +205,14 @@ impl Anagrams {
 impl GameHandler for Anagrams {
     type ClientMessage = ClientAnagrams;
     type SelfMessage = AnagramsMessage;
-    type Outcome = AnagramsPostGame;
+    type Outcome = Option<AnagramsPostGame>;
     type Snapshot = AnagramsState;
 
     fn on_client_message(
         &mut self,
         ctx: GameContext,
         (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<Self::Outcome>> {
+    ) -> anyhow::Result<Self::Outcome> {
         if !self.players.contains_key(&uuid) {
             return Err(anyhow::anyhow!("you aren't a player"));
         }
@@ -240,7 +241,7 @@ impl GameHandler for Anagrams {
         &mut self,
         _ctx: GameContext,
         message: Self::SelfMessage,
-    ) -> anyhow::Result<Option<Self::Outcome>> {
+    ) -> anyhow::Result<Self::Outcome> {
         match message {
             AnagramsMessage::TimerEnd => Ok(Some(self.info())),
         }
@@ -275,8 +276,11 @@ impl From<AnagramsState> for GameVariantState {
     }
 }
 
-impl From<AnagramsPostGame> for PostGameInfo {
-    fn from(value: AnagramsPostGame) -> Self {
-        Self::Anagrams(value)
+impl From<Option<AnagramsPostGame>> for StateChange {
+    fn from(value: Option<AnagramsPostGame>) -> Self {
+        match value {
+            Some(value) => Self::Lobby(Some(PostGameInfo::Anagrams(value))),
+            None => Self::None,
+        }
     }
 }

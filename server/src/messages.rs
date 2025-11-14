@@ -6,9 +6,9 @@ use uuid::Uuid;
 
 use crate::{
     game::{
-        anagrams::messages::{AnagramsMessage, AnagramsSettings, ServerAnagrams},
+        anagrams::messages::{AnagramsMessage, AnagramsSettings, ClientAnagrams, ServerAnagrams},
         messages::{ClientGame, GameMessage, GameState, ServerGame},
-        word_bomb::messages::{ServerWordBomb, WordBombMessage, WordBombSettings},
+        word_bomb::messages::{ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombSettings},
     },
     general::messages::{ClientGeneral, ServerGeneral},
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby},
@@ -25,6 +25,8 @@ pub enum ClientMessage {
     General(ClientGeneral),
     Lobby(ClientLobby),
     Game(ClientGame),
+    WordBomb(ClientWordBomb),
+    Anagrams(ClientAnagrams),
 }
 
 #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -54,8 +56,12 @@ pub enum ServerMessage {
     General(ServerGeneral),
     /// All lobby messages.
     Lobby(ServerLobby),
-    /// All in-game messages.
+    /// All general in-game messages.
     Game(ServerGame),
+    /// Word Bomb messages.
+    WordBomb(ServerWordBomb),
+    /// Anagrams messages.
+    Anagrams(ServerAnagrams),
 }
 
 #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -142,13 +148,13 @@ impl From<ServerGame> for ServerMessage {
 
 impl From<ServerWordBomb> for ServerMessage {
     fn from(value: ServerWordBomb) -> Self {
-        ServerMessage::Game(ServerGame::WordBomb(value))
+        ServerMessage::WordBomb(value)
     }
 }
 
 impl From<ServerAnagrams> for ServerMessage {
     fn from(value: ServerAnagrams) -> Self {
-        ServerMessage::Game(ServerGame::Anagrams(value))
+        ServerMessage::Anagrams(value)
     }
 }
 
@@ -172,13 +178,13 @@ impl From<GameMessage> for RoomMessage {
 
 impl From<WordBombMessage> for RoomMessage {
     fn from(value: WordBombMessage) -> Self {
-        RoomMessage::Game(GameMessage::WordBomb(value))
+        RoomMessage::Game(GameMessage::WordBombMessage(value))
     }
 }
 
 impl From<AnagramsMessage> for RoomMessage {
     fn from(value: AnagramsMessage) -> Self {
-        RoomMessage::Game(GameMessage::Anagrams(value))
+        RoomMessage::Game(GameMessage::AnagramsMessage(value))
     }
 }
 

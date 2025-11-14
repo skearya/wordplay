@@ -2,7 +2,9 @@
 	import type { PageProps } from './$types';
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
+	import type { Variant } from '$lib/utils';
 	import { onMount } from 'svelte';
+	import { rootEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
 
 	const { data, params }: PageProps = $props();
@@ -10,7 +12,7 @@
 	type State =
 		| { kind: 'connecting' }
 		| { kind: 'connected' }
-		| { kind: 'ready' }
+		| { kind: 'ready'; context: Variant<ServerMessage, 'info'>['data'] }
 		| { kind: 'error'; details: string };
 
 	let socket: WebSocket | undefined;
@@ -41,9 +43,12 @@
 
 			if (message.kind === 'info') {
 				connection = {
-					kind: 'ready'
+					kind: 'ready',
+					context: message.data
 				};
 			}
+
+			rootEmitter.emit(message);
 		});
 
 		socket.addEventListener('error', (e) => {

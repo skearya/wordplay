@@ -1,26 +1,17 @@
-pub mod anagrams;
-pub mod word_bomb;
-
 pub mod messages {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
     use uuid::Uuid;
 
     use crate::game::{
-        anagrams::messages::{
-            AnagramsMessage, AnagramsPostGame, AnagramsState, ClientAnagrams, ServerAnagrams,
-        },
-        word_bomb::messages::{
-            ClientWordBomb, ServerWordBomb, WordBombMessage, WordBombPostGame, WordBombState,
-        },
+        anagrams::messages::{AnagramsMessage, AnagramsPostGame, AnagramsState, ClientAnagrams},
+        word_bomb::messages::{ClientWordBomb, WordBombMessage, WordBombPostGame, WordBombState},
     };
 
     #[derive(Deserialize, TS)]
     #[serde(tag = "kind", content = "data", rename_all = "camelCase")]
     #[ts(export)]
     pub enum ClientGame {
-        WordBomb(ClientWordBomb),
-        Anagrams(ClientAnagrams),
         /// Request to end the game early. Starts a vote.
         EndRequest,
         /// Sent only by the room owner. Immediately ends the game.
@@ -37,12 +28,8 @@ pub mod messages {
     )]
     #[ts(export)]
     pub enum ServerGame {
-        WordBomb(ServerWordBomb),
-        Anagrams(ServerAnagrams),
         /// Broadcasted when a player requests to end the game early.
-        EndRequest {
-            uuid: Uuid,
-        },
+        EndRequest { uuid: Uuid },
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -55,8 +42,10 @@ pub mod messages {
     }
 
     pub enum GameMessage {
-        WordBomb(WordBombMessage),
-        Anagrams(AnagramsMessage),
+        ClientWordBomb((Uuid, ClientWordBomb)),
+        ClientAnagrams((Uuid, ClientAnagrams)),
+        WordBombMessage(WordBombMessage),
+        AnagramsMessage(AnagramsMessage),
     }
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -80,6 +69,9 @@ pub mod messages {
     }
 }
 
+pub mod anagrams;
+pub mod word_bomb;
+
 use std::collections::HashMap;
 
 use uuid::Uuid;
@@ -87,9 +79,7 @@ use uuid::Uuid;
 use crate::{
     game::{
         anagrams::Anagrams,
-        messages::{
-            ClientGame, GameMessage, GameState, GameVariantState, PostGameInfo, ServerGame,
-        },
+        messages::{ClientGame, GameMessage, GameState, GameVariantState, ServerGame},
         word_bomb::WordBomb,
     },
     messages::{GameType, RoomSettings},
@@ -115,20 +105,20 @@ impl<'a> GameContext<'a> {
 pub trait GameHandler {
     type ClientMessage;
     type SelfMessage;
-    type Outcome: Into<PostGameInfo>;
+    type Outcome: Into<StateChange>;
     type Snapshot: Into<GameVariantState>;
 
     fn on_client_message(
         &mut self,
         ctx: GameContext,
         message: (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<Self::Outcome>>;
+    ) -> anyhow::Result<Self::Outcome>;
 
     fn on_self_message(
         &mut self,
         ctx: GameContext,
         message: Self::SelfMessage,
-    ) -> anyhow::Result<Option<Self::Outcome>>;
+    ) -> anyhow::Result<Self::Outcome>;
 
     fn on_abort(&mut self);
 
@@ -141,7 +131,7 @@ enum State {
 }
 
 impl State {
-    fn try_word_bomb(&mut self) -> anyhow::Result<&mut WordBomb> {
+    pub fn try_word_bomb(&mut self) -> anyhow::Result<&mut WordBomb> {
         if let Self::WordBomb(v) = self {
             Ok(v)
         } else {
@@ -149,7 +139,7 @@ impl State {
         }
     }
 
-    fn try_anagrams(&mut self) -> anyhow::Result<&mut Anagrams> {
+    pub fn try_anagrams(&mut self) -> anyhow::Result<&mut Anagrams> {
         if let Self::Anagrams(v) = self {
             Ok(v)
         } else {
@@ -208,22 +198,6 @@ impl Game {
         (uuid, message): (Uuid, ClientGame),
     ) -> anyhow::Result<StateChange> {
         let outcome = match message {
-            ClientGame::WordBomb(message) => self
-                .state
-                .try_word_bomb()?
-                .on_client_message(
-                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
-                    (uuid, message),
-                )?
-                .map(Into::into),
-            ClientGame::Anagrams(message) => self
-                .state
-                .try_anagrams()?
-                .on_client_message(
-                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
-                    (uuid, message),
-                )?
-                .map(Into::into),
             ClientGame::EndRequest => {
                 if !self.rejoin_tokens.contains_key(&uuid) || self.requesting_end.contains(&uuid) {
                     return Ok(StateChange::None);
@@ -252,25 +226,41 @@ impl Game {
         message: GameMessage,
     ) -> anyhow::Result<StateChange> {
         let outcome = match message {
-            GameMessage::WordBomb(message) => self
+            GameMessage::ClientWordBomb(message) => self
+                .state
+                .try_word_bomb()?
+                .on_client_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
+                    message,
+                )?
+                .into(),
+            GameMessage::ClientAnagrams(message) => self
+                .state
+                .try_anagrams()?
+                .on_client_message(
+                    GameContext::new(ctx.room, ctx.clients, ctx.settings),
+                    message,
+                )?
+                .into(),
+            GameMessage::WordBombMessage(message) => self
                 .state
                 .try_word_bomb()?
                 .on_self_message(
                     GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     message,
                 )?
-                .map(Into::into),
-            GameMessage::Anagrams(message) => self
+                .into(),
+            GameMessage::AnagramsMessage(message) => self
                 .state
                 .try_anagrams()?
                 .on_self_message(
                     GameContext::new(ctx.room, ctx.clients, ctx.settings),
                     message,
                 )?
-                .map(Into::into),
+                .into(),
         };
 
-        Ok(outcome.map_or(StateChange::None, |info| StateChange::Lobby(Some(info))))
+        Ok(outcome)
     }
 
     pub fn on_client_leave(&mut self, ctx: Context, uuid: Uuid) {

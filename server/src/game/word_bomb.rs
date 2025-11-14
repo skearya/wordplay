@@ -115,7 +115,7 @@ use crate::{
         },
     },
     global::{is_english, random_prompt},
-    room::sender::RoomSender,
+    room::{StateChange, sender::RoomSender},
     task,
 };
 
@@ -370,14 +370,14 @@ impl WordBomb {
 impl GameHandler for WordBomb {
     type ClientMessage = ClientWordBomb;
     type SelfMessage = WordBombMessage;
-    type Outcome = WordBombPostGame;
+    type Outcome = Option<WordBombPostGame>;
     type Snapshot = WordBombState;
 
     fn on_client_message(
         &mut self,
         ctx: super::GameContext,
         (uuid, message): (Uuid, Self::ClientMessage),
-    ) -> anyhow::Result<Option<Self::Outcome>> {
+    ) -> anyhow::Result<Self::Outcome> {
         let Some(player) = self.players.get_mut(&uuid) else {
             return Err(anyhow::anyhow!("you aren't a player"));
         };
@@ -418,7 +418,7 @@ impl GameHandler for WordBomb {
         &mut self,
         ctx: super::GameContext,
         message: Self::SelfMessage,
-    ) -> anyhow::Result<Option<Self::Outcome>> {
+    ) -> anyhow::Result<Self::Outcome> {
         let info = match message {
             WordBombMessage::Exploded => {
                 if self.explosion() {
@@ -472,8 +472,11 @@ impl From<WordBombState> for GameVariantState {
     }
 }
 
-impl From<WordBombPostGame> for PostGameInfo {
-    fn from(value: WordBombPostGame) -> Self {
-        Self::WordBomb(value)
+impl From<Option<WordBombPostGame>> for StateChange {
+    fn from(value: Option<WordBombPostGame>) -> Self {
+        match value {
+            Some(value) => StateChange::Lobby(Some(PostGameInfo::WordBomb(value))),
+            None => StateChange::None,
+        }
     }
 }

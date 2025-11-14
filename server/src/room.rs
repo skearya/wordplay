@@ -80,7 +80,10 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    game::{Game, messages::PostGameInfo},
+    game::{
+        Game,
+        messages::{GameMessage, PostGameInfo},
+    },
     general::{General, messages::ServerGeneral},
     lobby::Lobby,
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
@@ -341,6 +344,14 @@ impl Room {
             ClientMessage::Game(message) => self.state.try_in_game()?.on_client_message(
                 Context::new(&self.sender, &mut self.clients, &mut self.settings),
                 (uuid, message),
+            ),
+            ClientMessage::WordBomb(message) => self.state.try_in_game()?.on_self_message(
+                Context::new(&self.sender, &mut self.clients, &mut self.settings),
+                GameMessage::ClientWordBomb((uuid, message)),
+            ),
+            ClientMessage::Anagrams(message) => self.state.try_in_game()?.on_self_message(
+                Context::new(&self.sender, &mut self.clients, &mut self.settings),
+                GameMessage::ClientAnagrams((uuid, message)),
             ),
         };
 
