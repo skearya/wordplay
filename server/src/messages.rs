@@ -73,6 +73,8 @@ pub struct ServerClient {
     pub username: String,
     /// URL to account avatar.
     pub avatar_url: Option<String>,
+    /// Is client currently connected? (Possibly not in game).
+    pub connected: bool,
 }
 
 #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -118,6 +120,7 @@ impl From<&Client> for ServerClient {
         Self {
             username: client.username.clone(),
             avatar_url: None,
+            connected: client.connected(),
         }
     }
 }

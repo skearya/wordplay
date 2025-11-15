@@ -1,18 +1,29 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import type { Context } from './context';
+	import type { ClientMessage } from '@bindings/ClientMessage';
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
 	import type { Variant } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { rootEmitter } from '$lib/events';
+	import {
+		anagramsEmitter,
+		coreEmitter,
+		gameEmitter,
+		generalEmitter,
+		lobbyEmitter,
+		wordBombEmitter
+	} from '$lib/events';
+	import Me from '$lib/icons/Me.svelte';
 	import { unreachable } from '$lib/utils';
+	import Wordplay from './Wordplay.svelte';
 
 	const { data, params }: PageProps = $props();
 
 	type State =
 		| { kind: 'connecting' }
 		| { kind: 'connected' }
-		| { kind: 'ready'; context: Variant<ServerMessage, 'info'>['data'] }
+		| { kind: 'ready'; context: Context; sendMsg: (message: ClientMessage) => void }
 		| { kind: 'error'; details: string };
 
 	let socket: WebSocket | undefined;
@@ -41,14 +52,33 @@
 				console.log('Message', message, e.data);
 			}
 
-			if (message.kind === 'info') {
-				connection = {
-					kind: 'ready',
-					context: message.data
-				};
+			switch (message.kind) {
+				case 'info':
+					connection = {
+						kind: 'ready',
+						context: message.data,
+						sendMsg: (message) => socket!.send(JSON.stringify(message))
+					};
+					break;
+				case 'core':
+					coreEmitter.emit(message.data);
+					break;
+				case 'general':
+					generalEmitter.emit(message.data);
+					break;
+				case 'lobby':
+					lobbyEmitter.emit(message.data);
+					break;
+				case 'game':
+					gameEmitter.emit(message.data);
+					break;
+				case 'wordBomb':
+					wordBombEmitter.emit(message.data);
+					break;
+				case 'anagrams':
+					anagramsEmitter.emit(message.data);
+					break;
 			}
-
-			rootEmitter.emit(message);
 		});
 
 		socket.addEventListener('error', (e) => {
@@ -82,7 +112,7 @@
 {:else if connection.kind === 'connected'}
 	<h1>Connected (awaiting details)</h1>
 {:else if connection.kind === 'ready'}
-	<h1>Ready</h1>
+	<Wordplay initialCtx={connection.context} sendMsg={connection.sendMsg} />
 {:else if connection.kind === 'error'}
 	<h1>Error {connection.details}</h1>
 {:else if connection satisfies never}

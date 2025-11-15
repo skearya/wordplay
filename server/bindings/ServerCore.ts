@@ -3,13 +3,13 @@ import type { GameState } from "./GameState";
 import type { PostGameInfo } from "./PostGameInfo";
 import type { ServerClient } from "./ServerClient";
 
-export type ServerCore = { "kind": "join", "data": { uuid: string, client: ServerClient, } } | { "kind": "leave", "data": { uuid: string, newOwner: string | null, } } | { "kind": "gameStart", "data": { 
+export type ServerCore = { "kind": "join", uuid: string, client: ServerClient, } | { "kind": "leave", uuid: string, newOwner: string | null, } | { "kind": "gameStart", 
 /**
  * Contains the player's rejoin token. Is `None` if client is spectating.
  */
-rejoinToken: string | null, state: GameState, } } | { "kind": "gameEnd", "data": { postGameInfo: PostGameInfo | null, 
+rejoinToken: string | null, state: GameState, } | { "kind": "gameEnd", postGameInfo: PostGameInfo | null, 
 /**
  * Is `Some` with a random client's uuid if the previous room owner
  * left during game and hasn't come back.
  */
-newOwner: string | null, } };
+newOwner: string | null, };

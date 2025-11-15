@@ -9,7 +9,7 @@ where
         match future.await {
             Ok(res) => Ok(res),
             Err(err) => {
-                tracing::error!(?err);
+                tracing::warn!(?err);
                 Err(err)
             }
         }

@@ -15,7 +15,6 @@ pub mod messages {
     #[derive(Serialize, TS)]
     #[serde(
         tag = "kind",
-        content = "data",
         rename_all = "camelCase",
         rename_all_fields = "camelCase"
     )]
@@ -476,7 +475,8 @@ mod tests {
                     one.uuid,
                     ServerClient {
                         username: "Client 1".to_owned(),
-                        avatar_url: None
+                        avatar_url: None,
+                        connected: true
                     }
                 )]),
                 settings: RoomSettings {
@@ -515,7 +515,8 @@ mod tests {
                     one.uuid,
                     ServerClient {
                         username: "Client 1".to_owned(),
-                        avatar_url: None
+                        avatar_url: None,
+                        connected: true
                     }
                 )]),
                 settings: RoomSettings {
@@ -544,14 +545,16 @@ mod tests {
                         one.uuid,
                         ServerClient {
                             username: "Client 1".to_owned(),
-                            avatar_url: None
+                            avatar_url: None,
+                            connected: true
                         }
                     ),
                     (
                         two.uuid,
                         ServerClient {
                             username: "Client 2".to_owned(),
-                            avatar_url: None
+                            avatar_url: None,
+                            connected: true
                         }
                     )
                 ]),

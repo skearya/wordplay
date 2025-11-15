@@ -67,6 +67,10 @@ impl Client {
             .as_ref()
             .is_some_and(|socket| socket.uuid == other)
     }
+
+    pub fn connected(&self) -> bool {
+        self.socket.is_some()
+    }
 }
 
 pub struct Clients {
@@ -114,11 +118,11 @@ impl Clients {
     }
 
     pub fn keep_connected(&mut self) {
-        self.clients.retain(|_, client| client.socket.is_some());
+        self.clients.retain(|_, client| client.connected());
     }
 
     pub fn is_empty(&self) -> bool {
-        self.clients.is_empty() || self.clients.values().all(|client| client.socket.is_none())
+        self.clients.is_empty() || self.clients.values().all(|client| !client.connected())
     }
 
     pub fn send(&self, uuid: Uuid, message: impl Into<ServerMessage>) {

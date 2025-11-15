@@ -8,4 +8,8 @@ username: string,
 /**
  * URL to account avatar.
  */
-avatarUrl: string | null, };
+avatarUrl: string | null, 
+/**
+ * Is client currently connected? (Possibly not in game).
+ */
+connected: boolean, };
