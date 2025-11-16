@@ -8,7 +8,7 @@
 
 		const timeout = setTimeout(
 			() => {
-				setInterval(() => {
+				interval = setInterval(() => {
 					countdown -= 1;
 				}, 1000);
 			},

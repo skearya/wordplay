@@ -106,6 +106,21 @@ impl Clients {
         self.clients.remove(&uuid);
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
+        self.clients.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.clients
+            .values()
+            .filter(|client| client.connected())
+            .count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn random(&self) -> (&Uuid, &Client) {
         self.clients
             .iter()
@@ -113,16 +128,8 @@ impl Clients {
             .expect("should always be at least one client")
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Client)> {
-        self.clients.iter()
-    }
-
     pub fn keep_connected(&mut self) {
         self.clients.retain(|_, client| client.connected());
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.clients.is_empty() || self.clients.values().all(|client| !client.connected())
     }
 
     pub fn send(&self, uuid: Uuid, message: impl Into<ServerMessage>) {

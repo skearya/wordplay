@@ -5,7 +5,7 @@ export class EventEmitter<Message extends { kind: Kinds }, Kinds extends string 
 	unhandledMessages: Map<Kinds, Message[]> = new Map();
 
 	on<K extends Kinds>(kind: K, handler: (data: Extract<Message, { kind: K }>) => void) {
-		const handlers = getOrSet(this.subscriptions, kind, []);
+		const handlers = getOrSet({ map: this.subscriptions, key: kind, val: [] });
 
 		if (handlers.length === 0) {
 			const unhandled = this.unhandledMessages.get(kind);
@@ -42,10 +42,10 @@ export class EventEmitter<Message extends { kind: Kinds }, Kinds extends string 
 	}
 
 	emit(message: Message) {
-		const handlers = getOrSet(this.subscriptions, message.kind, []);
+		const handlers = getOrSet({ map: this.subscriptions, key: message.kind, val: [] });
 
 		if (handlers.length === 0) {
-			const unhandled = getOrSet(this.unhandledMessages, message.kind, []);
+			const unhandled = getOrSet({ map: this.unhandledMessages, key: message.kind, val: [] });
 			unhandled.push(message);
 		} else {
 			for (const handler of handlers) {

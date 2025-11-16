@@ -7,7 +7,7 @@ export function unreachable(message: any) {
 	throw new Error(message);
 }
 
-export function getOrSet<K, V>(map: Map<K, V>, key: K, val: V) {
+export function getOrSet<K, V>({ map, key, val }: { map: Map<K, V>; key: K; val: V; }) {
 	const stored = map.get(key);
 
 	if (stored) {

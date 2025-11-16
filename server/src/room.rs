@@ -45,16 +45,12 @@ pub mod messages {
 
     pub enum CoreMessage {
         Join {
-            uuid: Uuid,
-            client: Client,
-        },
-        JoinWithRejoinToken {
-            rejoin_token: Uuid,
-            client: Client,
-            /// Response to the socket task that tried joining containing the client's designated UUID.
+            /// Response to the socket task containing the client's designated UUID.
             /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
             /// Otherwise, the client will be given a randomly generated UUID.
             response: oneshot::Sender<Uuid>,
+            rejoin_token: Option<Uuid>,
+            client: Client,
         },
         Leave {
             uuid: Uuid,
@@ -87,7 +83,7 @@ use crate::{
     lobby::Lobby,
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
     room::{
-        clients::{Client, Clients},
+        clients::Clients,
         context::Context,
         messages::{CoreMessage, ServerCore},
         sender::RoomSender,
@@ -243,47 +239,64 @@ impl Room {
 
     fn on_core_message(&mut self, message: CoreMessage) -> anyhow::Result<StateChange> {
         match message {
-            CoreMessage::Client { uuid, message } => self.on_client_message(uuid, message),
-            CoreMessage::Join { uuid, client } => {
-                self.add_client(uuid, client);
+            CoreMessage::Client { uuid, message } => {
+                let result = self.on_client_message(uuid, message);
+
+                if let Err(err) = &result {
+                    self.clients.send(
+                        uuid,
+                        ServerMessage::General(ServerGeneral::Error {
+                            message: err.to_string(),
+                        }),
+                    );
+
+                    tracing::debug!(?err);
+                }
 
                 Ok(StateChange::None)
             }
-            CoreMessage::JoinWithRejoinToken {
+            CoreMessage::Join {
+                response,
                 rejoin_token,
                 client,
-                response,
             } => {
-                // Previous player UUID, retrieved from rejoin token.
-                let player = self.state.try_in_game().ok().and_then(|game| {
-                    game.rejoin_tokens().iter().find_map(|(uuid, token)| {
-                        if rejoin_token == *token {
-                            Some(*uuid)
-                        } else {
-                            None
+                if let Some(token) = rejoin_token {
+                    let player = self
+                        .state
+                        .try_in_game()
+                        .ok()
+                        .and_then(|game| game.rejoin_tokens().get(&token))
+                        .copied();
+
+                    if let Some(player) = player {
+                        // If we try using a rejoin token while they still seem to be connected, end the old connection.
+                        if let Some(old) = self.clients.get_mut(player) {
+                            let old = mem::replace(old, client);
+                            old.close("Reconnected on another client");
                         }
-                    })
-                });
 
-                let uuid = if let Some(player) = player {
-                    // If we try using a rejoin token while they still seem to be connected, end the old connection.
-                    if let Some(old) = self.clients.get_mut(player) {
-                        let old = mem::replace(old, client);
-                        old.close("Reconnected on another client");
-
-                        self.clients.send(player, self.make_info_message(player));
                         response.send(player).ok();
+                        self.clients.send(player, self.make_info_message(player));
 
                         return Ok(StateChange::None);
                     }
+                }
 
-                    player
-                } else {
-                    Uuid::new_v4()
-                };
+                let uuid = Uuid::new_v4();
 
-                self.add_client(uuid, client);
+                if self.settings.owner == Uuid::default() {
+                    self.settings.owner = uuid;
+                }
+
+                self.clients.broadcast(ServerCore::Join {
+                    uuid,
+                    client: (&client).into(),
+                });
+
+                self.clients.insert(uuid, client);
+
                 response.send(uuid).ok();
+                self.clients.send(uuid, self.make_info_message(uuid));
 
                 Ok(StateChange::None)
             }
@@ -321,17 +334,12 @@ impl Room {
         message: ClientMessage,
     ) -> anyhow::Result<StateChange> {
         if self.limiter.check_key(&uuid).is_err() {
-            self.clients.send(
-                uuid,
-                ServerMessage::General(ServerGeneral::Error {
-                    message: "Rate limited, you're sending messages too fast".to_string(),
-                }),
-            );
-
-            return Ok(StateChange::None);
+            return Err(anyhow::anyhow!(
+                "Rate limited, you're sending messages too fast"
+            ));
         }
 
-        let result = match message {
+        match message {
             ClientMessage::General(message) => General.on_client_message(
                 Context::new(&self.sender, &mut self.clients, &mut self.settings),
                 (uuid, message),
@@ -352,18 +360,7 @@ impl Room {
                 Context::new(&self.sender, &mut self.clients, &mut self.settings),
                 GameMessage::ClientAnagrams((uuid, message)),
             ),
-        };
-
-        if let Err(err) = &result {
-            self.clients.send(
-                uuid,
-                ServerMessage::General(ServerGeneral::Error {
-                    message: err.to_string(),
-                }),
-            );
         }
-
-        result
     }
 
     fn make_info_message(&self, uuid: Uuid) -> ServerMessage {
@@ -377,19 +374,6 @@ impl Room {
             settings: self.settings,
             state: Box::new(self.state.snapshot()),
         }
-    }
-
-    fn add_client(&mut self, uuid: Uuid, client: Client) {
-        if self.settings.owner == Uuid::default() {
-            self.settings.owner = uuid;
-        }
-
-        let data = (&client).into();
-
-        self.clients.insert(uuid, client);
-        self.clients.send(uuid, self.make_info_message(uuid));
-        self.clients
-            .broadcast_except(uuid, ServerCore::Join { uuid, client: data });
     }
 
     fn maybe_new_owner(&mut self) -> Option<Uuid> {
@@ -409,7 +393,7 @@ mod tests {
     use std::collections::HashMap;
 
     use axum::extract::ws;
-    use tokio::sync::mpsc::UnboundedReceiver;
+    use tokio::sync::{mpsc::UnboundedReceiver, oneshot};
 
     use crate::{
         lobby::messages::LobbyState,
@@ -425,21 +409,27 @@ mod tests {
     }
 
     impl FakeClient {
-        fn new(id: &mut u32) -> (Self, Client) {
+        async fn new(id: &mut u32, room: &RoomSender) -> anyhow::Result<Self> {
             *id += 1;
 
             let (sender, reciever) = mpsc::unbounded_channel();
 
-            (
-                Self {
-                    uuid: Uuid::new_v4(),
-                    reciever,
-                },
-                Client::new(
-                    SocketRef::new(Uuid::new_v4(), sender),
-                    format!("Client {id}"),
-                ),
-            )
+            let client = Client::new(
+                SocketRef::new(Uuid::new_v4(), sender),
+                format!("Client {id}"),
+            );
+
+            let (response, uuid) = oneshot::channel();
+
+            room.send(CoreMessage::Join {
+                response,
+                rejoin_token: None,
+                client,
+            });
+
+            let uuid = uuid.await?;
+
+            Ok(Self { uuid, reciever })
         }
 
         async fn recv(&mut self) -> anyhow::Result<ServerMessage> {
@@ -457,15 +447,10 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn joining() -> anyhow::Result<()> {
+        let mut id = 0;
         let room = Room::spawn();
 
-        let mut id = 0;
-        let (mut one, one_client) = FakeClient::new(&mut id);
-
-        room.send(CoreMessage::Join {
-            uuid: one.uuid,
-            client: one_client,
-        });
+        let mut one = FakeClient::new(&mut id, &room).await?;
 
         assert_eq!(
             one.recv().await?,
@@ -496,16 +481,10 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn multiple() -> anyhow::Result<()> {
+        let mut id = 0;
         let room = Room::spawn();
 
-        let mut id = 0;
-        let (mut one, one_client) = FakeClient::new(&mut id);
-        let (mut two, two_client) = FakeClient::new(&mut id);
-
-        room.send(CoreMessage::Join {
-            uuid: one.uuid,
-            client: one_client,
-        });
+        let mut one = FakeClient::new(&mut id, &room).await?;
 
         assert_eq!(
             one.recv().await?,
@@ -531,10 +510,7 @@ mod tests {
             }
         );
 
-        room.send(CoreMessage::Join {
-            uuid: two.uuid,
-            client: two_client,
-        });
+        let mut two = FakeClient::new(&mut id, &room).await?;
 
         assert_eq!(
             two.recv().await?,

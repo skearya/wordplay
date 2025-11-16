@@ -54,7 +54,7 @@ pub mod messages {
     #[ts(export)]
     pub struct GameState {
         // Specific game type state (ex: word bomb).
-        pub state: GameVariantState,
+        pub variant: GameVariantState,
         /// UUIDs of players requesting to end the current game.
         pub requesting_end: Vec<Uuid>,
     }
@@ -164,7 +164,9 @@ impl State {
 
 pub struct Game {
     state: State,
+    /// Rejoin Token -> Player UUID.
     rejoin_tokens: HashMap<Uuid, Uuid>,
+    /// Clients (players or spectators) requesting to end the game early.
     requesting_end: Vec<Uuid>,
 }
 
@@ -181,7 +183,7 @@ impl Game {
                     players,
                 )),
             },
-            rejoin_tokens: players.iter().map(|&uuid| (uuid, Uuid::new_v4())).collect(),
+            rejoin_tokens: players.iter().map(|&uuid| (Uuid::new_v4(), uuid)).collect(),
             requesting_end: vec![],
         }
     }
@@ -199,14 +201,14 @@ impl Game {
     ) -> anyhow::Result<StateChange> {
         let outcome = match message {
             ClientGame::EndRequest => {
-                if !self.rejoin_tokens.contains_key(&uuid) || self.requesting_end.contains(&uuid) {
+                if self.requesting_end.contains(&uuid) {
                     return Ok(StateChange::None);
                 }
 
                 self.requesting_end.push(uuid);
 
-                // If everyone in game has requested to end early, end.
-                if self.requesting_end.len() == self.rejoin_tokens.len() {
+                // If everyone currently online has requested to end early, end.
+                if self.requesting_end.len() == ctx.clients.len() {
                     return Ok(StateChange::Lobby(None));
                 }
 
@@ -273,7 +275,7 @@ impl Game {
 
     pub fn snapshot(&self) -> GameState {
         GameState {
-            state: self.state.snapshot(),
+            variant: self.state.snapshot(),
             requesting_end: self.requesting_end.clone(),
         }
     }
