@@ -6,11 +6,9 @@ mod messages;
 mod room;
 mod socket;
 mod state;
-mod task;
 
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
-use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{global::init_globals, socket::handler, state::AppState};
 
@@ -18,10 +16,7 @@ use crate::{global::init_globals, socket::handler, state::AppState};
 async fn main() {
     init_globals();
 
-    tracing_subscriber::registry()
-        .with(fmt::layer().with_file(true).with_line_number(true))
-        .with(EnvFilter::from_default_env())
-        .init();
+    console_subscriber::init();
 
     let state = AppState::new();
 

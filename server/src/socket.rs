@@ -20,7 +20,6 @@ use crate::{
         messages::CoreMessage,
     },
     state::AppState,
-    task,
 };
 
 #[derive(Deserialize, TS)]
@@ -67,12 +66,12 @@ async fn socket(
     };
 
     // Room message -> WebSocket Sink.
-    task::spawn(async move {
+    tokio::spawn(async move {
         while let Some(message) = reciever.recv().await {
             sink.send(message).await?;
         }
 
-        Ok(())
+        anyhow::Ok(())
     });
 
     // Send a message to the room, requesting to join it.
@@ -90,7 +89,7 @@ async fn socket(
     };
 
     // WebSocket Stream -> Room message.
-    task::spawn(async move {
+    tokio::spawn(async move {
         while let Some(message) = stream.next().await {
             if let Ok(ws::Message::Text(bytes)) = message {
                 if let Ok(message) = serde_json::from_str(bytes.as_str()) {
@@ -103,7 +102,7 @@ async fn socket(
 
         room.send(CoreMessage::Leave { uuid, socket });
 
-        Ok(())
+        anyhow::Ok(())
     });
 
     Ok(())

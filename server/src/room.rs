@@ -89,7 +89,6 @@ use crate::{
         messages::{CoreMessage, ServerCore},
         sender::RoomSender,
     },
-    task,
 };
 
 pub enum State {
@@ -173,7 +172,7 @@ impl Room {
         let (sender, reciever) = mpsc::unbounded_channel::<RoomMessage>();
         let sender = RoomSender::new(sender);
 
-        task::spawn(Self::new(sender.clone(), reciever).run());
+        tokio::spawn(Self::new(sender.clone(), reciever).run());
 
         sender
     }

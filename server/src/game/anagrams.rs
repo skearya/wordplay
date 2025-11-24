@@ -87,7 +87,6 @@ use crate::{
     },
     global::{is_english, random_anagram},
     room::StateChange,
-    task,
 };
 
 pub struct Anagrams {
@@ -137,11 +136,11 @@ impl Anagrams {
     pub fn new(ctx: GameContext, players: &[Uuid]) -> Self {
         let room = ctx.room.clone();
 
-        let timer = task::spawn(async move {
+        let timer = tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(30)).await;
             room.send(AnagramsMessage::TimerEnd);
 
-            Ok(())
+            anyhow::Ok(())
         })
         .abort_handle();
 

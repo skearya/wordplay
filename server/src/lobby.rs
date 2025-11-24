@@ -82,7 +82,6 @@ use crate::{
     game::messages::PostGameInfo,
     lobby::messages::{ClientLobby, LobbyMessage, LobbyState, ServerLobby, TimerAction},
     room::{StateChange, context::Context},
-    task,
 };
 
 pub struct Lobby {
@@ -116,11 +115,11 @@ impl Lobby {
 
                 let room = ctx.room.clone();
 
-                let timer = task::spawn(async move {
+                let timer = tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_secs(10)).await;
                     room.send(LobbyMessage::GameStart);
 
-                    Ok(())
+                    anyhow::Ok(())
                 })
                 .abort_handle();
 
@@ -195,12 +194,10 @@ impl Lobby {
     }
 
     pub fn on_client_leave(&mut self, ctx: Context, uuid: Uuid) {
-        let Some(index) = self.ready.iter().position(|client| *client == uuid) else {
-            return;
-        };
-
-        self.ready.remove(index);
-
+        if let Some(index) = self.ready.iter().position(|client| *client == uuid) {
+            self.ready.remove(index);
+        }
+        
         ctx.clients.remove(uuid);
     }
 

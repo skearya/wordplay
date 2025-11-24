@@ -116,7 +116,6 @@ use crate::{
     },
     global::{is_english, random_prompt},
     room::{StateChange, sender::RoomSender},
-    task,
 };
 
 pub struct WordBomb {
@@ -213,11 +212,11 @@ impl WordBomb {
         let task = {
             let room = ctx.room.clone();
 
-            task::spawn(async move {
+            tokio::spawn(async move {
                 tokio::time::sleep_until((start + Duration::from_secs_f64(length)).into()).await;
                 room.send(WordBombMessage::Exploded);
 
-                Ok(())
+                anyhow::Ok(())
             })
             .abort_handle()
         };
@@ -334,11 +333,11 @@ impl WordBomb {
 
         let room = self.room.clone();
 
-        let task = task::spawn(async move {
+        let task = tokio::spawn(async move {
             tokio::time::sleep_until((start + Duration::from_secs_f64(length)).into()).await;
             room.send(WordBombMessage::Exploded);
 
-            Ok(())
+            anyhow::Ok(())
         })
         .abort_handle();
 
