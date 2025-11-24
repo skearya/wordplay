@@ -3,4 +3,4 @@ import type { AnagramsSettings } from "./AnagramsSettings";
 import type { GameType } from "./GameType";
 import type { WordBombSettings } from "./WordBombSettings";
 
-export type RoomSettings = { public: boolean, owner: string, game: GameType, wordBomb: WordBombSettings, anagrams: AnagramsSettings, };
+export type RoomSettings = { public: boolean, owner: string, size: number, game: GameType, wordBomb: WordBombSettings, anagrams: AnagramsSettings, };

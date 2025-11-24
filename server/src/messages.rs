@@ -39,7 +39,7 @@ pub enum ClientMessage {
 )]
 #[ts(export)]
 pub enum ServerMessage {
-    /// First message sent after establishing connection, sent only once.
+    /// First message sent after establishing connection succesfully, sent only once.
     Info {
         /// Joined client's designated UUID.
         uuid: Uuid,
@@ -94,15 +94,29 @@ pub enum RoomMessage {
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-#[derive(Serialize, Deserialize, TS, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, TS, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RoomSettings {
     pub public: bool,
     pub owner: Uuid,
+    pub size: u32,
     pub game: GameType,
     pub word_bomb: WordBombSettings,
     pub anagrams: AnagramsSettings,
+}
+
+impl Default for RoomSettings {
+    fn default() -> Self {
+        Self {
+            public: Default::default(),
+            owner: Default::default(),
+            size: 24,
+            game: Default::default(),
+            word_bomb: Default::default(),
+            anagrams: Default::default(),
+        }
+    }
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]

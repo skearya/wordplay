@@ -48,7 +48,7 @@ pub mod messages {
             /// Response to the socket task containing the client's designated UUID.
             /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
             /// Otherwise, the client will be given a randomly generated UUID.
-            response: oneshot::Sender<Uuid>,
+            response: oneshot::Sender<Option<Uuid>>,
             rejoin_token: Option<Uuid>,
             client: Client,
         },
@@ -71,6 +71,7 @@ pub mod sender;
 use std::{mem, num::NonZero};
 
 use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
+use rustrict::CensorStr;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -260,23 +261,45 @@ impl Room {
                 rejoin_token,
                 client,
             } => {
+                let error = match () {
+                    () if self.clients.len() > self.settings.size as usize => Some("room full"),
+                    () if client.username.is_empty() => Some("username cannot be empty"),
+                    () if client.username.len() > 20 => {
+                        Some("username too long (max 20 characters)")
+                    }
+                    () if client.username.is_inappropriate() => {
+                        Some("username likely contains inappropriate content")
+                    }
+                    () => None,
+                };
+
+                if let Some(err) = error {
+                    client.close(err);
+                    response.send(None).ok();
+
+                    return Ok(StateChange::None);
+                }
+
                 if let Some(token) = rejoin_token {
                     let player = self
                         .state
                         .try_in_game()
                         .ok()
-                        .and_then(|game| game.rejoin_tokens().get(&token))
-                        .copied();
+                        .and_then(|game| game.rejoin_tokens().get(&token).copied());
 
-                    if let Some(player) = player {
+                    if let Some(player) = player
+                        && let Some(c) = self.clients.get_mut(player)
+                    {
                         // If we try using a rejoin token while they still seem to be connected, end the old connection.
-                        if let Some(old) = self.clients.get_mut(player) {
-                            let old = mem::replace(old, client);
+                        if c.connected() {
+                            let old = mem::replace(c, client);
                             old.close("Reconnected on another client");
+                        } else {
+                            *c = client;
                         }
 
-                        response.send(player).ok();
-                        self.clients.send(player, self.make_info_message(player));
+                        self.clients.send(player, self.create_info_message(player));
+                        response.send(Some(player)).ok();
 
                         return Ok(StateChange::None);
                     }
@@ -295,8 +318,8 @@ impl Room {
 
                 self.clients.insert(uuid, client);
 
-                response.send(uuid).ok();
-                self.clients.send(uuid, self.make_info_message(uuid));
+                self.clients.send(uuid, self.create_info_message(uuid));
+                response.send(Some(uuid)).ok();
 
                 Ok(StateChange::None)
             }
@@ -363,7 +386,7 @@ impl Room {
         }
     }
 
-    fn make_info_message(&self, uuid: Uuid) -> ServerMessage {
+    fn create_info_message(&self, uuid: Uuid) -> ServerMessage {
         ServerMessage::Info {
             uuid,
             clients: self
@@ -427,7 +450,7 @@ mod tests {
                 client,
             });
 
-            let uuid = uuid.await?;
+            let uuid = uuid.await?.unwrap();
 
             Ok(Self { uuid, reciever })
         }

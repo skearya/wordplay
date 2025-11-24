@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import Socket from './Socket.svelte';
+	import Socket from '$lib/components/Socket.svelte';
 
 	const { params }: PageProps = $props();
 

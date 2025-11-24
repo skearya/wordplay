@@ -3,19 +3,19 @@ use axum::{
         Path, Query, State, WebSocketUpgrade,
         ws::{self, WebSocket},
     },
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use futures::{SinkExt, StreamExt};
-use rustrict::CensorStr;
 use serde::Deserialize;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{
+    mpsc::{self},
+    oneshot,
+};
 use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
     room::{
-        Room,
         clients::{Client, SocketRef},
         messages::CoreMessage,
     },
@@ -36,47 +36,35 @@ pub async fn handler(
     Path(room_name): Path<String>,
     Query(params): Query<SocketParams>,
     ws: WebSocketUpgrade,
-) -> Result<impl IntoResponse, impl IntoResponse> {
-    let error = match () {
-        () if params.username.is_empty() => Some("username cannot be empty"),
-        () if params.username.len() > 20 => Some("username too long (max 20 characters)"),
-        () if room_name.len() > 6 => Some("invalid room name, must be less than 6 characters"),
-        () if !room_name.chars().all(|c| c.is_ascii_alphanumeric()) => {
-            Some("invalid room name, must be alphanumeric")
+) -> Response {
+    ws.max_message_size(512).on_upgrade(|ws| async {
+        if let Err(err) = socket(state, room_name, params, ws).await {
+            tracing::error!(?err);
         }
-        () if params.username.is_inappropriate() => {
-            Some("username likely contains innappropriate content")
-        }
-        () if room_name.is_inappropriate() => {
-            Some("room name likely contains innappropriate content")
-        }
-        () => None,
-    };
-
-    if let Some(error) = error {
-        Err((StatusCode::BAD_REQUEST, error))
-    } else {
-        let upgrade = ws.max_message_size(512).on_upgrade(|ws| async {
-            if let Err(err) = socket(state, room_name, params, ws).await {
-                tracing::error!(?err);
-            }
-        });
-
-        Ok(upgrade)
-    }
+    })
 }
 
 async fn socket(
     state: AppState,
     room_name: String,
-    SocketParams {
-        username,
-        rejoin_token,
-    }: SocketParams,
+    params: SocketParams,
     socket: WebSocket,
 ) -> anyhow::Result<()> {
     let (mut sink, mut stream) = socket.split();
     let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
+
+    // Random UUID for this socket, not client.
+    let socket = Uuid::new_v4();
+    let client = Client::new(SocketRef::new(socket, sender), params.username);
+
+    // Get room or try creating it if it doesn't exist.
+    let room = match state.get_or_insert_room(room_name) {
+        Ok(room) => room,
+        Err(reason) => {
+            client.close(reason);
+            return Ok(());
+        }
+    };
 
     // Room message -> WebSocket Sink.
     task::spawn(async move {
@@ -87,28 +75,19 @@ async fn socket(
         Ok(())
     });
 
-    // Random UUID for this socket, not client.
-    let socket = Uuid::new_v4();
-
-    let room = if let Some(room) = state.get_room(&room_name) {
-        room
-    } else {
-        let room = Room::spawn();
-        state.insert_room(room_name, room.clone());
-
-        room
-    };
-
-    let (response, uuid) = oneshot::channel();
+    // Send a message to the room, requesting to join it.
+    let (msg_sender, msg_reciever) = oneshot::channel();
 
     room.send(CoreMessage::Join {
-        response,
-        rejoin_token,
-        client: Client::new(SocketRef::new(socket, sender), username),
+        response: msg_sender,
+        rejoin_token: params.rejoin_token,
+        client,
     });
 
-    // Client UUID returned by the room.
-    let uuid = uuid.await?;
+    // Client UUID returned by the room. `None` if join error.
+    let Some(uuid) = msg_reciever.await? else {
+        return Ok(());
+    };
 
     // WebSocket Stream -> Room message.
     task::spawn(async move {

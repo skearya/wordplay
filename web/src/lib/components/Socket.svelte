@@ -4,7 +4,6 @@
 	import type { SocketParams } from '@bindings/SocketParams';
 	import type { Context } from '$lib/context';
 	import { onMount } from 'svelte';
-	import Wordplay from '$lib/components/Wordplay.svelte';
 	import {
 		anagramsEmitter,
 		coreEmitter,
@@ -14,6 +13,7 @@
 		wordBombEmitter
 	} from '$lib/events';
 	import { unreachable } from '$lib/utils';
+	import Wordplay from './Wordplay.svelte';
 
 	const { room, username }: { room: string; username: string } = $props();
 

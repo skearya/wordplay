@@ -3,7 +3,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::room::sender::RoomSender;
+use rustrict::CensorStr;
+
+use crate::room::{Room, sender::RoomSender};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -22,22 +24,13 @@ impl AppState {
         }
     }
 
-    pub fn get_room(&self, name: &str) -> Option<RoomSender> {
+    pub fn get_or_insert_room(&self, name: String) -> Result<RoomSender, &'static str> {
         let mut lock = match self.inner.lock() {
             Ok(lock) => lock,
             Err(poison) => poison.into_inner(),
         };
 
-        lock.get_room(name)
-    }
-
-    pub fn insert_room(&self, name: String, room: RoomSender) {
-        let mut lock = match self.inner.lock() {
-            Ok(lock) => lock,
-            Err(poison) => poison.into_inner(),
-        };
-
-        lock.insert_room(name, room);
+        lock.get_or_insert_room(name)
     }
 }
 
@@ -60,7 +53,29 @@ impl AppStateInner {
         }
     }
 
-    fn insert_room(&mut self, name: String, room: RoomSender) {
-        self.rooms.insert(name, room);
+    fn make_room(&mut self, name: String) -> Result<RoomSender, &'static str> {
+        match () {
+            () if name.len() > 6 => Err("invalid room name, must be less than 6 characters"),
+            () if !name.chars().all(|c| c.is_ascii_alphanumeric()) => {
+                Err("invalid room name, must be alphanumeric")
+            }
+            () if name.is_inappropriate() => {
+                Err("invalid room name, contains innappropriate content")
+            }
+            () => {
+                let room = Room::spawn();
+                self.rooms.insert(name, room.clone());
+
+                Ok(room)
+            }
+        }
+    }
+
+    fn get_or_insert_room(&mut self, name: String) -> Result<RoomSender, &'static str> {
+        if let Some(room) = self.get_room(&name) {
+            Ok(room)
+        } else {
+            self.make_room(name)
+        }
     }
 }
