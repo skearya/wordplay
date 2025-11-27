@@ -8,7 +8,7 @@
 
 	const { ctx, initial, sendMsg }: Props<GameState> = $props();
 
-	let state = $state(initial);
+	let game = $state(initial);
 
 	onMount(() =>
 		gameEmitter.handle({
@@ -17,10 +17,10 @@
 	);
 </script>
 
-{#if state.variant.kind === 'wordBomb'}
-	<WordBomb {ctx} initial={state.variant} {sendMsg} />
-{:else if state.variant.kind === 'anagrams'}
+{#if game.variant.kind === 'wordBomb'}
+	<WordBomb {ctx} initial={game.variant} {sendMsg} />
+{:else if game.variant.kind === 'anagrams'}
 	anagrams
-{:else if state.variant satisfies never}
-	{unreachable(state.variant)}
+{:else if game.variant satisfies never}
+	{unreachable(game.variant)}
 {/if}

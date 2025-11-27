@@ -2,42 +2,42 @@
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-Italic.otf') format('opentype');
+	src: url('/PPEditorialNew-Italic.otf') format('opentype');
 	font-weight: normal;
 	font-style: italic;
 }
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-Regular.otf') format('opentype');
+	src: url('/PPEditorialNew-Regular.otf') format('opentype');
 	font-weight: normal;
 	font-style: normal;
 }
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-Ultrabold.otf') format('opentype');
+	src: url('/PPEditorialNew-Ultrabold.otf') format('opentype');
 	font-weight: bold;
 	font-style: normal;
 }
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-UltraboldItalic.otf') format('opentype');
+	src: url('/PPEditorialNew-UltraboldItalic.otf') format('opentype');
 	font-weight: bold;
 	font-style: italic;
 }
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-Ultralight.otf') format('opentype');
+	src: url('/PPEditorialNew-Ultralight.otf') format('opentype');
 	font-weight: lighter;
 	font-style: italic;
 }
 
 @font-face {
 	font-family: 'PP Editorial New';
-	src: url('PPEditorialNew-UltralightItalic.otf') format('opentype');
+	src: url('/PPEditorialNew-UltralightItalic.otf') format('opentype');
 	font-weight: lighter;
 	font-style: italic;
 }
@@ -144,5 +144,9 @@
 
 	.timing-function-0 {
 		transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+	}
+
+	.shadow-0 {
+		box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
 	}
 }

@@ -74,18 +74,22 @@ async fn socket(
         anyhow::Ok(())
     });
 
-    // Send a message to the room, requesting to join it.
-    let (msg_sender, msg_reciever) = oneshot::channel();
+    let uuid = {
+        // Send a message to the room, requesting to join it.
+        let (sender, reciever) = oneshot::channel();
 
-    room.send(CoreMessage::Join {
-        response: msg_sender,
-        rejoin_token: params.rejoin_token,
-        client,
-    });
+        room.send(CoreMessage::Join {
+            response: sender,
+            rejoin_token: params.rejoin_token,
+            client,
+        });
 
-    // Client UUID returned by the room. `None` if join error.
-    let Some(uuid) = msg_reciever.await? else {
-        return Ok(());
+        // Client UUID returned by the room. `None` if join error.
+        if let Some(uuid) = reciever.await? {
+            uuid
+        } else {
+            return Ok(());
+        }
     };
 
     // WebSocket Stream -> Room message.

@@ -374,7 +374,7 @@ impl GameHandler for WordBomb {
 
     fn on_client_message(
         &mut self,
-        ctx: super::GameContext,
+        ctx: GameContext,
         (uuid, message): (Uuid, Self::ClientMessage),
     ) -> anyhow::Result<Self::Outcome> {
         let Some(player) = self.players.get_mut(&uuid) else {
@@ -415,7 +415,7 @@ impl GameHandler for WordBomb {
 
     fn on_self_message(
         &mut self,
-        ctx: super::GameContext,
+        ctx: GameContext,
         message: Self::SelfMessage,
     ) -> anyhow::Result<Self::Outcome> {
         let info = match message {

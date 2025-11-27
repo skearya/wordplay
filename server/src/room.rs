@@ -249,11 +249,9 @@ impl Room {
                             message: err.to_string(),
                         }),
                     );
-
-                    tracing::debug!(?err);
                 }
 
-                Ok(StateChange::None)
+                result
             }
             CoreMessage::Join {
                 response,
