@@ -3,13 +3,14 @@
 	import type { TimerAction } from '@bindings/TimerAction';
 	import type { Props } from '$lib/context';
 	import { onMount } from 'svelte';
-	import { fly } from 'svelte/transition';
+	import { fade, fly, scale } from 'svelte/transition';
 	import grid2Svg from '$lib/assets/grid2.svg';
 	import { lobbyEmitter } from '$lib/events';
 	import Crown from '$lib/icons/Crown.svelte';
 	import DoubleRightArrow from '$lib/icons/DoubleRightArrow.svelte';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import WordBomb from '$lib/icons/WordBomb.svelte';
+	import Button from '$lib/ui/Button.svelte';
 
 	const { ctx, initial, sendMsg }: Props<LobbyState> = $props();
 
@@ -155,11 +156,9 @@
 		<div class="flex flex-1 items-center justify-center gap-x-20 px-12">
 			<div class="relative size-[304px]">
 				<div
-					in:fly={{ x: 48, y: 48, duration: 400, delay: 150 }}
-					out:fly={{ x: 48, y: -48, duration: 400 }}
 					class={[
-						lobby.ready.length === 0 ? 'delay-400 opacity-100' : 'opacity-0',
-						'absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-y-4 text-[#B1C1AE] transition-opacity'
+						'absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-y-4 text-[#B1C1AE] transition-opacity',
+						lobby.ready.length === 0 ? 'delay-400 opacity-100' : 'opacity-0'
 					]}
 				>
 					<div
@@ -213,8 +212,8 @@
 			</button>
 		</div>
 		<div class="z-10 flex gap-x-4 p-4">
-			<button
-				class="shadow-0 border-pastel-pink bg-dark-dark-green text-pastel-pink active:bg-pastel-pink active:text-dark-dark-green flex-1 border p-4 text-xl transition-all active:translate-y-1.5"
+			<Button
+				color="pastel-pink"
 				onclick={() => {
 					sendMsg({
 						kind: 'lobby',
@@ -223,16 +222,16 @@
 				}}
 			>
 				{lobby.ready.includes(ctx.uuid) ? 'Unready' : 'Ready'}
-			</button>
-			<button
+			</Button>
+			<Button
+				color="pastel-blue"
 				disabled={ctx.settings.owner !== ctx.uuid || lobby.timerStart === null}
-				class="shadow-0 bg-dark-dark-green active:text-dark-dark-green flex-1 border border-[#C0E8FF] p-4 text-xl text-[#C0E8FF] transition-all active:translate-y-1.5 active:bg-[#C0E8FF] disabled:pointer-events-none disabled:opacity-50"
 				onclick={() => {
 					sendMsg({ kind: 'lobby', data: { kind: 'startEarly' } });
 				}}
 			>
 				Start Early
-			</button>
+			</Button>
 		</div>
 	</section>
 </div>

@@ -77,9 +77,7 @@
 							class="size-12 rounded-full border border-black"
 						/>
 					{/each}
-					<div
-						class="border-dark-green size-12 content-center rounded-full border-2 bg-black text-center"
-					>
+					<div class="border-green size-12 content-center rounded-full border bg-black text-center">
 						+2
 					</div>
 				</div>

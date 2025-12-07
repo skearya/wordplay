@@ -17,7 +17,7 @@
 				/>
 			{/each}
 			<div
-				class="border-dark-green size-12 content-center rounded-full border-2 bg-black text-center"
+				class="size-12 content-center rounded-full border-2 border-dark-green bg-black text-center"
 			>
 				+2
 			</div>

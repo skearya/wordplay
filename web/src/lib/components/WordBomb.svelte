@@ -162,24 +162,24 @@
 <div class="relative flex flex-1 items-center justify-center gap-4 overflow-hidden p-4 pt-0">
 	<div
 		bind:this={bombElement}
-		class="timing-function-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
+		class="timing-function-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
 	>
 		<GameBomb />
-		<GameBombWire class="absolute right-0 top-0 -translate-y-[4.8rem] translate-x-[4.8rem]" />
+		<GameBombWire class="absolute top-0 right-0 translate-x-[4.8rem] -translate-y-[4.8rem]" />
 		<div
-			class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] font-serif text-7xl uppercase"
+			class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] font-serif text-7xl uppercase"
 		>
 			{wordBomb.prompt}
 		</div>
 	</div>
-	<div class="absolute left-0 top-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
+	<div class="absolute top-0 left-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
 		{#each { length: 26 }, i}
-			<div class="border-green size-12 content-center border text-center">
+			<div class="size-12 content-center border border-green text-center">
 				{String.fromCharCode(i + 'A'.charCodeAt(0))}
 			</div>
 		{/each}
 	</div>
-	<div bind:this={activeOutlineElement} class="absolute left-0 top-0">
+	<div bind:this={activeOutlineElement} class="absolute top-0 left-0">
 		<div
 			style={`scale: ${100 - Math.log2(players.length) * 8}%;`}
 			class="rotating-border size-48"
@@ -197,7 +197,7 @@
 						--dist: min(100vw, 100vh) * 0.35;
 						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
 						scale: ${100 - Math.log2(players.length) * 8}%;`}
-				class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
+				class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 			>
 				<div class="relative mb-2">
 					<img
@@ -213,10 +213,10 @@
 						{/each}
 					</div>
 					{#if i === 0}
-						<div class="absolute right-0 top-0 -translate-y-1/2 translate-x-1/2">
+						<div class="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2">
 							<Star />
 							<span
-								class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
+								class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
 							>
 								x<span class="text-2xl font-semibold">10</span>
 							</span>
@@ -253,7 +253,7 @@
 						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
 						scale: ${100 - Math.log2(players.length) * 8}%;
 						rotate: ${Math.PI - angle}rad;`}
-				class="timing-function-0 absolute left-1/2 top-1/2 text-transparent transition-transform duration-[400ms]"
+				class="timing-function-0 absolute top-1/2 left-1/2 text-transparent transition-transform duration-[400ms]"
 			>
 				<div class="opacity-0">
 					{#each { length: 3 }}

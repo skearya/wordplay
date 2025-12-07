@@ -53,6 +53,7 @@
 
 	--color-pastel-red: #fec5bb;
 	--color-pastel-light-red: #fae1dd;
+	--color-pastel-blue: #c0e8ff;
 	--color-pastel-green: #e8e8e4;
 	--color-pastel-pink: #e9b8ff;
 
@@ -78,10 +79,6 @@
 		color: var(--color-white);
 	}
 
-	.background-scroll {
-		animation: 120s linear infinite background-scroll-keyframes;
-	}
-
 	@keyframes background-scroll-keyframes {
 		0% {
 			background-position: 0px 0px;
@@ -89,6 +86,10 @@
 		100% {
 			background-position: -100vw 100vh;
 		}
+	}
+
+	.background-scroll {
+		animation: 120s linear infinite background-scroll-keyframes;
 	}
 
 	/* https://stackoverflow.com/questions/13014808/is-there-any-way-to-animate-an-ellipsis-with-css-animations */

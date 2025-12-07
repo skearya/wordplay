@@ -7,7 +7,7 @@ export function unreachable(message: any) {
 	throw new Error(message);
 }
 
-export function getOrSet<K, V>({ map, key, val }: { map: Map<K, V>; key: K; val: V; }) {
+export function getOrSet<K, V>({ map, key, val }: { map: Map<K, V>; key: K; val: V }) {
 	const stored = map.get(key);
 
 	if (stored) {
@@ -70,3 +70,12 @@ export function setupCanvas(
 
 export const lerp = (start: number, end: number, amount: number) =>
 	start * (1 - amount) + end * amount;
+
+// Source - https://stackoverflow.com/questions/29325069/how-to-generate-random-numbers-biased-towards-one-value-in-a-range
+// Posted by user1693593, modified by community. See post 'Timeline' for change history
+// Retrieved 2025-12-06, License - CC BY-SA 3.0
+function randomWithBias(min: number, max: number, bias: number, influence: number) {
+	const rnd = Math.random() * (max - min) + min,
+		mix = Math.random() * influence;
+	return rnd * (1 - mix) + bias * mix;
+}
