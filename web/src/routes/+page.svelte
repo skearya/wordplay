@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import Matter from 'matter-js';
 	import { onMount } from 'svelte';
 	import gridSvg from '$lib/assets/grid.svg';
 	import homepageNoiseImage from '$lib/assets/homepage-noise.png';
@@ -10,11 +9,8 @@
 	import Search from '$lib/icons/Search.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
 	import { createLetterCanvas } from '$lib/letters';
-	import { lerp, setupCanvas } from '$lib/utils';
 
 	const { data }: PageProps = $props();
-
-	const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
 
 	let backgroundCanvasElement: HTMLCanvasElement;
 	let headerTextElement: HTMLElement;
@@ -45,15 +41,14 @@
 			}
 		);
 
-		const cleanupCanvas = createLetterCanvas(
-			backgroundCanvasElement,
-			'light',
-			0.01,
-			(width, height) => {
+		const cleanupCanvas = createLetterCanvas(backgroundCanvasElement, {
+			style: 'light',
+			gravity: 0.01,
+			initLetters: (width, height) => {
 				const letterWidth = 64;
 				const letterHeight = 64;
 
-				return ['wordplay', 'byskeary.me', 'abcdefghijkl'].toReversed().flatMap((line, lineIndex) =>
+				return ['wordplay', 'byskeary.me', 'abcdefghijkl'].reverse().flatMap((line, lineIndex) =>
 					line.split('').map((letter, letterIndex) => {
 						const lineWidth = line.length * (letterWidth + 4);
 						const start = width / 2 - lineWidth / 2;
@@ -67,8 +62,8 @@
 					})
 				);
 			},
-			() => animation?.effect?.getComputedTiming().progress ?? 0
-		);
+			bottomPosition: () => animation?.effect?.getComputedTiming().progress ?? 0
+		});
 
 		return () => cleanupCanvas();
 	});

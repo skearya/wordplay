@@ -143,6 +143,28 @@
 		inherits: false;
 	}
 
+	/* https://stackoverflow.com/questions/45847392/pure-css-continuous-horizontal-text-scroll-without-break */
+
+	.marquee {
+		white-space: nowrap;
+		overflow: hidden;
+		display: inline-block;
+		animation: marquee-keyframes 30s linear infinite;
+	}
+
+	.marquee p {
+		display: inline-block;
+	}
+
+	@keyframes marquee-keyframes {
+		0% {
+			transform: translate3d(0, 0, 0);
+		}
+		100% {
+			transform: translate3d(-50%, 0, 0);
+		}
+	}
+
 	.timing-function-0 {
 		transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
 	}

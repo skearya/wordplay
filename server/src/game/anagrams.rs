@@ -233,7 +233,7 @@ impl GameHandler for Anagrams {
             },
         }
 
-        todo!()
+        Ok(None)
     }
 
     fn on_self_message(

@@ -68,7 +68,7 @@ pub mod clients;
 pub mod context;
 pub mod sender;
 
-use std::{mem, num::NonZero};
+use std::{collections::HashMap, mem, num::NonZero};
 
 use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
 use rustrict::CensorStr;
@@ -202,9 +202,15 @@ impl Room {
 
                         let state = game.snapshot();
 
-                        for (&uuid, client) in self.clients.iter() {
+                        let tokens = game
+                            .rejoin_tokens()
+                            .iter()
+                            .map(|(&token, &user)| (user, token))
+                            .collect::<HashMap<Uuid, Uuid>>();
+
+                        for (uuid, client) in self.clients.iter() {
                             client.send(ServerCore::GameStart {
-                                rejoin_token: game.rejoin_tokens().get(&uuid).copied(),
+                                rejoin_token: tokens.get(uuid).copied(),
                                 state: state.clone(),
                             });
                         }

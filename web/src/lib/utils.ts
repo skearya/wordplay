@@ -20,7 +20,13 @@ export function getOrSet<K, V>({ map, key, val }: { map: Map<K, V>; key: K; val:
 
 export function setupCanvas(
 	canvas: HTMLCanvasElement,
-	onFrame: (ctx: CanvasRenderingContext2D, dt: number, width: number, height: number) => void
+	onFrame: (
+		ctx: CanvasRenderingContext2D,
+		dt: number,
+		width: number,
+		height: number,
+		duration: number
+	) => void
 ) {
 	const ctx = canvas.getContext('2d');
 
@@ -34,8 +40,10 @@ export function setupCanvas(
 	const canvasResizeObserver = new ResizeObserver(() => (resized = true));
 	canvasResizeObserver.observe(canvas);
 
+	const startTime = performance.now();
+
 	let rafId: number;
-	let lastTime = performance.now();
+	let lastTime = startTime;
 	let width: number;
 	let height: number;
 
@@ -54,7 +62,7 @@ export function setupCanvas(
 			resized = false;
 		}
 
-		onFrame(ctx, time - lastTime, width, height);
+		onFrame(ctx, time - lastTime, width, height, time - startTime);
 
 		lastTime = time;
 		rafId = requestAnimationFrame(rafFn);
@@ -71,10 +79,11 @@ export function setupCanvas(
 export const lerp = (start: number, end: number, amount: number) =>
 	start * (1 - amount) + end * amount;
 
-// Source - https://stackoverflow.com/questions/29325069/how-to-generate-random-numbers-biased-towards-one-value-in-a-range
-// Posted by user1693593, modified by community. See post 'Timeline' for change history
-// Retrieved 2025-12-06, License - CC BY-SA 3.0
-function randomWithBias(min: number, max: number, bias: number, influence: number) {
+export function getRandomRange(min: number, max: number) {
+	return Math.random() * (max - min) + min;
+}
+
+export function getRandomWithBias(min: number, max: number, bias: number, influence: number) {
 	const rnd = Math.random() * (max - min) + min,
 		mix = Math.random() * influence;
 	return rnd * (1 - mix) + bias * mix;

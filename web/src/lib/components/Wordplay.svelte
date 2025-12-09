@@ -72,6 +72,7 @@
 						<img
 							src={`https://avatar.vercel.sh/${client!.username}`}
 							alt={client!.username}
+							title={`${client!.username} (${uuid})`}
 							width="120"
 							height="120"
 							class="size-12 rounded-full border border-black"

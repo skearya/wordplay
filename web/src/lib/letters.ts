@@ -6,13 +6,22 @@ const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matt
 
 export function createLetterCanvas(
 	canvas: HTMLCanvasElement,
-	style: 'light' | 'dark',
-	gravity: number,
-	initLetters: (
-		width: number,
-		height: number
-	) => (IChamferableBodyDefinition & { x: number; y: number; letter: string })[],
-	bottomPosition?: () => number
+	{
+		style,
+		gravity,
+		initLetters,
+		bottomPosition = undefined,
+		initialForce = false
+	}: {
+		style: 'light' | 'dark';
+		gravity: number;
+		initLetters: (
+			width: number,
+			height: number
+		) => (IChamferableBodyDefinition & { x: number; y: number; letter: string })[];
+		bottomPosition?: () => number;
+		initialForce?: boolean;
+	}
 ): () => void {
 	const light = style === 'light';
 	const originalWidth = canvas.clientWidth;
@@ -26,6 +35,7 @@ export function createLetterCanvas(
 
 	for (const { x, y, letter, ...rest } of initLetters(originalWidth, originalHeight)) {
 		const letterBody = Bodies.rectangle(x, y, letterWidth, letterHeight, rest);
+
 		letters.set(letterBody, letter);
 	}
 
@@ -93,7 +103,7 @@ export function createLetterCanvas(
 
 	Composite.add(engine.world, mouseConstraint);
 
-	const cleanupCanvas = setupCanvas(canvas, (ctx, dt, width, height) => {
+	const cleanupCanvas = setupCanvas(canvas, (ctx, dt, width, height, time) => {
 		const bottom = lerp(height, height / 2, bottomPosition?.() ?? 0);
 
 		Body.setPosition(leftWall, Vector.create(0 - wallThickness / 2, height / 2));
@@ -107,6 +117,11 @@ export function createLetterCanvas(
 		);
 
 		for (const [body] of letters) {
+			if (initialForce && time < 50) {
+				Body.applyForce(body, body.position, Vector.create(0, -0.01));
+				Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.03);
+			}
+
 			const clampedX = Math.max(Math.min(body.position.x, width), 0);
 			const clampedY = Math.max(Math.min(body.position.y, height), 0);
 

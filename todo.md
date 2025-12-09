@@ -1,4 +1,2 @@
 -   zstd compression on messages
--   move join/leave logic to each root state
-    -   fix client leaving not sending an unready
 -   multiplayer cursors
