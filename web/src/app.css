@@ -64,6 +64,7 @@
 	--color-light-green: #8ba698;
 	--color-bright-green: #62e297;
 
+	--color-red: #ff645c;
 	--color-pink: #f3acff;
 	--color-purple: #acaaff;
 	--color-yellow: #f6f5b4;
@@ -120,24 +121,28 @@
 		);
 	}
 
-	@keyframes rotating-border-keyframes {
+	@keyframes rotation-keyframes {
 		from {
-			--rotating-border-angle: 0deg;
+			--rotation-angle: 0deg;
 		}
 		to {
-			--rotating-border-angle: -360deg;
+			--rotation-angle: -360deg;
 		}
+	}
+
+	.rotating {
+		rotate: var(--rotation-angle);
+		animation: 8s rotation-keyframes linear infinite;
 	}
 
 	.rotating-border {
 		border-width: 4px;
 		border-style: solid;
-		border-image: conic-gradient(from var(--rotating-border-angle), #cbc9fc, #79789627) 1;
-		rotate: var(--rotating-border-angle);
-		animation: 8s rotating-border-keyframes linear infinite;
+		border-image: conic-gradient(from var(--rotation-angle), #cbc9fc, #79789627) 1;
+		animation: 8s rotation-keyframes linear infinite;
 	}
 
-	@property --rotating-border-angle {
+	@property --rotation-angle {
 		syntax: '<angle>';
 		initial-value: 0deg;
 		inherits: false;

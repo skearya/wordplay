@@ -45,7 +45,7 @@
 			></canvas>
 			<form
 				style="background: radial-gradient(at top left, var(--color-background) 0%, rgba(233, 184, 255, 0.1) 100%), var(--color-background); border-image: conic-gradient(from -112deg, rgba(121, 120, 150, 0.5), rgba(203, 201, 252, 1)) 1;"
-				class="relative mx-auto mt-28 flex h-64 max-w-xl flex-col border"
+				class="absolute left-1/2 top-28 flex h-64 max-w-xl -translate-x-1/2 flex-col border"
 				onsubmit={(e) => {
 					e.preventDefault();
 
@@ -57,7 +57,7 @@
 				<div
 					class="bg-pink absolute left-0 top-0 w-min text-nowrap rounded-br-2xl px-3 py-1 text-black"
 				>
-					<p>Joining Game <code>'abc'</code></p>
+					<p>Joining Game <code>'{params.room}'</code></p>
 				</div>
 				<div class="flex flex-1 items-center">
 					<div class="flex flex-1 flex-col justify-center p-4">
@@ -104,7 +104,7 @@
 	{/if}
 
 	{#snippet failed(_error, _reset)}
-		<button onclick={() => window.location.reload()}>oops! try again</button>
+		<button onclick={() => window.location.reload()}>oops, something broke. try again?</button>
 	{/snippet}
 </svelte:boundary>
 
