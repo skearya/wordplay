@@ -2,7 +2,7 @@
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
 	import gridSvg from '$lib/assets/grid.svg';
-	import homepageNoiseImage from '$lib/assets/homepage-noise.png';
+	import homepageNoiseImage from '$lib/assets/homepage-noise.webp';
 	import Bomb from '$lib/icons/Bomb.svelte';
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
