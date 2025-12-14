@@ -113,8 +113,8 @@
 				},
 				{
 					easing: 'ease-out',
-					duration: 400,
-					delay: 150 + i * 400
+					duration: 1000,
+					delay: 350 + i * 350
 				}
 			);
 		}
@@ -256,12 +256,12 @@
 	</div>
 	<div bind:this={activeOutlineContainer} class="absolute left-0 top-0">
 		<div
-			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length) * 8}%;`}
+			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
 			class="rotating-border rotating absolute left-1/2 top-1/2 size-56 -translate-x-1/2 -translate-y-1/2 duration-300"
 		></div>
 		<div
 			bind:this={incorrectOutlineElement}
-			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length) * 8}%;`}
+			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
 			class="border-red rotating timing-function-0 absolute left-1/2 top-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 opacity-0 transition-transform duration-300"
 		></div>
 	</div>
