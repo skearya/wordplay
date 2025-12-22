@@ -3,7 +3,7 @@
 	import type { TimerAction } from '@bindings/TimerAction';
 	import type { Props } from '$lib/context';
 	import { onMount } from 'svelte';
-	import { fade, fly, scale } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
 	import grid2Svg from '$lib/assets/grid2.svg';
 	import { lobbyEmitter } from '$lib/events';
 	import Crown from '$lib/icons/Crown.svelte';
@@ -48,30 +48,9 @@
 	);
 </script>
 
-<!-- 
-<h1>lobby</h1>
-<button
-	onclick={() => {
-		sendMsg({
-			kind: 'lobby',
-			data: { kind: lobby.ready.includes(ctx.uuid) ? 'unready' : 'ready' }
-		});
-	}}
->
-	ready
-</button>
-
-{#each lobby.ready as uuid}
-	<p>{ctx.clients[uuid]!.username}</p>
-{/each}
-
-{#if lobby.timerStart}
-	<Countdown timerStart={lobby.timerStart} />
-{/if} -->
-
 <div class="flex flex-1 items-stretch gap-4 overflow-y-hidden p-4 pt-0">
 	{#if lobby.prevGame}
-		<section class="border-pink bg-pink/15 flex flex-[30%] flex-col overflow-y-clip border">
+		<section class="border-pink bg-pink/15 flex flex-[30%] flex-col overflow-y-hidden border">
 			<div
 				style={`background: url("${grid2Svg}"), #F3ACFF;`}
 				class="background-scroll p-4 pt-16 text-black"

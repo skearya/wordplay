@@ -101,23 +101,6 @@
 				duration: 400
 			}
 		);
-
-		const arrowElementsValues = Object.values(arrowElements);
-
-		for (let i = 0; i < arrowElementsValues.length; i++) {
-			const arrowElementChild = arrowElementsValues[i].firstChild as HTMLElement;
-
-			arrowElementChild.animate(
-				{
-					opacity: ['100%', '0%']
-				},
-				{
-					easing: 'ease-out',
-					duration: 1000,
-					delay: 350 + i * 350
-				}
-			);
-		}
 	}
 
 	function animateBombPass() {
