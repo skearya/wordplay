@@ -1,7 +1,11 @@
 <script lang="ts">
 	import type { WordBombState } from '@bindings/WordBombState';
 	import type { Props } from '$lib/context';
+	import type { AnimationConfig, FlipParams } from 'svelte/animate';
+	import type { TransitionConfig } from 'svelte/transition';
 	import { onMount } from 'svelte';
+	import { cubicOut, elasticOut } from 'svelte/easing';
+	import { fade, slide } from 'svelte/transition';
 	import { wordBombEmitter } from '$lib/events';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import GameBomb from '$lib/icons/GameBomb.svelte';
@@ -17,13 +21,14 @@
 	let playersContainer: HTMLElement;
 	let bombElement: HTMLElement;
 	let playerInputElement = $state<HTMLInputElement>();
-	let playerElements: Record<string, HTMLElement> = {};
-	let arrowElements: Record<string, HTMLElement> = {};
+	let playerElements: Record<string, HTMLElement> = $state({});
+	let arrowElements: Record<string, HTMLElement> = $state({});
 
 	let wordBomb = $state(initial);
+	let invalidWordMessage = $state('');
 
 	onMount(() => {
-		animateInit();
+		animateTurnChange(true);
 
 		return wordBombEmitter.handle({
 			input: ({ input }) => {
@@ -44,13 +49,11 @@
 				wordBomb.prompt = prompt;
 				wordBomb.turn = turn;
 
-				if (ctx.uuid === turn) {
-					playerInputElement?.focus();
-				}
-
-				animateBombPass();
+				animateTurnChange();
 			},
 			invalid: ({ reason }) => {
+				invalidWordMessage = reason;
+
 				animateIncorrect();
 			},
 			exploded: ({ prompt, turn }) => {
@@ -61,19 +64,31 @@
 				wordBomb.prompt = prompt;
 				wordBomb.turn = turn;
 
-				animateBombPass();
+				animateTurnChange();
 			}
 		});
 	});
 
+	$effect(() => {
+		if (ctx.uuid === wordBomb.turn) {
+			playerInputElement && (playerInputElement.value = '');
+			playerInputElement?.focus();
+		}
+	});
+
 	const screenPull = 0.003;
 
-	function animateInit() {
+	function animateTurnChange(firstRun?: boolean) {
 		const playerUUID = wordBomb.turn;
+
 		const playerBBox = playerElements[playerUUID].getBoundingClientRect();
+		const outlineBBox = activeOutlineContainer.getBoundingClientRect();
 
 		const playerX = playerBBox.left + playerBBox.width / 2;
 		const playerY = playerBBox.top + playerBBox.height / 2;
+
+		const outlineX = outlineBBox.left + outlineBBox.width / 2;
+		const outlineY = outlineBBox.top + outlineBBox.height / 2;
 
 		const playerDistanceX = playerX - window.innerWidth / 2;
 		const playerDistanceY = playerY - window.innerHeight / 2;
@@ -90,100 +105,70 @@
 		const newPlayerX = playerX + containerTransformX;
 		const newPlayerY = playerY + containerTransformY;
 
-		activeOutlineContainer.style.translate = `${newPlayerX}px ${newPlayerY}px`;
+		if (firstRun) {
+			activeOutlineContainer.style.translate = `${newPlayerX}px ${newPlayerY}px`;
 
-		activeOutlineContainer.animate(
-			{
-				opacity: ['0%', '100%']
-			},
-			{
-				easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-				duration: 400
-			}
-		);
-	}
-
-	function animateBombPass() {
-		const playerUUID = wordBomb.turn;
-		const playerBBox = playerElements[playerUUID].getBoundingClientRect();
-		const outlineBBox = activeOutlineContainer.getBoundingClientRect();
-
-		const playerX = playerBBox.left + playerBBox.width / 2;
-		const playerY = playerBBox.top + playerBBox.height / 2;
-
-		const outlineX = outlineBBox.left + outlineBBox.width / 2;
-		const outlineY = outlineBBox.top + outlineBBox.height / 2;
-
-		const playerDistanceX = playerX - window.innerWidth / 2;
-		const playerDistanceY = playerY - window.innerHeight / 2;
-
-		const [prevContainerTransformX, prevContainerTransformY] = (
-			playersContainer.style.translate || '0px 0px'
-		)
-			.split(' ')
-			.map((value) => value.substring(0, value.length - 2))
-			.map((value) => parseFloat(value));
-
-		const containerTransformX = -playerDistanceX * screenPull * 2;
-		const containerTransformY = -playerDistanceY * screenPull * 2;
-
-		const bombTransformX = -playerDistanceX * screenPull;
-		const bombTransformY = -playerDistanceY * screenPull;
-
-		playersContainer.style.translate = `${containerTransformX}px ${containerTransformY}px`;
-		bombElement.style.translate = `calc(-50% + ${bombTransformX}px) calc(-50% + ${bombTransformY}px)`;
-
-		const newPlayerX = playerX + containerTransformX - prevContainerTransformX;
-		const newPlayerY = playerY + containerTransformY - prevContainerTransformY;
-
-		const toX1 = lerp(outlineX, playerX, 0.1);
-		const toY1 = lerp(outlineY, playerY, 0.1);
-
-		activeOutlineContainer
-			.animate(
+			activeOutlineContainer.animate(
 				{
-					translate: `${toX1}px ${toY1}px`,
-					opacity: '0%'
+					opacity: ['0%', '100%']
 				},
 				{
-					fill: 'forwards',
-					easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-					duration: 100
+					easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
+					duration: 400
 				}
-			)
-			.finished.then(() => {
-				const fromX2 = lerp(outlineX, newPlayerX, 0.9);
-				const fromY2 = lerp(outlineY, newPlayerY, 0.9);
+			);
+		} else {
+			const toX1 = lerp(outlineX, playerX, 0.1);
+			const toY1 = lerp(outlineY, playerY, 0.1);
 
-				const toX3 = newPlayerX;
-				const toY3 = newPlayerY;
-
-				activeOutlineContainer.animate(
+			activeOutlineContainer
+				.animate(
 					{
-						translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
-						opacity: '100%'
+						translate: `${toX1}px ${toY1}px`,
+						opacity: '0%'
 					},
 					{
 						fill: 'forwards',
-						easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-						duration: 150
+						easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+						duration: 100
 					}
-				);
-			});
+				)
+				.finished.then(() => {
+					const fromX2 = lerp(outlineX, newPlayerX, 0.9);
+					const fromY2 = lerp(outlineY, newPlayerY, 0.9);
 
-		const arrowElement = arrowElements[playerUUID];
-		const arrowElementChild = arrowElement.firstChild as HTMLElement;
+					const toX3 = newPlayerX;
+					const toY3 = newPlayerY;
 
-		arrowElementChild.animate(
-			{
-				translate: `0px 32px`,
-				opacity: ['100%', '0%']
-			},
-			{
-				easing: 'ease-out',
-				duration: 400
-			}
-		);
+					activeOutlineContainer.animate(
+						{
+							translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
+							opacity: '100%'
+						},
+						{
+							fill: 'forwards',
+							easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
+							duration: 150
+						}
+					);
+				});
+		}
+
+		if (!firstRun) {
+			const arrowElement = arrowElements[playerUUID];
+			const arrowElementChild = arrowElement.firstChild as HTMLElement;
+
+			arrowElementChild.animate(
+				{
+					translate: `0px 32px`,
+					opacity: ['100%', '0%']
+				},
+				{
+					easing: 'ease-out',
+					duration: 400
+				}
+			);
+		}
 	}
 
 	function animateIncorrect() {
@@ -210,13 +195,65 @@
 		);
 	}
 
-	const players = $derived(Object.entries(wordBomb.players));
-
 	const unusedLetters = $derived(
 		Array.from({ length: 26 })
-			.map((_, i) => String.fromCharCode(i + 'A'.charCodeAt(0)))
+			.map((_, i) => String.fromCharCode(i + 'a'.charCodeAt(0)))
 			.filter((c) => !wordBomb.players[ctx.uuid]!.letters.includes(c))
 	);
+
+	const players = $derived(Object.entries(wordBomb.players));
+
+	// Modified version of `svelte/animate/flip`.
+	function flip(
+		_node: HTMLElement,
+		{ from, to }: { from: DOMRect; to: DOMRect },
+		params: FlipParams = {}
+	): AnimationConfig {
+		const { delay = 0, duration = (d) => Math.sqrt(d) * 120, easing = cubicOut } = params;
+
+		// find the transform origin, expressed as a pair of values between 0 and 1
+		const ox = 0.5;
+		const oy = 0.5;
+
+		// find the starting position of the transform origin
+		const fx = from.left + from.width * ox;
+		const fy = from.top + from.height * oy;
+
+		// find the ending position of the transform origin
+		const tx = to.left + to.width * ox;
+		const ty = to.top + to.height * oy;
+
+		// find the translation at the start of the transform
+		const dx = fx - tx;
+		const dy = fy - ty;
+
+		return {
+			delay,
+			duration: typeof duration === 'function' ? duration(Math.sqrt(dx * dx + dy * dy)) : duration,
+			easing,
+			css: (_t, u) => {
+				const x = u * dx;
+				const y = u * dy;
+
+				return `transform: translate(${x}px, ${y}px)`;
+			}
+		};
+	}
+
+	function correctLetterAnimationOut(
+		_node: HTMLElement,
+		params?: { delay?: number; duration?: number; easing?: (t: number) => number }
+	): TransitionConfig {
+		const { delay = 0, duration = 1500, easing = cubicOut } = params ?? {};
+
+		return {
+			delay,
+			duration,
+			easing,
+			css: (t, u) =>
+				`background-color: var(--color-green); translate: ${u * 250}px 0px; opacity: ${t};`
+		};
+	}
 </script>
 
 <div class="relative flex flex-1 items-center justify-center gap-4 overflow-hidden p-4 pt-0">
@@ -233,8 +270,14 @@
 		</div>
 	</div>
 	<div class="absolute left-0 top-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
-		{#each unusedLetters as letter}
-			<div class="border-green size-12 content-center border text-center">{letter}</div>
+		{#each unusedLetters as letter (letter)}
+			<div
+				animate:flip={{ delay: 300, duration: (d) => Math.sqrt(d) * 20 }}
+				out:correctLetterAnimationOut
+				class="border-green size-12 content-center border text-center uppercase"
+			>
+				{letter}
+			</div>
 		{/each}
 	</div>
 	<div bind:this={activeOutlineContainer} class="absolute left-0 top-0">
@@ -275,7 +318,7 @@
 							<HeartIcon />
 						{/each}
 					</div>
-					{#if i === 0}
+					{#if false}
 						<div class="absolute right-0 top-0 -translate-y-1/2 translate-x-1/2">
 							<Star />
 							<span

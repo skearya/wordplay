@@ -199,6 +199,18 @@ impl Player {
     fn alive(&self) -> bool {
         self.lives != 0
     }
+
+    fn letters(&self) -> Vec<char> {
+        (0..26)
+            .filter_map(|i| {
+                if (self.letters >> i & 1) != 0 {
+                    Some((i + b'a') as char)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl WordBomb {
@@ -251,14 +263,13 @@ impl WordBomb {
         word.retain(|c| c.is_ascii_alphabetic());
         word.make_ascii_lowercase();
 
-        let error = if !word.contains(self.prompt.text) {
-            Some("word doesn't contain prompt")
-        } else if self.used.iter().any(|(_, used)| *used == word) {
-            Some("word has already been used")
-        } else if !is_english(&word) {
-            Some("word is not english")
-        } else {
-            None
+        let error = match () {
+            () if !word.contains(self.prompt.text) => Some("word doesn't contain prompt"),
+            () if self.used.iter().any(|(_, used)| *used == word) => {
+                Some("word has already been used")
+            }
+            () if !is_english(&word) => Some("word is not english"),
+            () => None,
         };
 
         if let Some(error) = error {
@@ -451,10 +462,7 @@ impl GameHandler for WordBomb {
                         WordBombPlayer {
                             input: player.input.clone(),
                             lives: player.lives,
-                            letters: (0..26)
-                                .map(|i| (player.letters >> i & 1) as u8)
-                                .map(|value| (value + b'a') as char)
-                                .collect(),
+                            letters: player.letters(),
                         },
                     )
                 })

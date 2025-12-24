@@ -1,6 +1,7 @@
 import type { IChamferableBodyDefinition } from 'matter-js';
 import Matter from 'matter-js';
-import { lerp, setupCanvas } from './utils';
+import { setupCanvas } from './canvas';
+import { lerp } from './utils';
 
 const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
 
