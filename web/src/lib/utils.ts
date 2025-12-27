@@ -18,6 +18,10 @@ export function getOrSet<K, V>({ map, key, val }: { map: Map<K, V>; key: K; val:
 	}
 }
 
+export function objectAssign<T extends {}>(target: T, source: T): T {
+	return Object.assign(target, source);
+}
+
 export function getRandomRange(min: number, max: number) {
 	return Math.random() * (max - min) + min;
 }

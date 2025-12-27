@@ -4,12 +4,12 @@
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
 	import { coreEmitter } from '$lib/events';
-	import GreenSettings from '$lib/icons/GreenSettings.svelte';
-	import Logo from '$lib/icons/Logo.svelte';
-	import { unreachable } from '$lib/utils';
+	import { transitionState } from '$lib/stores/transition.svelte';
+	import { objectAssign, unreachable } from '$lib/utils';
 	import Game from './Game.svelte';
 	import Lobby from './Lobby.svelte';
 	import Nav from './Nav.svelte';
+	import Transition from './Transition.svelte';
 
 	const {
 		initial,
@@ -42,14 +42,25 @@
 					localStorage.setItem('rejoinToken', rejoinToken);
 				}
 
-				ctx.state = { kind: 'game', ...state };
+				objectAssign(transitionState, {
+					kind: 'transitioning',
+					update: { kind: 'game', ...state }
+				});
 			},
 			gameEnd: ({ newOwner, postGameInfo }) => {
 				if (newOwner) {
 					ctx.settings.owner = newOwner;
 				}
 
-				ctx.state = { kind: 'lobby', ready: [], timerStart: null, prevGame: postGameInfo };
+				objectAssign(transitionState, {
+					kind: 'transitioning',
+					update: {
+						kind: 'lobby',
+						ready: [],
+						timerStart: null,
+						prevGame: postGameInfo
+					}
+				});
 
 				for (const uuid in ctx.clients) {
 					if (!ctx.clients[uuid]!.connected) {
@@ -66,6 +77,7 @@
 	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), var(--color-background)"
 	class="flex h-screen flex-col overflow-hidden"
 >
+	<Transition {ctx} />
 	<Nav {ctx} {sendMsg} />
 	{#if ctx.state.kind === 'lobby'}
 		<Lobby {ctx} initial={ctx.state} {sendMsg} />

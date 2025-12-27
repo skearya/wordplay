@@ -20,7 +20,7 @@
 	class={[
 		'flex items-center justify-between px-5 py-4',
 		ctx.state.kind !== 'lobby'
-			? 'bg-background/90 fixed left-0 top-0 z-50 w-full opacity-0 transition-opacity'
+			? 'bg-background/90 fixed left-0 top-0 z-40 w-full opacity-0 transition-opacity'
 			: 'opacity-100'
 	]}
 	onmouseover={(e) => navOnFocus(e.currentTarget)}

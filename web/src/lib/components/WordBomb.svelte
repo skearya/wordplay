@@ -4,9 +4,9 @@
 	import type { AnimationConfig, FlipParams } from 'svelte/animate';
 	import type { TransitionConfig } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { cubicOut, elasticOut } from 'svelte/easing';
-	import { fade, slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { wordBombEmitter } from '$lib/events';
+	import { explode } from '$lib/explode';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import GameBomb from '$lib/icons/GameBomb.svelte';
 	import GameBombWire from '$lib/icons/GameBombWire.svelte';
@@ -25,10 +25,9 @@
 	let arrowElements: Record<string, HTMLElement> = $state({});
 
 	let wordBomb = $state(initial);
-	let invalidWordMessage = $state('');
 
 	onMount(() => {
-		animateTurnChange(true);
+		animateTurnChange({ kind: 'first-run' });
 
 		return wordBombEmitter.handle({
 			input: ({ input }) => {
@@ -37,6 +36,7 @@
 				player.input = input;
 			},
 			valid: ({ guess, prompt, life, turn }) => {
+				const prevTurn = wordBomb.turn;
 				const player = wordBomb.players[wordBomb.turn]!;
 
 				player.letters = [...new Set([...player.letters, ...guess])];
@@ -49,14 +49,13 @@
 				wordBomb.prompt = prompt;
 				wordBomb.turn = turn;
 
-				animateTurnChange();
+				life ? animateTurnChange({ kind: 'gained-life', on: prevTurn }) : animateTurnChange();
 			},
 			invalid: ({ reason }) => {
-				invalidWordMessage = reason;
-
 				animateIncorrect();
 			},
 			exploded: ({ prompt, turn }) => {
+				const prevTurn = wordBomb.turn;
 				const player = wordBomb.players[wordBomb.turn]!;
 
 				player.lives -= 1;
@@ -64,7 +63,7 @@
 				wordBomb.prompt = prompt;
 				wordBomb.turn = turn;
 
-				animateTurnChange();
+				animateTurnChange({ kind: 'exploded', on: prevTurn });
 			}
 		});
 	});
@@ -78,7 +77,12 @@
 
 	const screenPull = 0.003;
 
-	function animateTurnChange(firstRun?: boolean) {
+	function animateTurnChange(
+		opt?:
+			| { kind: 'first-run' }
+			| { kind: 'exploded'; on: string }
+			| { kind: 'gained-life'; on: string }
+	) {
 		const playerUUID = wordBomb.turn;
 
 		const playerBBox = playerElements[playerUUID].getBoundingClientRect();
@@ -105,7 +109,7 @@
 		const newPlayerX = playerX + containerTransformX;
 		const newPlayerY = playerY + containerTransformY;
 
-		if (firstRun) {
+		if (opt?.kind === 'first-run') {
 			activeOutlineContainer.style.translate = `${newPlayerX}px ${newPlayerY}px`;
 
 			activeOutlineContainer.animate(
@@ -117,58 +121,79 @@
 					duration: 400
 				}
 			);
-		} else {
-			const toX1 = lerp(outlineX, playerX, 0.1);
-			const toY1 = lerp(outlineY, playerY, 0.1);
 
-			activeOutlineContainer
-				.animate(
+			return;
+		} else if (opt?.kind === 'exploded') {
+			const badPlayer = playerElements[opt.on];
+			const prevBorder = badPlayer.style.border;
+
+			badPlayer.style.border = '1px solid var(--color-red)';
+
+			explode(badPlayer, { distMultiplier: 5 });
+
+			badPlayer.style.border = prevBorder;
+
+			badPlayer.animate(
+				{
+					opacity: ['0%', '100%']
+				},
+				{
+					easing: 'ease-in',
+					duration: 3500
+				}
+			);
+		} else if (opt?.kind === 'gained-life') {
+			// TODO: Gained life animation
+		}
+
+		const toX1 = lerp(outlineX, playerX, 0.1);
+		const toY1 = lerp(outlineY, playerY, 0.1);
+
+		activeOutlineContainer
+			.animate(
+				{
+					translate: `${toX1}px ${toY1}px`,
+					opacity: '0%'
+				},
+				{
+					fill: 'forwards',
+					easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+					duration: 100
+				}
+			)
+			.finished.then(() => {
+				const fromX2 = lerp(outlineX, newPlayerX, 0.9);
+				const fromY2 = lerp(outlineY, newPlayerY, 0.9);
+
+				const toX3 = newPlayerX;
+				const toY3 = newPlayerY;
+
+				activeOutlineContainer.animate(
 					{
-						translate: `${toX1}px ${toY1}px`,
-						opacity: '0%'
+						translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
+						opacity: '100%'
 					},
 					{
 						fill: 'forwards',
-						easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-						duration: 100
+						easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
+						duration: 150
 					}
-				)
-				.finished.then(() => {
-					const fromX2 = lerp(outlineX, newPlayerX, 0.9);
-					const fromY2 = lerp(outlineY, newPlayerY, 0.9);
+				);
+			});
 
-					const toX3 = newPlayerX;
-					const toY3 = newPlayerY;
+		const arrowElement = arrowElements[playerUUID];
+		const arrowElementChild = arrowElement.firstChild as HTMLElement;
 
-					activeOutlineContainer.animate(
-						{
-							translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
-							opacity: '100%'
-						},
-						{
-							fill: 'forwards',
-							easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-							duration: 150
-						}
-					);
-				});
-		}
-
-		if (!firstRun) {
-			const arrowElement = arrowElements[playerUUID];
-			const arrowElementChild = arrowElement.firstChild as HTMLElement;
-
-			arrowElementChild.animate(
-				{
-					translate: `0px 32px`,
-					opacity: ['100%', '0%']
-				},
-				{
-					easing: 'ease-out',
-					duration: 400
-				}
-			);
-		}
+		arrowElementChild.animate(
+			{
+				translate: `0px 32px`,
+				opacity: ['100%', '0%']
+			},
+			{
+				easing: 'ease-out',
+				duration: 400
+			}
+		);
 	}
 
 	function animateIncorrect() {
@@ -201,7 +226,7 @@
 			.filter((c) => !wordBomb.players[ctx.uuid]!.letters.includes(c))
 	);
 
-	const players = $derived(Object.entries(wordBomb.players));
+	const players = $derived(Object.entries(wordBomb.players).filter(([_, p]) => p!.lives > 0));
 
 	// Modified version of `svelte/animate/flip`.
 	function flip(
@@ -251,7 +276,7 @@
 			duration,
 			easing,
 			css: (t, u) =>
-				`background-color: var(--color-green); translate: ${u * 250}px 0px; opacity: ${t};`
+				`background-color: var(--color-green); translate: ${u * 200}px 0px; opacity: ${t};`
 		};
 	}
 </script>
