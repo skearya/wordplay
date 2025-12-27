@@ -139,12 +139,15 @@
 					<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
 				</div>
 				<div class="bg-green absolute left-0 top-0 w-min text-nowrap rounded-br-2xl px-3 py-1">
-					<p>Ready Players</p>
+					{#if lobby.timerStart}
+						<Countdown timerStart={lobby.timerStart} />
+					{:else}
+						<p>Ready Players</p>
+					{/if}
 				</div>
 				<div class="text-bright-green absolute right-3 top-3 w-min text-nowrap">
 					<p>{ctx.settings.size - lobby.ready.length} slots left</p>
 				</div>
-
 				<div class="flex flex-1 items-center justify-center gap-x-20 px-12">
 					<div class="relative size-[304px]">
 						<div
@@ -187,7 +190,7 @@
 					</div>
 					<DoubleRightArrow />
 					<button
-						style="border-image: linear-gradient(to right, #475D50, #95C3A8) 1;"
+						style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
 						class="bg-dark-dark-green/80 z-10 w-72 space-y-2.5 border p-4 pt-5"
 					>
 						<div class="flex items-center justify-between">
