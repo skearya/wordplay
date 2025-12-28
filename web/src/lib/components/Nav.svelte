@@ -5,48 +5,53 @@
 
 	const { ctx, sendMsg }: Omit<Props<never>, 'initial'> = $props();
 
-	const navOnFocus = (nav: HTMLElement) => {
+	let innerNavElement: HTMLElement;
+
+	const navOnFocus = () => {
 		if (ctx.state.kind === 'lobby') return;
-		nav.classList.remove('opacity-0');
+		innerNavElement.classList.remove('-translate-y-full');
 	};
 
-	const navOnBlur = (nav: HTMLElement) => {
+	const navOnBlur = () => {
 		if (ctx.state.kind === 'lobby') return;
-		nav.classList.add('opacity-0');
+		innerNavElement.classList.add('-translate-y-full');
 	};
 </script>
 
 <nav
-	class={[
-		'flex items-center justify-between px-5 py-4',
-		ctx.state.kind !== 'lobby'
-			? 'bg-background/90 fixed left-0 top-0 z-40 w-full opacity-0 transition-opacity'
-			: 'opacity-100'
-	]}
-	onmouseover={(e) => navOnFocus(e.currentTarget)}
-	onfocus={(e) => navOnFocus(e.currentTarget)}
-	onmouseout={(e) => navOnBlur(e.currentTarget)}
-	onblur={(e) => navOnBlur(e.currentTarget)}
+	onmouseover={() => navOnFocus()}
+	onfocus={() => navOnFocus()}
+	onmouseout={() => navOnBlur()}
+	onblur={() => navOnBlur()}
+	class={ctx.state.kind !== 'lobby' ? 'fixed left-0 top-0 z-40 w-full' : null}
 >
-	<Logo />
-	<div class="flex items-center gap-x-4">
-		<div class="border-green flex -space-x-4">
-			{#each Object.entries(ctx.clients).slice(0, 4) as [uuid, client]}
-				<img
-					src={`https://avatar.vercel.sh/${client!.username}`}
-					alt={client!.username}
-					title={`${client!.username} (${uuid})`}
-					width="120"
-					height="120"
-					class="size-10 rounded-full border border-black"
-				/>
-			{/each}
-			{#if Object.keys(ctx.clients).length > 4}
-				<div class="border-green size-10 content-center rounded-full border bg-black text-center">
-					+{Object.keys(ctx.clients).length - 4}
-				</div>
-			{/if}
+	<div
+		bind:this={innerNavElement}
+		class={[
+			'flex items-center justify-between px-5 py-4 transition-transform',
+			ctx.state.kind === 'lobby' ? 'translate-y-0' : 'bg-background/90 -translate-y-full'
+		]}
+	>
+		<Logo />
+		<div class="flex items-center gap-x-4">
+			<div class="border-green flex -space-x-4">
+				{#each Object.entries(ctx.clients).slice(0, 4) as [uuid, client]}
+					<img
+						src={`https://avatar.vercel.sh/${client!.username}`}
+						alt={client!.username}
+						title={`${client!.username} (${uuid})`}
+						width="120"
+						height="120"
+						class="size-10 rounded-full border border-black"
+					/>
+				{/each}
+				{#if Object.keys(ctx.clients).length > 4}
+					<div class="border-green size-10 content-center rounded-full border bg-black text-center">
+						+{Object.keys(ctx.clients).length - 4}
+					</div>
+				{/if}
+			</div>
+			<GreenSettings />
 		</div>
-		<GreenSettings />
 	</div>
 </nav>
