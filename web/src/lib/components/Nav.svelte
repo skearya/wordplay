@@ -3,7 +3,7 @@
 	import GreenSettings from '$lib/icons/GreenSettings.svelte';
 	import Logo from '$lib/icons/Logo.svelte';
 
-	const { ctx, sendMsg }: Omit<Props<never>, 'initial'> = $props();
+	const { ctx }: Omit<Props<never>, 'initial' | 'sendMsg'> = $props();
 
 	let innerNavElement: HTMLElement;
 

@@ -5,7 +5,6 @@
 	import type { SocketParams } from '@bindings/SocketParams';
 	import type { Context } from '$lib/context';
 	import { onDestroy } from 'svelte';
-	import { fade } from 'svelte/transition';
 	import Wordplay from '$lib/components/Wordplay.svelte';
 	import {
 		anagramsEmitter,
@@ -116,14 +115,11 @@
 </script>
 
 {#if connection.kind === 'awaiting' || connection.kind === 'connecting' || connection.kind === 'connected'}
-	<main out:fade>
-		<Background />
-		<Join
-			room={params.room}
-			connection={connection.kind}
-			onJoin={(username) => connectSocket(username)}
-		/>
-	</main>
+	<Join
+		room={params.room}
+		connection={connection.kind}
+		onJoin={(username) => connectSocket(username)}
+	/>
 {:else if connection.kind === 'ready'}
 	<Wordplay initial={connection.context} sendMsg={connection.sendMsg} />
 {:else if connection.kind === 'error'}
