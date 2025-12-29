@@ -34,3 +34,5 @@ export function getRandomWithBias(min: number, max: number, bias: number, influe
 
 export const lerp = (start: number, end: number, amount: number) =>
 	start * (1 - amount) + end * amount;
+
+export const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
