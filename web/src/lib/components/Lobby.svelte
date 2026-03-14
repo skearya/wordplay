@@ -170,7 +170,7 @@
 							{@const x = Math.cos(angle) * distanceFromCenter}
 							{@const y = Math.sin(angle) * distanceFromCenter - 32}
 							<div
-								in:fly={{ x: 48, y: 48, duration: 400, delay: 150 }}
+								in:fly={{ x: 48, y: 48, duration: 400 }}
 								out:fly={{ x: 48, y: -48, duration: 400 }}
 								style={lobby.ready.length === 1
 									? `translate: -50% -50%;`

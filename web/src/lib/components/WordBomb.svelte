@@ -125,13 +125,11 @@
 			return;
 		} else if (opt?.kind === 'exploded') {
 			const badPlayer = playerElements[opt.on];
-			const prevBorder = badPlayer.style.border;
 
-			badPlayer.style.border = '1px solid var(--color-red)';
-
-			explode(badPlayer, { distMultiplier: 5 });
-
-			badPlayer.style.border = prevBorder;
+			explode(badPlayer, {
+				distMultiplier: 5,
+				elementModifications: (player) => (player.style.border = '1px solid var(--color-red)')
+			});
 
 			badPlayer.animate(
 				{
@@ -139,11 +137,21 @@
 				},
 				{
 					easing: 'ease-in',
-					duration: 3500
+					duration: 3500,
 				}
 			);
 		} else if (opt?.kind === 'gained-life') {
-			// TODO: Gained life animation
+			const player = playerElements[opt.on];
+
+			player.animate(
+				{
+					rotate: '360deg'
+				},
+				{
+					easing: 'ease-in',
+					duration: 1500
+				}
+			);
 		}
 
 		const toX1 = lerp(outlineX, playerX, 0.1);
@@ -284,36 +292,36 @@
 <div class="relative flex flex-1 items-center justify-center gap-4 overflow-hidden p-4 pt-0">
 	<div
 		bind:this={bombElement}
-		class="timing-function-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
+		class="timing-function-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
 	>
 		<GameBomb />
-		<GameBombWire class="absolute right-0 top-0 -translate-y-[4.8rem] translate-x-[4.8rem]" />
+		<GameBombWire class="absolute top-0 right-0 translate-x-[4.8rem] -translate-y-[4.8rem]" />
 		<div
-			class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] font-serif text-7xl uppercase"
+			class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] font-serif text-7xl uppercase"
 		>
 			{wordBomb.prompt}
 		</div>
 	</div>
-	<div class="absolute left-0 top-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
+	<div class="absolute top-0 left-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
 		{#each unusedLetters as letter (letter)}
 			<div
 				animate:flip={{ delay: 300, duration: (d) => Math.sqrt(d) * 20 }}
 				out:correctLetterAnimationOut
-				class="border-green size-12 content-center border text-center uppercase"
+				class="size-12 content-center border border-green text-center uppercase"
 			>
 				{letter}
 			</div>
 		{/each}
 	</div>
-	<div bind:this={activeOutlineContainer} class="absolute left-0 top-0">
+	<div bind:this={activeOutlineContainer} class="absolute top-0 left-0">
 		<div
 			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
-			class="rotating-border rotating absolute left-1/2 top-1/2 size-56 -translate-x-1/2 -translate-y-1/2 duration-300"
+			class="rotating-border rotating absolute top-1/2 left-1/2 size-56 -translate-x-1/2 -translate-y-1/2 duration-300"
 		></div>
 		<div
 			bind:this={incorrectOutlineElement}
 			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
-			class="border-red rotating timing-function-0 absolute left-1/2 top-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 opacity-0 transition-transform duration-300"
+			class="rotating timing-function-0 absolute top-1/2 left-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 border-red opacity-0 transition-transform duration-300"
 		></div>
 	</div>
 	<div
@@ -328,7 +336,7 @@
 						--dist: min(100vw, 100vh) * 0.35;
 						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
 						scale: ${100 - Math.log2(players.length) * 8}%;`}
-				class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
+				class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 			>
 				<div class="relative mb-2">
 					<img
@@ -344,10 +352,10 @@
 						{/each}
 					</div>
 					{#if false}
-						<div class="absolute right-0 top-0 -translate-y-1/2 translate-x-1/2">
+						<div class="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2">
 							<Star />
 							<span
-								class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
+								class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
 							>
 								x<span class="text-2xl font-semibold">10</span>
 							</span>
@@ -360,7 +368,7 @@
 						bind:this={playerInputElement}
 						type="text"
 						disabled={ctx.uuid !== wordBomb.turn}
-						class="border-green focus:ring-pasteborder-green focus:border-green shadow-xs mt-2.5 w-24 rounded-lg border px-2 py-1.5 text-center text-lg disabled:opacity-50"
+						class="mt-2.5 w-24 rounded-lg border px-2 py-1.5 text-center text-lg shadow-xs focus:border-green focus:ring-green disabled:opacity-50"
 						oninput={(e) => {
 							sendMsg({ kind: 'wordBomb', data: { kind: 'input', input: e.currentTarget.value } });
 						}}
@@ -386,7 +394,7 @@
 						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
 						scale: ${100 - Math.log2(players.length) * 8}%;
 						rotate: ${Math.PI - angle}rad;`}
-				class="timing-function-0 absolute left-1/2 top-1/2 text-transparent transition-transform duration-[400ms]"
+				class="timing-function-0 absolute top-1/2 left-1/2 text-transparent transition-transform duration-[400ms]"
 			>
 				<div class="opacity-0">
 					{#each { length: 3 }}

@@ -121,6 +121,12 @@
 		);
 	}
 
+	@property --rotation-angle {
+		syntax: '<angle>';
+		initial-value: 0deg;
+		inherits: false;
+	}
+
 	@keyframes rotation-keyframes {
 		from {
 			--rotation-angle: 0deg;
@@ -140,12 +146,6 @@
 		border-style: solid;
 		border-image: conic-gradient(from var(--rotation-angle), #cbc9fc, #79789627) 1;
 		animation: 8s rotation-keyframes linear infinite;
-	}
-
-	@property --rotation-angle {
-		syntax: '<angle>';
-		initial-value: 0deg;
-		inherits: false;
 	}
 
 	/* https://stackoverflow.com/questions/45847392/pure-css-continuous-horizontal-text-scroll-without-break */

@@ -32,7 +32,7 @@ export function createLetterCanvas(
 
 	const letterWidth = 64;
 	const letterHeight = 64;
-	const letters = new Map();
+	const letters = new Map<Matter.Body, string>();
 
 	for (const { x, y, letter, ...rest } of initLetters(originalWidth, originalHeight)) {
 		const letterBody = Bodies.rectangle(x, y, letterWidth, letterHeight, rest);

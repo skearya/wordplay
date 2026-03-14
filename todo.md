@@ -1,2 +1,5 @@
--   zstd compression on messages
--   multiplayer cursors
+-   fix word bomb dead outline move
+-   proper game picker, settings
+-   room info
+-   anagrams
+-   scrabble

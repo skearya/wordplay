@@ -263,13 +263,14 @@ impl WordBomb {
         word.retain(|c| c.is_ascii_alphabetic());
         word.make_ascii_lowercase();
 
-        let error = match () {
-            () if !word.contains(self.prompt.text) => Some("word doesn't contain prompt"),
-            () if self.used.iter().any(|(_, used)| *used == word) => {
-                Some("word has already been used")
-            }
-            () if !is_english(&word) => Some("word is not english"),
-            () => None,
+        let error = if !word.contains(self.prompt.text) {
+            Some("word doesn't contain prompt")
+        } else if self.used.iter().any(|(_uuid, used)| *used == word) {
+            Some("word has already been used")
+        } else if !is_english(&word) {
+            Some("word is not english")
+        } else {
+            None
         };
 
         if let Some(error) = error {

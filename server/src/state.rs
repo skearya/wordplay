@@ -54,20 +54,17 @@ impl AppStateInner {
     }
 
     fn make_room(&mut self, name: String) -> Result<RoomSender, &'static str> {
-        match () {
-            () if name.len() > 6 => Err("invalid room name, must be less than 6 characters"),
-            () if !name.chars().all(|c| c.is_ascii_alphanumeric()) => {
-                Err("invalid room name, must be alphanumeric")
-            }
-            () if name.is_inappropriate() => {
-                Err("invalid room name, contains innappropriate content")
-            }
-            () => {
-                let room = Room::spawn();
-                self.rooms.insert(name, room.clone());
+        if name.len() > 6 {
+            Err("invalid room name, must be less than 6 characters")
+        } else if !name.chars().all(|c| c.is_ascii_alphanumeric()) {
+            Err("invalid room name, must be alphanumeric")
+        } else if name.is_inappropriate() {
+            Err("invalid room name, contains innappropriate content")
+        } else {
+            let room = Room::spawn();
+            self.rooms.insert(name, room.clone());
 
-                Ok(room)
-            }
+            Ok(room)
         }
     }
 

@@ -2,7 +2,17 @@ import Voronoi from '$lib/deps/voronoi/rhill-voronoi-core';
 
 export function explode(
 	targetElement: HTMLElement,
-	{ duration = 10000, pointCount = 10, distMultiplier = 2 } = {}
+	{
+		duration = 10000,
+		pointCount = 10,
+		distMultiplier = 2,
+		elementModifications
+	}: {
+		duration?: number;
+		pointCount?: number;
+		distMultiplier?: number;
+		elementModifications?: (element: HTMLElement) => void;
+	}
 ) {
 	const { top, left, width, height } = targetElement.getBoundingClientRect();
 
@@ -17,12 +27,11 @@ export function explode(
 	const centerX = width / 2;
 	const centerY = height / 2;
 
-	// TODO: Clean up div.
 	const container = document.createElement('div');
 
 	container.style.position = 'absolute';
-	container.style.top = `0px`;
-	container.style.left = `0px`;
+	container.style.top = '0px';
+	container.style.left = '0px';
 	container.style.width = '100vw';
 	container.style.height = '100vh';
 	container.style.overflow = 'hidden';
@@ -48,6 +57,8 @@ export function explode(
 		clone.style.left = `${left}px`;
 		clone.style.translate = `0px 0px`;
 		clone.style.clipPath = `path("${paths.join(' ')}")`;
+
+		elementModifications?.(clone);
 
 		const dist = Math.hypot(cell.site.y - centerY, cell.site.x - centerX);
 		const angle = Math.atan2(cell.site.y - centerY, cell.site.x - centerX);
@@ -77,7 +88,7 @@ export function explode(
 				fill: 'forwards',
 				easing: 'ease-in',
 				delay: 1000,
-				duration: 10000
+				duration
 			}
 		);
 
@@ -89,7 +100,7 @@ export function explode(
 			{
 				fill: 'forwards',
 				easing: 'ease-out',
-				duration: 10000
+				duration
 			}
 		);
 	}

@@ -2,7 +2,6 @@
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
 	import gridSvg from '$lib/assets/grid.svg';
-	import homepageNoiseImage from '$lib/assets/homepage-noise.webp';
 	import Bomb from '$lib/icons/Bomb.svelte';
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
@@ -70,13 +69,13 @@
 </script>
 
 <header
-	style={`background-image: url("${homepageNoiseImage}");`}
-	class="absolute left-0 top-0 -z-10 h-full w-full bg-cover"
+	style={`background: linear-gradient(45deg, rgba(255,250,226,1), rgba(229,228,158,0.8)), url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.91' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");`}
+	class="absolute top-0 left-0 -z-10 h-full w-full bg-cover"
 >
 	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
 	<h1
 		bind:this={headerTextElement}
-		class="text-background pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl opacity-0"
+		class="pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl text-background opacity-0"
 	>
 		Wordplay
 	</h1>
@@ -85,16 +84,16 @@
 <section
 	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll bg-background inset-shadow-[0_20px_20px] inset-shadow-black mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-repeat p-4"
+	class="background-scroll mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black"
 >
-	<div class="text-background sticky top-4 w-[325px] space-y-2.5">
-		<button class="bg-pastel-red block w-full py-7 text-2xl font-medium">Join room</button>
-		<button class="bg-pastel-light-red block w-full py-7 text-2xl font-medium">Create room</button>
-		<button class="bg-pastel-green block w-full py-7 text-2xl font-medium">Singleplayer</button>
+	<div class="sticky top-4 w-[325px] space-y-2.5 text-background">
+		<button class="w-full bg-pastel-red py-7 text-2xl font-medium">Join room</button>
+		<button class="w-full bg-pastel-light-red py-7 text-2xl font-medium">Create room</button>
+		<button class="w-full bg-pastel-green py-7 text-2xl font-medium">Singleplayer</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
-			<Settings />
+			<Me width={42} height={42} />
 			<Github />
-			<Me width={42} height={42} class="ml-auto" />
+			<Settings class="ml-auto" />
 		</div>
 	</div>
 	<div class="flex-1 space-y-2.5 p-2.5">
@@ -107,7 +106,7 @@
 		</div>
 		<div class="grid grid-cols-3 gap-2.5">
 			{#each { length: 12 }}
-				<a href="/" class="border-faded-green bg-dark-green relative border p-2.5">
+				<a href="/" class="relative border border-faded-green bg-dark-green p-2.5">
 					<h1 class="mb-10 text-lg">Stupid Room Name</h1>
 					<div class="flex -space-x-2">
 						{#each { length: 3 }, i}
@@ -116,16 +115,16 @@
 								width="38px"
 								height="38px"
 								alt="avatar"
-								class="border-background aspect-square size-[38px] rounded-full border-2"
+								class="aspect-square size-[38px] rounded-full border-2 border-background"
 							/>
 						{/each}
 						<p
-							class="bg-background flex aspect-square size-[38px] items-center justify-center rounded-full"
+							class="flex aspect-square size-[38px] items-center justify-center rounded-full bg-background"
 						>
 							+21
 						</p>
 					</div>
-					<Bomb class="absolute bottom-2.5 right-2.5" />
+					<Bomb class="absolute right-2.5 bottom-2.5" />
 				</a>
 			{/each}
 		</div>
