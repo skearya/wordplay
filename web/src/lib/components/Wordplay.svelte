@@ -77,7 +77,7 @@
 	style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(246, 245, 180, 0.08) 100%), var(--color-background)"
 	class="flex h-screen flex-col overflow-hidden"
 >
-	<Transition {ctx} />
+	<Transition bind:ctx />
 	<Nav {ctx} />
 	{#if ctx.state.kind === 'lobby'}
 		<Lobby {ctx} initial={ctx.state} {sendMsg} />

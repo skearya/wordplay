@@ -196,8 +196,13 @@ impl Lobby {
     pub fn on_client_leave(&mut self, ctx: Context, uuid: Uuid) {
         if let Some(index) = self.ready.iter().position(|client| *client == uuid) {
             self.ready.remove(index);
+
+            ctx.clients.broadcast(ServerLobby::Unready {
+                uuid,
+                timer: self.update_countdown(&ctx),
+            });
         }
-        
+
         ctx.clients.remove(uuid);
     }
 

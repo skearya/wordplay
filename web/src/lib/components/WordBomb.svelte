@@ -70,26 +70,30 @@
 
 	$effect(() => {
 		if (ctx.uuid === wordBomb.turn) {
-			playerInputElement && (playerInputElement.value = '');
-			playerInputElement?.focus();
+			if (playerInputElement) {
+				playerInputElement.value = '';
+				playerInputElement.focus();
+			}
 		}
 	});
 
 	const screenPull = 0.003;
+	const alphabet = [...'abcdefghijklmnopqrstuvwxyz'];
 
-	function animateTurnChange(
+	async function animateTurnChange(
 		opt?:
 			| { kind: 'first-run' }
 			| { kind: 'exploded'; on: string }
 			| { kind: 'gained-life'; on: string }
 	) {
 		const playerUUID = wordBomb.turn;
+		const playerIndex = players.findIndex(([uuid]) => uuid === playerUUID);
 
-		const playerBBox = playerElements[playerUUID].getBoundingClientRect();
+		const playerBBox = getPlayerFinalPosition(playerIndex, players.length);
 		const outlineBBox = activeOutlineContainer.getBoundingClientRect();
 
-		const playerX = playerBBox.left + playerBBox.width / 2;
-		const playerY = playerBBox.top + playerBBox.height / 2;
+		const playerX = playerBBox.x;
+		const playerY = playerBBox.y;
 
 		const outlineX = outlineBBox.left + outlineBBox.width / 2;
 		const outlineY = outlineBBox.top + outlineBBox.height / 2;
@@ -97,17 +101,17 @@
 		const playerDistanceX = playerX - window.innerWidth / 2;
 		const playerDistanceY = playerY - window.innerHeight / 2;
 
-		const containerTransformX = -playerDistanceX * screenPull * 2;
-		const containerTransformY = -playerDistanceY * screenPull * 2;
+		const containerShiftX = -playerDistanceX * screenPull * 2;
+		const containerShiftY = -playerDistanceY * screenPull * 2;
 
-		const bombTransformX = -playerDistanceX * screenPull;
-		const bombTransformY = -playerDistanceY * screenPull;
+		const bombShiftX = -playerDistanceX * screenPull;
+		const bombShiftY = -playerDistanceY * screenPull;
 
-		playersContainer.style.translate = `${containerTransformX}px ${containerTransformY}px`;
-		bombElement.style.translate = `calc(-50% + ${bombTransformX}px) calc(-50% + ${bombTransformY}px)`;
+		playersContainer.style.translate = `${containerShiftX}px ${containerShiftY}px`;
+		bombElement.style.translate = `calc(-50% + ${bombShiftX}px) calc(-50% + ${bombShiftY}px)`;
 
-		const newPlayerX = playerX + containerTransformX;
-		const newPlayerY = playerY + containerTransformY;
+		const newPlayerX = playerX + containerShiftX;
+		const newPlayerY = playerY + containerShiftY;
 
 		if (opt?.kind === 'first-run') {
 			activeOutlineContainer.style.translate = `${newPlayerX}px ${newPlayerY}px`;
@@ -123,12 +127,14 @@
 			);
 
 			return;
-		} else if (opt?.kind === 'exploded') {
+		}
+
+		if (opt?.kind === 'exploded') {
 			const badPlayer = playerElements[opt.on];
 
 			explode(badPlayer, {
 				distMultiplier: 5,
-				elementModifications: (player) => (player.style.border = '1px solid var(--color-red)')
+				elementModifications: (element) => (element.style.border = '1px solid var(--color-red)')
 			});
 
 			badPlayer.animate(
@@ -137,7 +143,7 @@
 				},
 				{
 					easing: 'ease-in',
-					duration: 3500,
+					duration: 3500
 				}
 			);
 		} else if (opt?.kind === 'gained-life') {
@@ -157,51 +163,52 @@
 		const toX1 = lerp(outlineX, playerX, 0.1);
 		const toY1 = lerp(outlineY, playerY, 0.1);
 
-		activeOutlineContainer
-			.animate(
-				{
-					translate: `${toX1}px ${toY1}px`,
-					opacity: '0%'
-				},
-				{
-					fill: 'forwards',
-					easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-					duration: 100
-				}
-			)
-			.finished.then(() => {
-				const fromX2 = lerp(outlineX, newPlayerX, 0.9);
-				const fromY2 = lerp(outlineY, newPlayerY, 0.9);
-
-				const toX3 = newPlayerX;
-				const toY3 = newPlayerY;
-
-				activeOutlineContainer.animate(
-					{
-						translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
-						opacity: '100%'
-					},
-					{
-						fill: 'forwards',
-						easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-						duration: 150
-					}
-				);
-			});
-
-		const arrowElement = arrowElements[playerUUID];
-		const arrowElementChild = arrowElement.firstChild as HTMLElement;
-
-		arrowElementChild.animate(
+		activeOutlineContainer.animate(
 			{
-				translate: `0px 32px`,
-				opacity: ['100%', '0%']
+				translate: `${toX1}px ${toY1}px`,
+				opacity: '0%'
 			},
 			{
-				easing: 'ease-out',
-				duration: 400
+				fill: 'forwards',
+				easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+				duration: 100
 			}
 		);
+
+		const fromX2 = lerp(outlineX, newPlayerX, 0.9);
+		const fromY2 = lerp(outlineY, newPlayerY, 0.9);
+
+		const toX3 = newPlayerX;
+		const toY3 = newPlayerY;
+
+		activeOutlineContainer.animate(
+			{
+				translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
+				opacity: '100%'
+			},
+			{
+				fill: 'forwards',
+				easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
+				duration: 150,
+				delay: 100
+			}
+		);
+
+		const arrows = arrowElements[playerUUID].children;
+
+		for (let i = 0; i < arrows.length; i++) {
+			arrows[i].animate(
+				{
+					translate: `0px ${(i + 1) * 16}px`,
+					opacity: ['100%', '0%'],
+					scale: ['1', `${i}`]
+				},
+				{
+					easing: 'ease-out',
+					duration: 400
+				}
+			);
+		}
 	}
 
 	function animateIncorrect() {
@@ -229,34 +236,45 @@
 	}
 
 	const unusedLetters = $derived(
-		Array.from({ length: 26 })
-			.map((_, i) => String.fromCharCode(i + 'a'.charCodeAt(0)))
-			.filter((c) => !wordBomb.players[ctx.uuid]!.letters.includes(c))
+		alphabet.filter((c) => !wordBomb.players[ctx.uuid]!.letters.includes(c))
 	);
 
-	const players = $derived(Object.entries(wordBomb.players).filter(([_, p]) => p!.lives > 0));
+	const players = $derived(
+		Object.entries(wordBomb.players).filter(([_uuid, player]) => player!.lives > 0)
+	);
+
+	const playerScale = $derived(`${100 - Math.log2(players.length) * 8}%`);
+
+	function getPlayerFinalPosition(index: number, players: number) {
+		const dist = Math.min(window.innerWidth, window.innerHeight) * 0.35;
+		const angleBetween = (2 * Math.PI) / players;
+		const angle = index * angleBetween;
+
+		const containerRect = playersContainer.getBoundingClientRect();
+		const centerX = containerRect.left + containerRect.width / 2;
+		const centerY = containerRect.top + containerRect.height / 2;
+
+		return {
+			x: centerX + Math.cos(angle) * dist,
+			y: centerY - Math.sin(angle) * dist
+		};
+	}
 
 	// Modified version of `svelte/animate/flip`.
 	function flip(
 		_node: HTMLElement,
 		{ from, to }: { from: DOMRect; to: DOMRect },
-		params: FlipParams = {}
+		{ delay = 300, duration = (d) => Math.sqrt(d) * 20, easing = cubicOut }: FlipParams = {}
 	): AnimationConfig {
-		const { delay = 0, duration = (d) => Math.sqrt(d) * 120, easing = cubicOut } = params;
-
-		// find the transform origin, expressed as a pair of values between 0 and 1
 		const ox = 0.5;
 		const oy = 0.5;
 
-		// find the starting position of the transform origin
 		const fx = from.left + from.width * ox;
 		const fy = from.top + from.height * oy;
 
-		// find the ending position of the transform origin
 		const tx = to.left + to.width * ox;
 		const ty = to.top + to.height * oy;
 
-		// find the translation at the start of the transform
 		const dx = fx - tx;
 		const dy = fy - ty;
 
@@ -264,27 +282,21 @@
 			delay,
 			duration: typeof duration === 'function' ? duration(Math.sqrt(dx * dx + dy * dy)) : duration,
 			easing,
-			css: (_t, u) => {
-				const x = u * dx;
-				const y = u * dy;
-
-				return `transform: translate(${x}px, ${y}px)`;
-			}
+			css: (_t, u) => `translate: ${u * dx}px ${u * dy}px`
 		};
 	}
 
-	function correctLetterAnimationOut(
-		_node: HTMLElement,
-		params?: { delay?: number; duration?: number; easing?: (t: number) => number }
-	): TransitionConfig {
-		const { delay = 0, duration = 1500, easing = cubicOut } = params ?? {};
+	function correctLetterOut(_node: HTMLElement): TransitionConfig {
+		const delay = 0;
+		const duration = 1500;
+		const easing = cubicOut;
 
 		return {
 			delay,
 			duration,
 			easing,
 			css: (t, u) =>
-				`background-color: var(--color-green); translate: ${u * 200}px 0px; opacity: ${t};`
+				`background-color: var(--color-green);` + `translate: ${u * 200}px 0px;` + `opacity: ${t};`
 		};
 	}
 </script>
@@ -305,9 +317,9 @@
 	<div class="absolute top-0 left-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
 		{#each unusedLetters as letter (letter)}
 			<div
-				animate:flip={{ delay: 300, duration: (d) => Math.sqrt(d) * 20 }}
-				out:correctLetterAnimationOut
-				class="size-12 content-center border border-green text-center uppercase"
+				animate:flip
+				out:correctLetterOut
+				class="size-12 content-center border border-green bg-green/15 text-center uppercase"
 			>
 				{letter}
 			</div>
@@ -329,13 +341,14 @@
 		class="timing-function-0 relative size-full transition-transform duration-[400ms]"
 	>
 		{#each players as [uuid, player], i (uuid)}
+			{@const angleBetween = (2 * Math.PI) / players.length}
+			{@const angle = i * angleBetween}
+			{@const arrowAngle = angle + angleBetween / 2}
+			{@const dist = Math.min(window.innerWidth, window.innerHeight) * 0.35}
 			<div
 				bind:this={playerElements[uuid]}
-				style={`--angle-between: 2 * pi / ${players.length};
-						--angle: ${i} * var(--angle-between);
-						--dist: min(100vw, 100vh) * 0.35;
-						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
-						scale: ${100 - Math.log2(players.length) * 8}%;`}
+				style={`translate: calc(-50% + cos(${angle}rad) * ${dist}px) calc(-50% - sin(${angle}rad) * ${dist}px);` +
+					`scale: ${playerScale}%;`}
 				class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 			>
 				<div class="relative mb-2">
@@ -368,7 +381,8 @@
 						bind:this={playerInputElement}
 						type="text"
 						disabled={ctx.uuid !== wordBomb.turn}
-						class="mt-2.5 w-24 rounded-lg border px-2 py-1.5 text-center text-lg shadow-xs focus:border-green focus:ring-green disabled:opacity-50"
+						placeholder="answer"
+						class="mt-2.5 w-24 rounded-lg border px-2 py-1.5 text-center text-lg shadow-xs outline-0 focus:border-green focus:ring-green disabled:opacity-50"
 						oninput={(e) => {
 							sendMsg({ kind: 'wordBomb', data: { kind: 'input', input: e.currentTarget.value } });
 						}}
@@ -382,25 +396,16 @@
 					<p class="mt-0.5 text-lg">{player!.input}</p>
 				{/if}
 			</div>
-		{/each}
-		{#each players as [uuid], i (uuid)}
-			{@const angleBetween = (2 * Math.PI) / players.length}
-			{@const angle = i * angleBetween - angleBetween / 2}
 			<div
 				bind:this={arrowElements[uuid]}
-				style={`--angle-between: 2 * pi / ${players.length};
-						--angle: ${i} * var(--angle-between) + var(--angle-between) / 2;
-						--dist: min(100vw, 100vh) * 0.35;
-						translate: calc(-50% + cos(var(--angle)) * var(--dist)) calc(-50% - sin(var(--angle)) * var(--dist));
-						scale: ${100 - Math.log2(players.length) * 8}%;
-						rotate: ${Math.PI - angle}rad;`}
-				class="timing-function-0 absolute top-1/2 left-1/2 text-transparent transition-transform duration-[400ms]"
+				style={`translate: calc(-50% + cos(${arrowAngle}rad) * ${dist}px) calc(-50% - sin(${arrowAngle}rad) * ${dist}px);` +
+					`scale: ${playerScale}%;` +
+					`rotate: ${-arrowAngle}rad;`}
+				class="timing-function-0 absolute top-1/2 left-1/2 transition-transform duration-[400ms]"
 			>
-				<div class="opacity-0">
-					{#each { length: 3 }}
-						<DownArrow />
-					{/each}
-				</div>
+				{#each { length: 3 }}
+					<DownArrow class="opacity-0" />
+				{/each}
 			</div>
 		{/each}
 	</div>

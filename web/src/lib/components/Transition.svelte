@@ -4,7 +4,7 @@
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
 	import { transitionState } from '$lib/stores/transition.svelte';
 
-	const { ctx }: Omit<Props<never>, 'initial' | 'sendMsg'> = $props();
+	const { ctx = $bindable() }: Omit<Props<never>, 'initial' | 'sendMsg'> = $props();
 
 	let containerElement = $state<HTMLElement>();
 	let logoElement = $state<HTMLElement>();
@@ -65,16 +65,16 @@
 {#if transitionState.kind === 'transitioning'}
 	<div
 		bind:this={containerElement}
-		class="absolute left-0 top-0 z-50 h-screen w-screen overflow-hidden"
+		class="absolute top-0 left-0 z-50 h-screen w-screen overflow-hidden"
 	>
 		<div
 			bind:this={backgroundElement}
-			class="background absolute left-0 top-0 h-screen w-screen opacity-0"
+			class="background absolute top-0 left-0 h-screen w-screen opacity-0"
 			style="clip-path: circle(0% at 50% 50%);"
 		></div>
 		<div
 			bind:this={logoElement}
-			class="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-[60vh] scale-50"
+			class="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[60vh] scale-50"
 		>
 			<LogoFilled width={96 * 2} height={61 * 2} />
 		</div>

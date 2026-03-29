@@ -61,8 +61,8 @@
 			animate:flip={{ duration: 400 }}
 			in:fly={{ delay: 400 }}
 			class={kind === 'stats'
-				? 'border-pink bg-pink/15 flex max-w-md flex-[30%] flex-col overflow-y-hidden border'
-				: 'border-green bg-green/15 relative flex flex-[70%] flex-col overflow-hidden border'}
+				? 'flex max-w-md flex-[30%] flex-col overflow-y-hidden border border-pink bg-pink/15'
+				: 'relative flex flex-[70%] flex-col overflow-hidden border border-green bg-green/15'}
 		>
 			{#if kind === 'stats'}
 				<div
@@ -77,19 +77,19 @@
 							height="120"
 							class="h-full w-full rounded-full"
 						/>
-						<Crown class="absolute -right-4 -top-4" />
+						<Crown class="absolute -top-4 -right-4" />
 					</div>
 					<h1 class="text-xl"><b>skeary</b> won the game!</h1>
 				</div>
 				<div class="flex flex-1 flex-col overflow-y-hidden p-4">
 					<div class="mb-4 flex items-center justify-between gap-x-8 px-8">
 						<div class="text-center">
-							<h1 class="text-yellow font-serif text-4xl">21</h1>
+							<h1 class="font-serif text-4xl text-yellow">21</h1>
 							<p>Minutes Elapsed</p>
 						</div>
-						<div class="bg-pastel-pink w-[1px] rotate-12 self-stretch"></div>
+						<div class="w-[1px] rotate-12 self-stretch bg-pastel-pink"></div>
 						<div class="text-center">
-							<h1 class="text-yellow font-serif text-4xl">21</h1>
+							<h1 class="font-serif text-4xl text-yellow">21</h1>
 							<p>Words Used</p>
 						</div>
 					</div>
@@ -111,12 +111,12 @@
 						</div>
 						<div
 							style="scrollbar-width: none;"
-							class="border-pastel-pink flex-1 divide-y overflow-y-auto border"
+							class="flex-1 divide-y overflow-y-auto border border-pastel-pink"
 						>
 							{#each { length: 99 }, i}
-								<div class="border-pastel-pink relative flex items-center space-x-2.5 p-2.5">
+								<div class="relative flex items-center space-x-2.5 border-pastel-pink p-2.5">
 									<div
-										class="bg-pastel-pink absolute left-0 top-0 content-center px-1 py-0.5 text-center text-xs text-black"
+										class="absolute top-0 left-0 content-center bg-pastel-pink px-1 py-0.5 text-center text-xs text-black"
 									>
 										<p>{i + 1}</p>
 									</div>
@@ -135,25 +135,25 @@
 					</div>
 				</div>
 			{:else}
-				<div class="pointer-events-none absolute -bottom-6 -right-6 opacity-50">
+				<div class="pointer-events-none absolute -right-6 -bottom-6 opacity-50">
 					<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
 				</div>
-				<div class="bg-green absolute left-0 top-0 w-min text-nowrap rounded-br-2xl px-3 py-1">
+				<div class="absolute top-0 left-0 w-min rounded-br-2xl bg-green px-3 py-1 text-nowrap">
 					{#if lobby.timerStart}
 						<Countdown timerStart={lobby.timerStart} />
 					{:else}
 						<p>Ready Players</p>
 					{/if}
 				</div>
-				<div class="text-bright-green absolute right-3 top-3 w-min text-nowrap">
+				<div class="absolute top-3 right-3 w-min text-nowrap text-bright-green">
 					<p>{ctx.settings.size - lobby.ready.length} slots left</p>
 				</div>
 				<div class="flex flex-1 items-center justify-center gap-x-20 px-12">
 					<div class="relative size-[304px]">
 						<div
 							class={[
-								'absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-y-4 text-[#B1C1AE] transition-opacity',
-								lobby.ready.length === 0 ? 'delay-400 opacity-100' : 'opacity-0'
+								'absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-y-4 text-[#B1C1AE] transition-opacity',
+								lobby.ready.length === 0 ? 'opacity-100 delay-400' : 'opacity-0'
 							]}
 						>
 							<div
@@ -175,7 +175,7 @@
 								style={lobby.ready.length === 1
 									? `translate: -50% -50%;`
 									: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px); scale: ${100 - Math.log2(lobby.ready.length) * 8}%;`}
-								class="timing-function-0 absolute left-1/2 top-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
+								class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
 							>
 								<img
 									src={`https://avatar.vercel.sh/${ctx.clients[uuid]!.username}`}
@@ -191,14 +191,14 @@
 					<DoubleRightArrow />
 					<button
 						style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
-						class="bg-dark-dark-green/80 z-10 w-72 space-y-2.5 border p-4 pt-5"
+						class="z-10 w-72 space-y-2.5 border bg-dark-dark-green/80 p-4 pt-5"
 					>
 						<div class="flex items-center justify-between">
-							<h1 class="text-yellow font-serif text-4xl">Word Bomb</h1>
+							<h1 class="font-serif text-4xl text-yellow">Word Bomb</h1>
 							<DownArrow />
 						</div>
-						<div class="bg-green h-[1px] w-full"></div>
-						<div class="text-light-green grid grid-cols-2 justify-between text-sm">
+						<div class="h-[1px] w-full bg-green"></div>
+						<div class="grid grid-cols-2 justify-between text-sm text-light-green">
 							<p class="text-left font-medium">Difficulty</p>
 							<p class="text-right">Easy</p>
 							<p class="text-left font-medium">Starting Lives</p>
@@ -209,6 +209,7 @@
 				<div class="z-10 flex gap-x-4 p-4">
 					<Button
 						color="pastel-pink"
+						class="flex-1"
 						onclick={() => {
 							sendMsg({
 								kind: 'lobby',
@@ -219,8 +220,9 @@
 						{lobby.ready.includes(ctx.uuid) ? 'Unready' : 'Ready'}
 					</Button>
 					<Button
-						color="pastel-blue"
 						disabled={ctx.settings.owner !== ctx.uuid || lobby.timerStart === null}
+						color="pastel-blue"
+						class="flex-1"
 						onclick={() => {
 							sendMsg({ kind: 'lobby', data: { kind: 'startEarly' } });
 						}}

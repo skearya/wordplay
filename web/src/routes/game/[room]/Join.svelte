@@ -15,14 +15,14 @@
 		onJoin: (username: string) => void;
 	} = $props();
 
-	let username = $state('');
+	let username = $state(import.meta.env.DEV ? 'wordplayer' : '');
 </script>
 
 <main out:fade>
 	<Background />
 	<form
 		style="background: radial-gradient(at top left, var(--color-background) 0%, rgba(233, 184, 255, 0.1) 100%), var(--color-background); border-image: conic-gradient(from -112deg, rgba(121, 120, 150, 0.5), rgba(203, 201, 252, 1)) 1;"
-		class="absolute left-1/2 top-28 flex h-64 max-w-xl -translate-x-1/2 flex-col border"
+		class="absolute top-28 left-1/2 flex h-64 max-w-xl -translate-x-1/2 flex-col border"
 		onsubmit={(e) => {
 			e.preventDefault();
 
@@ -32,7 +32,7 @@
 		}}
 	>
 		<div
-			class="bg-pink absolute left-0 top-0 w-min text-nowrap rounded-br-2xl px-3 py-1 text-black"
+			class="absolute top-0 left-0 w-min rounded-br-2xl bg-pink px-3 py-1 text-nowrap text-black"
 		>
 			<p>Joining Game <code>'{room}'</code></p>
 		</div>
@@ -43,7 +43,7 @@
 					type="text"
 					id="username"
 					name="username"
-					class="bg-background border-green focus:border-green shadow-xs border px-3 py-2.5 text-sm"
+					class="border border-green bg-background px-3 py-2.5 text-sm shadow-xs focus:border-green"
 					placeholder="wordplayer"
 					required
 					minlength="1"
@@ -54,16 +54,16 @@
 			</div>
 			<button
 				style="clip-path: polygon(35% 0, 100% 0, 100% 100%, 0% 100%);"
-				class="bg-pink relative h-full pl-12 pr-6"
+				class="relative h-full bg-pink pr-6 pl-12"
 			>
-				<p class="text-background bg-pink font-serif text-2xl">Enter!</p>
-				<FilledDoubleRightArrow class="absolute bottom-2.5 right-2" />
+				<p class="bg-pink font-serif text-2xl text-background">Enter!</p>
+				<FilledDoubleRightArrow class="absolute right-2 bottom-2.5" />
 			</button>
 		</div>
-		<div class="border-pastel-pink/20 bg-pastel-pink/5 overflow-hidden border-t font-mono">
+		<div class="overflow-hidden border-t border-pastel-pink/20 bg-pastel-pink/5 font-mono">
 			<div class="marquee -mb-1 py-0.5">
 				{#each { length: 2 }}
-					<p class="text-nowrap pl-32 text-sm text-white/75">
+					<p class="pl-32 text-sm text-nowrap text-white/75">
 						The room is currently in a game of Word Bomb with 4 players for 3:39 minutes with 95
 						words used. Consider supporting Wordplay! <HeartIcon
 							width={19.5}
@@ -75,7 +75,7 @@
 			</div>
 		</div>
 		<LogoFilled
-			class="absolute bottom-4 left-4 -translate-x-1/2 translate-y-1/2 rotate-3 scale-125"
+			class="absolute bottom-4 left-4 -translate-x-1/2 translate-y-1/2 scale-125 rotate-3"
 		/>
 	</form>
 </main>

@@ -10,10 +10,11 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<svelte:boundary>
+<svelte:boundary onerror={(error) => console.error(error)}>
 	{@render children?.()}
 
 	{#snippet failed(_error, _reset)}
 		<button onclick={() => window.location.reload()}>oops, something broke. try again?</button>
+		<code>{_error}</code>
 	{/snippet}
 </svelte:boundary>
