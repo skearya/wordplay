@@ -11,9 +11,13 @@ import type { ServerWordBomb } from "./ServerWordBomb";
 
 export type ServerMessage = { "kind": "info", "data": { 
 /**
- * Joined client's designated UUID.
+ * Joined clients designated UUID.
  */
 uuid: string, 
+/**
+ * Joined clients rejoin token, may be the same one they joined with.
+ */
+rejoinToken: string, 
 /**
  * Room clients.
  */

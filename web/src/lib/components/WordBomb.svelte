@@ -382,7 +382,7 @@
 						type="text"
 						disabled={ctx.uuid !== wordBomb.turn}
 						placeholder="answer"
-						class="mt-2.5 w-24 rounded-lg border px-2 py-1.5 text-center text-lg shadow-xs outline-0 focus:border-green focus:ring-green disabled:opacity-50"
+						class="mt-2.5 w-24 border px-2 py-1.5 text-center text-lg shadow-xs outline-0 focus:border-green focus:ring-green disabled:opacity-50"
 						oninput={(e) => {
 							sendMsg({ kind: 'wordBomb', data: { kind: 'input', input: e.currentTarget.value } });
 						}}

@@ -15,7 +15,6 @@
 		wordBombEmitter
 	} from '$lib/events';
 	import { unreachable } from '$lib/utils';
-	import Background from './Background.svelte';
 	import Join from './Join.svelte';
 
 	const { params }: PageProps = $props();
@@ -24,8 +23,8 @@
 		| { kind: 'awaiting' }
 		| { kind: 'connecting'; username: string }
 		| { kind: 'connected' }
-		| { kind: 'ready'; context: Context; sendMsg: (message: ClientMessage) => void }
-		| { kind: 'error'; details: string };
+		| { kind: 'ready'; ctx: Context; sendMsg: (message: ClientMessage) => void }
+		| { kind: 'error'; reason: string; code?: number; clean?: boolean };
 
 	let socket: WebSocket | undefined;
 	let connection = $state<State>({ kind: 'awaiting' });
@@ -35,7 +34,7 @@
 			const id = setTimeout(() => {
 				if (connection.kind === 'connected') {
 					socket?.close();
-					connection = { kind: 'error', details: 'Timed out waiting for server response' };
+					connection = { kind: 'error', reason: 'Timed out waiting for server response' };
 				}
 			}, 5000);
 
@@ -50,11 +49,9 @@
 	function connectSocket(username: string) {
 		if (connection.kind !== 'awaiting') return;
 
-		const rejoinToken = localStorage.getItem('rejoinToken');
-
 		const socketParams: SocketParams = {
 			username,
-			rejoinToken
+			rejoinToken: import.meta.env.DEV ? null : localStorage.getItem('rejoinToken')
 		};
 
 		const urlParams = new URLSearchParams(
@@ -76,9 +73,11 @@
 
 			switch (message.kind) {
 				case 'info':
+					localStorage.setItem('rejoinToken', message.data.rejoinToken);
+
 					connection = {
 						kind: 'ready',
-						context: message.data,
+						ctx: message.data,
 						sendMsg: (message) => socket!.send(JSON.stringify(message))
 					};
 					break;
@@ -104,12 +103,18 @@
 		});
 
 		socket.addEventListener('error', (e) => {
-			console.log('WebSocket error', e);
+			console.error('WebSocket error', e);
 		});
 
 		socket.addEventListener('close', (e) => {
-			console.log('WebSocket closed', e);
-			connection = { kind: 'error', details: e.reason };
+			console.error('WebSocket closed', e);
+
+			connection = {
+				kind: 'error',
+				reason: e.reason,
+				code: e.code,
+				clean: e.wasClean
+			};
 		});
 	}
 </script>
@@ -121,10 +126,13 @@
 		onJoin={(username) => connectSocket(username)}
 	/>
 {:else if connection.kind === 'ready'}
-	<Wordplay initial={connection.context} sendMsg={connection.sendMsg} />
+	<Wordplay initial={connection.ctx} sendMsg={connection.sendMsg} />
 {:else if connection.kind === 'error'}
 	<main class="flex h-screen items-center justify-center">
-		<h1>Error: {connection.details}</h1>
+		<div>
+			<h1>Connection error, sorry about that!</h1>
+			<code>{JSON.stringify(connection, null, 2)}</code>
+		</div>
 	</main>
 {:else if connection satisfies never}
 	{unreachable(connection)}

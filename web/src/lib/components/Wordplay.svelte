@@ -26,32 +26,19 @@
 			join: ({ uuid, client }) => {
 				ctx.clients[uuid] = client;
 			},
-			leave: ({ uuid, newOwner }) => {
-				if (newOwner) {
-					ctx.settings.owner = newOwner;
-				}
-
-				if (ctx.state.kind === 'lobby') {
-					delete ctx.clients[uuid];
-				} else {
-					ctx.clients[uuid]!.connected = false;
-				}
+			rejoin: ({ uuid }) => {
+				ctx.clients[uuid]!.connected = true;
 			},
-			gameStart: ({ rejoinToken, state }) => {
-				if (rejoinToken) {
-					localStorage.setItem('rejoinToken', rejoinToken);
-				}
-
+			leave: ({ uuid }) => {
+				ctx.clients[uuid]!.connected = false;
+			},
+			gameStart: ({ state }) => {
 				objectAssign(transitionState, {
 					kind: 'transitioning',
 					update: { kind: 'game', ...state }
 				});
 			},
-			gameEnd: ({ newOwner, postGameInfo }) => {
-				if (newOwner) {
-					ctx.settings.owner = newOwner;
-				}
-
+			gameEnd: ({ postGameInfo }) => {
 				objectAssign(transitionState, {
 					kind: 'transitioning',
 					update: {
@@ -61,12 +48,6 @@
 						prevGame: postGameInfo
 					}
 				});
-
-				for (const uuid in ctx.clients) {
-					if (!ctx.clients[uuid]!.connected) {
-						delete ctx.clients[uuid];
-					}
-				}
 			}
 		})
 	);

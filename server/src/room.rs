@@ -8,7 +8,8 @@ pub mod messages {
     use crate::{
         game::messages::{GameState, PostGameInfo},
         messages::{ClientMessage, ServerClient},
-        room::clients::Client,
+        room::clients::SocketRef,
+        socket::SocketParams,
     };
 
     #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
@@ -20,37 +21,28 @@ pub mod messages {
     )]
     #[ts(export)]
     pub enum ServerCore {
-        /// Broadcasted when a client joins/rejoins.
+        /// Broadcasted when a client joins.
         Join { uuid: Uuid, client: ServerClient },
+        /// Broadcasted when a client rejoins.
+        Rejoin { uuid: Uuid },
         /// Broadcasted when a client leaves.
-        /// `new_owner` will only be some if the owner leaves in lobby, if the owner
-        /// leaves in game, they will still be owner and have the chance to rejoin.
-        /// If they don't rejoin before the game ends, the game ending message will
-        /// broadcast the new owner.
-        Leave { uuid: Uuid, new_owner: Option<Uuid> },
+        Leave { uuid: Uuid },
         /// Sent when the game (based on room settings) has started.
-        GameStart {
-            /// Contains the player's rejoin token. Is `None` if client is spectating.
-            rejoin_token: Option<Uuid>,
-            state: GameState,
-        },
+        GameStart { state: GameState },
         /// Broadcasted when the current game has ended.
         GameEnd {
             post_game_info: Option<PostGameInfo>,
-            /// Is `Some` with a random client's uuid if the previous room owner
-            /// left during game and hasn't come back.
-            new_owner: Option<Uuid>,
         },
     }
 
     pub enum CoreMessage {
         Join {
+            socket: SocketRef,
+            params: SocketParams,
             /// Response to the socket task containing the client's designated UUID.
             /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
             /// Otherwise, the client will be given a randomly generated UUID.
             response: oneshot::Sender<Option<Uuid>>,
-            rejoin_token: Option<Uuid>,
-            client: Client,
         },
         Leave {
             uuid: Uuid,
@@ -68,7 +60,7 @@ pub mod clients;
 pub mod context;
 pub mod sender;
 
-use std::{collections::HashMap, mem, num::NonZero};
+use std::num::NonZero;
 
 use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
 use rustrict::CensorStr;
@@ -84,7 +76,7 @@ use crate::{
     lobby::Lobby,
     messages::{ClientMessage, RoomMessage, RoomSettings, ServerMessage, ServerState},
     room::{
-        clients::Clients,
+        clients::{Client, Clients},
         context::Context,
         messages::{CoreMessage, ServerCore},
         sender::RoomSender,
@@ -183,13 +175,8 @@ impl Room {
                 Ok(change) => match change {
                     StateChange::None => (),
                     StateChange::Lobby(prev_game_info) => {
-                        self.clients.keep_connected();
-
-                        let new_owner = self.maybe_new_owner();
-
                         self.clients.broadcast(ServerCore::GameEnd {
                             post_game_info: prev_game_info.clone(),
-                            new_owner,
                         });
 
                         self.state = State::Lobby(Lobby::new(prev_game_info));
@@ -200,20 +187,9 @@ impl Room {
                             &players,
                         );
 
-                        let state = game.snapshot();
-
-                        let tokens = game
-                            .rejoin_tokens()
-                            .iter()
-                            .map(|(&token, &user)| (user, token))
-                            .collect::<HashMap<Uuid, Uuid>>();
-
-                        for (uuid, client) in self.clients.iter() {
-                            client.send(ServerCore::GameStart {
-                                rejoin_token: tokens.get(uuid).copied(),
-                                state: state.clone(),
-                            });
-                        }
+                        self.clients.broadcast(ServerCore::GameStart {
+                            state: game.snapshot(),
+                        });
 
                         self.state = State::InGame(game);
                     }
@@ -260,68 +236,79 @@ impl Room {
                 result
             }
             CoreMessage::Join {
+                socket,
+                params,
                 response,
-                rejoin_token,
-                client,
             } => {
                 let error = match () {
                     () if self.clients.len() > self.settings.size as usize => Some("room full"),
-                    () if client.username.is_empty() => Some("username cannot be empty"),
-                    () if client.username.len() > 20 => {
+                    () if params.username.is_empty() => Some("username cannot be empty"),
+                    () if params.username.len() > 20 => {
                         Some("username too long (max 20 characters)")
                     }
-                    () if client.username.is_inappropriate() => {
+                    () if params.username.is_inappropriate() => {
                         Some("username likely contains inappropriate content")
                     }
                     () => None,
                 };
 
                 if let Some(err) = error {
-                    client.close(err);
+                    socket.close(err);
                     response.send(None).ok();
 
                     return Ok(StateChange::None);
                 }
 
-                if let Some(token) = rejoin_token {
-                    let player = self
-                        .state
-                        .try_in_game()
-                        .ok()
-                        .and_then(|game| game.rejoin_tokens().get(&token).copied());
-
-                    if let Some(player) = player
-                        && let Some(c) = self.clients.get_mut(player)
-                    {
-                        // If we try using a rejoin token while they still seem to be connected, end the old connection.
-                        if c.connected() {
-                            let old = mem::replace(c, client);
-                            old.close("Reconnected on another client");
-                        } else {
-                            *c = client;
-                        }
-
-                        self.clients.send(player, self.create_info_message(player));
-                        response.send(Some(player)).ok();
-
-                        return Ok(StateChange::None);
+                let (uuid, rejoined) = if let Some(rejoin_token) = params.rejoin_token
+                    && let Some((&uuid, client)) = self.clients.get_by_rejoin_token(rejoin_token)
+                {
+                    // If we try using a rejoin token while they still seem to be connected, end the old connection.
+                    if client.connected() {
+                        client.close("Reconnected on another client");
                     }
-                }
 
-                let uuid = Uuid::new_v4();
+                    client.socket = Some(socket);
 
-                if self.settings.owner == Uuid::default() {
-                    self.settings.owner = uuid;
-                }
+                    (uuid, true)
+                } else {
+                    let uuid = Uuid::new_v4();
 
-                self.clients.broadcast(ServerCore::Join {
+                    if self.settings.owner == Uuid::default() {
+                        self.settings.owner = uuid;
+                    }
+
+                    self.clients
+                        .insert(uuid, Client::new(socket, params.username));
+
+                    (uuid, false)
+                };
+
+                let client = self
+                    .clients
+                    .get(&uuid)
+                    .expect("uuid should point to existing client?");
+
+                client.send(ServerMessage::Info {
                     uuid,
-                    client: (&client).into(),
+                    rejoin_token: client.rejoin_token,
+                    clients: self
+                        .clients
+                        .iter()
+                        .map(|(&uuid, client)| (uuid, client.into()))
+                        .collect(),
+                    settings: self.settings,
+                    state: Box::new(self.state.snapshot()),
                 });
 
-                self.clients.insert(uuid, client);
+                self.clients.broadcast(if rejoined {
+                    ServerCore::Rejoin { uuid }
+                } else {
+                    ServerCore::Join {
+                        uuid,
+                        client: client.into(),
+                    }
+                });
 
-                self.clients.send(uuid, self.create_info_message(uuid));
                 response.send(Some(uuid)).ok();
 
                 Ok(StateChange::None)
@@ -329,7 +316,7 @@ impl Room {
             CoreMessage::Leave { uuid, socket } => {
                 if !self
                     .clients
-                    .get(uuid)
+                    .get(&uuid)
                     .is_some_and(|client| client.socket_uuid_eq(socket))
                 {
                     return Ok(StateChange::None);
@@ -340,14 +327,13 @@ impl Room {
                     uuid,
                 );
 
+                self.clients.disconnect(uuid);
+
                 if self.clients.is_empty() {
                     return Ok(StateChange::End);
                 }
 
-                let new_owner = self.maybe_new_owner();
-
-                self.clients
-                    .broadcast(ServerCore::Leave { uuid, new_owner });
+                self.clients.broadcast(ServerCore::Leave { uuid });
 
                 Ok(StateChange::None)
             }
@@ -388,30 +374,6 @@ impl Room {
             ),
         }
     }
-
-    fn create_info_message(&self, uuid: Uuid) -> ServerMessage {
-        ServerMessage::Info {
-            uuid,
-            clients: self
-                .clients
-                .iter()
-                .map(|(&uuid, client)| (uuid, client.into()))
-                .collect(),
-            settings: self.settings,
-            state: Box::new(self.state.snapshot()),
-        }
-    }
-
-    fn maybe_new_owner(&mut self) -> Option<Uuid> {
-        if self.clients.get(self.settings.owner).is_none() {
-            let random = *self.clients.random().0;
-            self.settings.owner = random;
-
-            Some(random)
-        } else {
-            None
-        }
-    }
 }
 
 #[cfg(test)]
@@ -424,7 +386,8 @@ mod tests {
     use crate::{
         lobby::messages::LobbyState,
         messages::{ServerClient, ServerState},
-        room::clients::{Client, SocketRef},
+        room::clients::SocketRef,
+        socket::SocketParams,
     };
 
     use super::*;
@@ -439,23 +402,21 @@ mod tests {
             *id += 1;
 
             let (sender, reciever) = mpsc::unbounded_channel();
-
-            let client = Client::new(
-                SocketRef::new(Uuid::new_v4(), sender),
-                format!("Client {id}"),
-            );
-
             let (response, uuid) = oneshot::channel();
 
             room.send(CoreMessage::Join {
+                socket: SocketRef::new(Uuid::new_v4(), sender),
+                params: SocketParams {
+                    username: format!("Client {id}"),
+                    rejoin_token: None,
+                },
                 response,
-                rejoin_token: None,
-                client,
             });
 
-            let uuid = uuid.await?.unwrap();
-
-            Ok(Self { uuid, reciever })
+            Ok(Self {
+                uuid: uuid.await?.unwrap(),
+                reciever,
+            })
         }
 
         async fn recv(&mut self) -> anyhow::Result<ServerMessage> {
@@ -474,103 +435,121 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn joining() -> anyhow::Result<()> {
         let mut id = 0;
-        let room = Room::spawn();
 
+        let room = Room::spawn();
         let mut one = FakeClient::new(&mut id, &room).await?;
 
-        assert_eq!(
-            one.recv().await?,
+        assert!(matches!(one.recv().await?,
             ServerMessage::Info {
-                uuid: one.uuid,
-                clients: HashMap::from([(
-                    one.uuid,
-                    ServerClient {
-                        username: "Client 1".to_owned(),
-                        avatar_url: None,
-                        connected: true
+                uuid,
+                rejoin_token,
+                clients,
+                settings,
+                state,
+            } if uuid == one.uuid
+                && clients
+                    == HashMap::from([(
+                        one.uuid,
+                        ServerClient {
+                            username: "Client 1".to_owned(),
+                            avatar_url: None,
+                            connected: true,
+                        },
+                    )])
+                && settings
+                    == RoomSettings {
+                        owner: one.uuid,
+                        ..RoomSettings::default()
                     }
-                )]),
-                settings: RoomSettings {
-                    owner: one.uuid,
-                    ..RoomSettings::default()
-                },
-                state: Box::new(ServerState::Lobby(LobbyState {
-                    ready: vec![],
-                    timer_start: None,
-                    prev_game: None
-                }))
-            }
-        );
+                && *state
+                    == ServerState::Lobby(LobbyState {
+                        ready: vec![],
+                        timer_start: None,
+                        prev_game: None,
+                    })
+        ));
 
         Ok(())
     }
 
     #[tokio::test(start_paused = true)]
-    async fn multiple() -> anyhow::Result<()> {
+    async fn multiple_joining() -> anyhow::Result<()> {
         let mut id = 0;
         let room = Room::spawn();
 
         let mut one = FakeClient::new(&mut id, &room).await?;
 
-        assert_eq!(
-            one.recv().await?,
+        assert!(matches!(one.recv().await?,
             ServerMessage::Info {
-                uuid: one.uuid,
-                clients: HashMap::from([(
-                    one.uuid,
-                    ServerClient {
-                        username: "Client 1".to_owned(),
-                        avatar_url: None,
-                        connected: true
-                    }
-                )]),
-                settings: RoomSettings {
-                    owner: one.uuid,
-                    ..RoomSettings::default()
-                },
-                state: Box::new(ServerState::Lobby(LobbyState {
-                    ready: vec![],
-                    timer_start: None,
-                    prev_game: None
-                }))
-            }
-        );
-
-        let mut two = FakeClient::new(&mut id, &room).await?;
-
-        assert_eq!(
-            two.recv().await?,
-            ServerMessage::Info {
-                uuid: two.uuid,
-                clients: HashMap::from([
-                    (
+                uuid,
+                rejoin_token,
+                clients,
+                settings,
+                state,
+            } if uuid == one.uuid
+                && clients
+                    == HashMap::from([(
                         one.uuid,
                         ServerClient {
                             username: "Client 1".to_owned(),
                             avatar_url: None,
-                            connected: true
-                        }
-                    ),
-                    (
-                        two.uuid,
-                        ServerClient {
-                            username: "Client 2".to_owned(),
-                            avatar_url: None,
-                            connected: true
-                        }
-                    )
-                ]),
-                settings: RoomSettings {
-                    owner: one.uuid,
-                    ..RoomSettings::default()
-                },
-                state: Box::new(ServerState::Lobby(LobbyState {
-                    ready: vec![],
-                    timer_start: None,
-                    prev_game: None
-                }))
-            }
-        );
+                            connected: true,
+                        },
+                    )])
+                && settings
+                    == RoomSettings {
+                        owner: one.uuid,
+                        ..RoomSettings::default()
+                    }
+                && *state
+                    == ServerState::Lobby(LobbyState {
+                        ready: vec![],
+                        timer_start: None,
+                        prev_game: None,
+                    })
+        ));
+
+        let mut two = FakeClient::new(&mut id, &room).await?;
+
+        assert!(matches!(two.recv().await?,
+            ServerMessage::Info {
+                uuid,
+                rejoin_token,
+                clients,
+                settings,
+                state,
+            } if uuid == two.uuid
+                && clients
+                    == HashMap::from([
+                        (
+                            one.uuid,
+                            ServerClient {
+                                username: "Client 1".to_owned(),
+                                avatar_url: None,
+                                connected: true
+                            }
+                        ),
+                        (
+                            two.uuid,
+                            ServerClient {
+                                username: "Client 2".to_owned(),
+                                avatar_url: None,
+                                connected: true
+                            }
+                        )
+                    ])
+                && settings
+                    == RoomSettings {
+                        owner: one.uuid,
+                        ..RoomSettings::default()
+                    }
+                && *state
+                    == ServerState::Lobby(LobbyState {
+                        ready: vec![],
+                        timer_start: None,
+                        prev_game: None,
+                    })
+        ));
 
         Ok(())
     }

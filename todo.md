@@ -1,6 +1,5 @@
 urgent:
 
-- always valid rejoin-tokens, no more owner shuffling
 - first time game explanations
 
 to-do:

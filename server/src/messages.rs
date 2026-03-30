@@ -41,8 +41,10 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     /// First message sent after establishing connection succesfully, sent only once.
     Info {
-        /// Joined client's designated UUID.
+        /// Joined clients designated UUID.
         uuid: Uuid,
+        /// Joined clients rejoin token, may be the same one they joined with.
+        rejoin_token: Uuid,
         /// Room clients.
         clients: HashMap<Uuid, ServerClient>,
         /// Room and game settings.
@@ -109,12 +111,12 @@ pub struct RoomSettings {
 impl Default for RoomSettings {
     fn default() -> Self {
         Self {
-            public: Default::default(),
-            owner: Default::default(),
+            public: false,
+            owner: Uuid::default(),
             size: 24,
-            game: Default::default(),
-            word_bomb: Default::default(),
-            anagrams: Default::default(),
+            game: GameType::default(),
+            word_bomb: WordBombSettings::default(),
+            anagrams: AnagramsSettings::default(),
         }
     }
 }

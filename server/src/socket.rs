@@ -15,10 +15,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::{
-    room::{
-        clients::{Client, SocketRef},
-        messages::CoreMessage,
-    },
+    room::{clients::SocketRef, messages::CoreMessage},
     state::AppState,
 };
 
@@ -53,14 +50,14 @@ async fn socket(
     let (sender, mut reciever) = mpsc::unbounded_channel::<ws::Message>();
 
     // Random UUID for this socket, not client.
-    let socket = Uuid::new_v4();
-    let client = Client::new(SocketRef::new(socket, sender), params.username);
+    let socket_uuid = Uuid::new_v4();
+    let socket = SocketRef::new(socket_uuid, sender);
 
     // Get room or try creating it if it doesn't exist.
     let room = match state.get_or_insert_room(room_name) {
         Ok(room) => room,
         Err(reason) => {
-            client.close(reason);
+            socket.close(reason);
             return Ok(());
         }
     };
@@ -79,9 +76,9 @@ async fn socket(
         let (sender, reciever) = oneshot::channel();
 
         room.send(CoreMessage::Join {
+            socket,
+            params,
             response: sender,
-            rejoin_token: params.rejoin_token,
-            client,
         });
 
         // Client UUID returned by the room. `None` if join error.
@@ -104,7 +101,10 @@ async fn socket(
             }
         }
 
-        room.send(CoreMessage::Leave { uuid, socket });
+        room.send(CoreMessage::Leave {
+            uuid,
+            socket: socket_uuid,
+        });
 
         anyhow::Ok(())
     });

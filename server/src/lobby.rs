@@ -202,8 +202,6 @@ impl Lobby {
                 timer: self.update_countdown(&ctx),
             });
         }
-
-        ctx.clients.remove(uuid);
     }
 
     pub fn on_abort(&mut self) {

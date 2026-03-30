@@ -72,8 +72,6 @@ pub mod messages {
 pub mod anagrams;
 pub mod word_bomb;
 
-use std::collections::HashMap;
-
 use uuid::Uuid;
 
 use crate::{
@@ -164,8 +162,6 @@ impl State {
 
 pub struct Game {
     state: State,
-    /// Rejoin Token -> Player UUID.
-    rejoin_tokens: HashMap<Uuid, Uuid>,
     /// Clients (players or spectators) requesting to end the game early.
     requesting_end: Vec<Uuid>,
 }
@@ -183,13 +179,8 @@ impl Game {
                     players,
                 )),
             },
-            rejoin_tokens: players.iter().map(|&uuid| (Uuid::new_v4(), uuid)).collect(),
             requesting_end: vec![],
         }
-    }
-
-    pub fn rejoin_tokens(&self) -> &HashMap<Uuid, Uuid> {
-        &self.rejoin_tokens
     }
 }
 
@@ -209,17 +200,17 @@ impl Game {
 
                 // If everyone currently online has requested to end early, end.
                 if self.requesting_end.len() == ctx.clients.len() {
-                    return Ok(StateChange::Lobby(None));
+                    StateChange::Lobby(None)
+                } else {
+                    ctx.clients.broadcast(ServerGame::EndRequest { uuid });
+
+                    StateChange::None
                 }
-
-                ctx.clients.broadcast(ServerGame::EndRequest { uuid });
-
-                None
             }
-            ClientGame::ForceEnd => return Ok(StateChange::Lobby(None)),
+            ClientGame::ForceEnd => StateChange::Lobby(None),
         };
 
-        Ok(outcome.map_or(StateChange::None, |info| StateChange::Lobby(Some(info))))
+        Ok(outcome)
     }
 
     pub fn on_self_message(
@@ -265,8 +256,8 @@ impl Game {
         Ok(outcome)
     }
 
-    pub fn on_client_leave(&mut self, ctx: Context, uuid: Uuid) {
-        ctx.clients.disconnect(uuid);
+    pub fn on_client_leave(&mut self, _ctx: Context, _uuid: Uuid) {
+        // TODO: If after leave, everyone wants the game ended, end it.
     }
 
     pub fn on_abort(&mut self) {
