@@ -126,7 +126,7 @@
 		onJoin={(username) => connectSocket(username)}
 	/>
 {:else if connection.kind === 'ready'}
-	<Wordplay initial={connection.ctx} sendMsg={connection.sendMsg} />
+	<Wordplay bind:ctx={connection.ctx} sendMsg={connection.sendMsg} />
 {:else if connection.kind === 'error'}
 	<main class="flex h-screen items-center justify-center">
 		<div>

@@ -3,7 +3,7 @@
 	import GreenSettings from '$lib/icons/GreenSettings.svelte';
 	import Logo from '$lib/icons/Logo.svelte';
 
-	const { ctx }: Omit<Props<never>, 'initial' | 'sendMsg'> = $props();
+	let { ctx = $bindable() }: Omit<Props<never>, 'state' | 'sendMsg'> = $props();
 
 	let innerNavElement: HTMLElement;
 
@@ -23,18 +23,18 @@
 	onfocus={() => navOnFocus()}
 	onmouseout={() => navOnBlur()}
 	onblur={() => navOnBlur()}
-	class={ctx.state.kind !== 'lobby' ? 'fixed left-0 top-0 z-40 w-full' : null}
+	class={ctx.state.kind !== 'lobby' ? 'fixed top-0 left-0 z-40 w-full' : null}
 >
 	<div
 		bind:this={innerNavElement}
 		class={[
 			'flex items-center justify-between px-5 py-4 transition-transform',
-			ctx.state.kind === 'lobby' ? 'translate-y-0' : 'bg-background/90 -translate-y-full'
+			ctx.state.kind === 'lobby' ? 'translate-y-0' : '-translate-y-full bg-background/90'
 		]}
 	>
 		<Logo />
 		<div class="flex items-center gap-x-4">
-			<div class="border-green flex -space-x-4">
+			<div class="flex -space-x-4 border-green">
 				{#each Object.entries(ctx.clients).slice(0, 4) as [uuid, client]}
 					<img
 						src={`https://avatar.vercel.sh/${client!.username}`}
@@ -46,7 +46,7 @@
 					/>
 				{/each}
 				{#if Object.keys(ctx.clients).length > 4}
-					<div class="border-green size-10 content-center rounded-full border bg-black text-center">
+					<div class="size-10 content-center rounded-full border border-green bg-black text-center">
 						+{Object.keys(ctx.clients).length - 4}
 					</div>
 				{/if}

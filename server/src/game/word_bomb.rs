@@ -88,11 +88,12 @@ pub mod messages {
     pub struct WordBombPostGame {
         pub winner: Uuid,
         // pub mins_elapsed: f32,
-        // pub words_used: usize,
+        // pub words_used: Vec<String>,
+        // pub words_missed: Vec<String>,
+        // pub lives_regained: Vec<(Uuid, u32)>,
         // pub fastest_guesses: Vec<(Uuid, f32)>,
         // pub longest_words: Vec<(Uuid, String)>,
         // pub avg_wpms: Vec<(Uuid, f32)>,
-        // pub avg_word_lengths: Vec<(Uuid, f32)>,
     }
 }
 
@@ -365,7 +366,7 @@ impl WordBomb {
             winner: *self
                 .players
                 .iter()
-                .find(|player| player.1.alive())
+                .find(|(_uuid, player)| player.alive())
                 .expect("one player should be alive")
                 .0,
         }

@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { Props } from '$lib/context';
-	import { tick } from 'svelte';
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
 	import { transitionState } from '$lib/stores/transition.svelte';
 
-	const { ctx = $bindable() }: Omit<Props<never>, 'initial' | 'sendMsg'> = $props();
+	let { ctx = $bindable() }: Omit<Props<never>, 'state' | 'sendMsg'> = $props();
 
 	let containerElement = $state<HTMLElement>();
 	let logoElement = $state<HTMLElement>();

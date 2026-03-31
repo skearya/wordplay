@@ -11,15 +11,13 @@
 	import Nav from './Nav.svelte';
 	import Transition from './Transition.svelte';
 
-	const {
-		initial,
+	let {
+		ctx = $bindable(),
 		sendMsg
 	}: {
-		initial: Context;
+		ctx: Context;
 		sendMsg: (message: ClientMessage) => void;
 	} = $props();
-
-	let ctx = $state(initial);
 
 	onMount(() =>
 		coreEmitter.handle({
@@ -59,11 +57,11 @@
 	class="flex h-screen flex-col overflow-hidden"
 >
 	<Transition bind:ctx />
-	<Nav {ctx} />
+	<Nav bind:ctx />
 	{#if ctx.state.kind === 'lobby'}
-		<Lobby {ctx} initial={ctx.state} {sendMsg} />
+		<Lobby bind:ctx bind:state={ctx.state} {sendMsg} />
 	{:else if ctx.state.kind === 'game'}
-		<Game {ctx} initial={ctx.state} {sendMsg} />
+		<Game bind:ctx bind:state={ctx.state} {sendMsg} />
 	{:else if ctx.state satisfies never}
 		{unreachable(ctx.state)}
 	{/if}

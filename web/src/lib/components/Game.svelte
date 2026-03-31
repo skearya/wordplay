@@ -6,9 +6,7 @@
 	import { unreachable } from '$lib/utils';
 	import WordBomb from './WordBomb.svelte';
 
-	const { ctx, initial, sendMsg }: Props<GameState> = $props();
-
-	let game = $state(initial);
+	let { ctx = $bindable(), state: game = $bindable(), sendMsg }: Props<GameState> = $props();
 
 	onMount(() =>
 		gameEmitter.handle({
@@ -18,7 +16,7 @@
 </script>
 
 {#if game.variant.kind === 'wordBomb'}
-	<WordBomb {ctx} initial={game.variant} {sendMsg} />
+	<WordBomb bind:ctx bind:state={game.variant} {sendMsg} />
 {:else if game.variant.kind === 'anagrams'}
 	anagrams
 {:else if game.variant satisfies never}

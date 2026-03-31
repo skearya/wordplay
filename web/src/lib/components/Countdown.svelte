@@ -1,5 +1,5 @@
 <script lang="ts">
-	const { timerStart }: { timerStart: bigint } = $props();
+	let { timerStart }: { timerStart: bigint } = $props();
 
 	let countdown = $derived(10 - Math.floor((Date.now() - Number(timerStart)) / 1000));
 

@@ -14,7 +14,11 @@
 	import Star from '$lib/icons/Star.svelte';
 	import { lerp } from '$lib/utils';
 
-	const { ctx, initial, sendMsg }: Props<WordBombState> = $props();
+	let {
+		ctx = $bindable(),
+		state: wordBomb = $bindable(),
+		sendMsg
+	}: Props<WordBombState> = $props();
 
 	let activeOutlineContainer: HTMLElement;
 	let incorrectOutlineElement: HTMLElement;
@@ -23,8 +27,6 @@
 	let playerInputElement = $state<HTMLInputElement>();
 	let playerElements: Record<string, HTMLElement> = $state({});
 	let arrowElements: Record<string, HTMLElement> = $state({});
-
-	let wordBomb = $state(initial);
 
 	onMount(() => {
 		animateTurnChange({ kind: 'first-run' });

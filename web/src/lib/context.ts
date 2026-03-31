@@ -5,8 +5,8 @@ import type { Variant } from '$lib/utils';
 /// Initial state the server sends on connection.
 export type Context = Variant<ServerMessage, 'info'>['data'];
 
-export type Props<InitialState> = {
+export type Props<State> = {
 	ctx: Context;
-	initial: InitialState;
+	state: State;
 	sendMsg: (message: ClientMessage) => void;
 };

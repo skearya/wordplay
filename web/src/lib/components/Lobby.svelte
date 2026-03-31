@@ -14,9 +14,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Countdown from './Countdown.svelte';
 
-	const { ctx, initial, sendMsg }: Props<LobbyState> = $props();
+	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
-	let lobby = $state(initial);
 	let panels: ('stats' | 'join')[] = $state(lobby.prevGame ? ['stats'] : ['join']);
 
 	const handleTimer = (action: TimerAction) => {
