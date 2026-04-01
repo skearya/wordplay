@@ -240,16 +240,16 @@ impl Room {
                 params,
                 response,
             } => {
-                let error = match () {
-                    () if self.clients.len() > self.settings.size as usize => Some("room full"),
-                    () if params.username.is_empty() => Some("username cannot be empty"),
-                    () if params.username.len() > 20 => {
-                        Some("username too long (max 20 characters)")
-                    }
-                    () if params.username.is_inappropriate() => {
-                        Some("username likely contains inappropriate content")
-                    }
-                    () => None,
+                let error = if self.clients.len() > self.settings.size as usize {
+                    Some("room full")
+                } else if params.username.is_empty() {
+                    Some("username cannot be empty")
+                } else if params.username.len() > 20 {
+                    Some("username too long (max 20 characters)")
+                } else if params.username.is_inappropriate() {
+                    Some("username likely contains inappropriate content")
+                } else {
+                    None
                 };
 
                 if let Some(err) = error {
