@@ -13,6 +13,7 @@
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import Star from '$lib/icons/Star.svelte';
 	import { lerp } from '$lib/utils';
+	import Avatar from './Avatar.svelte';
 
 	let {
 		ctx = $bindable(),
@@ -354,13 +355,7 @@
 				class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 			>
 				<div class="relative mb-2">
-					<img
-						src={`https://avatar.vercel.sh/${ctx.clients[uuid]!.username}`}
-						alt="avatar"
-						width="120"
-						height="120"
-						class="size-24 rounded-full"
-					/>
+					<Avatar {ctx} {uuid} />
 					<div class="absolute bottom-0 left-0 flex flex-col gap-y-1.5 mix-blend-plus-lighter">
 						{#each { length: player!.lives }}
 							<HeartIcon />

@@ -12,6 +12,7 @@
 	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Avatar from './Avatar.svelte';
 	import Countdown from './Countdown.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
@@ -173,16 +174,11 @@
 								out:fly={{ x: 48, y: -48, duration: 400 }}
 								style={lobby.ready.length === 1
 									? `translate: -50% -50%;`
-									: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px); scale: ${100 - Math.log2(lobby.ready.length) * 8}%;`}
+									: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px);` +
+										`scale: ${100 - Math.log2(lobby.ready.length) * 8}%;`}
 								class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
 							>
-								<img
-									src={`https://avatar.vercel.sh/${ctx.clients[uuid]!.username}`}
-									alt="avatar"
-									width="120"
-									height="120"
-									class="size-24 rounded-full"
-								/>
+								<Avatar {ctx} {uuid} />
 								<p>{ctx.clients[uuid]!.username}</p>
 							</div>
 						{/each}

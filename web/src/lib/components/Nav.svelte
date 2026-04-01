@@ -2,6 +2,7 @@
 	import type { Props } from '$lib/context';
 	import GreenSettings from '$lib/icons/GreenSettings.svelte';
 	import Logo from '$lib/icons/Logo.svelte';
+	import Avatar from './Avatar.svelte';
 
 	let { ctx = $bindable() }: Omit<Props<never>, 'state' | 'sendMsg'> = $props();
 
@@ -35,15 +36,8 @@
 		<Logo />
 		<div class="flex items-center gap-x-4">
 			<div class="flex -space-x-4 border-green">
-				{#each Object.entries(ctx.clients).slice(0, 4) as [uuid, client]}
-					<img
-						src={`https://avatar.vercel.sh/${client!.username}`}
-						alt={client!.username}
-						title={`${client!.username} (${uuid})`}
-						width="120"
-						height="120"
-						class="size-10 rounded-full border border-black"
-					/>
+				{#each Object.keys(ctx.clients).slice(0, 4) as uuid}
+					<Avatar {ctx} {uuid} size="sm" class="border border-black" />
 				{/each}
 				{#if Object.keys(ctx.clients).length > 4}
 					<div class="size-10 content-center rounded-full border border-green bg-black text-center">
