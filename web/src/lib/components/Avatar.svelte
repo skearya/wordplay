@@ -1,6 +1,9 @@
 <script lang="ts">
-	import type { Props } from '$lib/context';
-	import type { HTMLImgAttributes } from 'svelte/elements';
+	import type { Context, Props } from '$lib/context';
+	import type { ComponentProps } from 'svelte';
+	import StaticAvatar from '$lib/ui/StaticAvatar.svelte';
+
+	type StaticAvatarProps = ComponentProps<typeof StaticAvatar>;
 
 	let {
 		ctx,
@@ -8,25 +11,19 @@
 		size = 'md',
 		class: className,
 		...rest
-	}: Omit<Props<never>, 'state' | 'sendMsg'> & {
+	}: {
+		ctx: Context;
 		uuid: string;
-		size?: 'sm' | 'md' | 'lg';
-	} & HTMLImgAttributes = $props();
+	} & Partial<StaticAvatarProps> = $props();
 
 	let user = $derived(ctx.clients[uuid]!);
 </script>
 
-<img
-	src={user.avatarUrl ? user.avatarUrl : `https://avatar.vercel.sh/${user.username}`}
-	alt={user.username}
+<StaticAvatar
+	{size}
+	username={user.username}
+	avatarUrl={user.avatarUrl ?? undefined}
 	title={user.connected ? user.username : `${user.username} (disconnected)`}
-	width="120"
-	height="120"
-	class={[
-		size === 'sm' ? 'size-10' : size === 'md' ? 'size-24' : 'size-36',
-		user.connected ? 'opacity-100' : 'animate-pulse',
-		'rounded-full transition-opacity',
-		className
-	]}
+	class={[!user.connected && 'animate-pulse', className]}
 	{...rest}
 />

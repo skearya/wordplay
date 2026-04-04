@@ -7,10 +7,7 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
-use tokio::sync::{
-    mpsc::{self},
-    oneshot,
-};
+use tokio::sync::{mpsc, oneshot};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -78,7 +75,7 @@ async fn socket(
         room.send(CoreMessage::Join {
             socket,
             params,
-            response: sender,
+            sender,
         });
 
         // Client UUID returned by the room. `None` if join error.

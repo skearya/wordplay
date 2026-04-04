@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
 	import { onMount } from 'svelte';
 	import gridSvg from '$lib/assets/grid.svg';
-	import Bomb from '$lib/icons/Bomb.svelte';
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
 	import Search from '$lib/icons/Search.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
 	import { createLetterCanvas } from '$lib/letters';
+	import Room from './Room.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -66,10 +67,17 @@
 
 		return () => cleanupCanvas();
 	});
+
+	async function fetchRoomsInfo() {
+		const res = await fetch('http://localhost:3000/info');
+		const json = (await res.json()) as RoomsInfoResponse;
+
+		return json;
+	}
 </script>
 
 <header
-	style={`background: linear-gradient(45deg, rgba(255,250,226,1), rgba(229,228,158,0.8)), url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.91' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");`}
+	style={`background: linear-gradient(45deg, rgba(255, 250, 226, 1), rgba(229, 228, 158, 0.8)), url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.91' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");`}
 	class="absolute top-0 left-0 -z-10 h-full w-full bg-cover"
 >
 	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
@@ -84,7 +92,7 @@
 <section
 	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll mt-[50vh] flex min-h-[64rem] translate-y-[50vh] items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black"
+	class="background-scroll mt-[50vh] flex min-h-[50vh] translate-y-[50vh] items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black"
 >
 	<div class="sticky top-4 w-[325px] space-y-2.5 text-background">
 		<button class="w-full bg-pastel-red py-7 text-2xl font-medium">Join room</button>
@@ -104,29 +112,28 @@
 				<Search />
 			</div>
 		</div>
-		<div class="grid grid-cols-3 gap-2.5">
-			{#each { length: 12 }}
-				<a href="/" class="relative border border-faded-green bg-dark-green p-2.5">
-					<h1 class="mb-10 text-lg">Stupid Room Name</h1>
-					<div class="flex -space-x-2">
-						{#each { length: 3 }, i}
-							<img
-								src={`https://avatar.vercel.sh/${i}`}
-								width="38px"
-								height="38px"
-								alt="avatar"
-								class="aspect-square size-[38px] rounded-full border-2 border-background"
-							/>
-						{/each}
-						<p
-							class="flex aspect-square size-[38px] items-center justify-center rounded-full bg-background"
-						>
-							+21
-						</p>
+		{#await fetchRoomsInfo()}
+			loading
+		{:then { rooms }}
+			<div class="relative grid grid-cols-3 gap-2.5">
+				{#each Object.entries(rooms) as [name, info]}
+					<Room {name} {info} />
+				{:else}
+					<div
+						class="text-xl content-center h-16 text-center bg-pink text-black font-serif col-span-3"
+					>
+						There aren't any public rooms right now, be the first?
 					</div>
-					<Bomb class="absolute right-2.5 bottom-2.5" />
-				</a>
-			{/each}
-		</div>
+					{#each { length: 15 }, i}
+						<Room
+							name="Your Room Here..."
+							style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
+						/>
+					{/each}
+				{/each}
+			</div>
+		{:catch}
+			error
+		{/await}
 	</div>
 </section>

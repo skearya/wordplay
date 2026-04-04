@@ -18,3 +18,4 @@ rand = "0.9"
 governor = "0.10.1"
 rustrict = "0.7.36"
 console-subscriber = "0.5.0"
+tower-http = { version = "0.6.8", features = ["cors"] }

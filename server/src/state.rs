@@ -4,8 +4,13 @@ use std::{
 };
 
 use rustrict::CensorStr;
+use tokio::{sync::oneshot, task::JoinSet};
 
-use crate::room::{Room, sender::RoomSender};
+use crate::room::{
+    Room,
+    messages::{CoreMessage, RoomInfo},
+    sender::RoomSender,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -31,6 +36,43 @@ impl AppState {
         };
 
         lock.get_or_insert_room(name)
+    }
+
+    pub async fn get_room_info(&self, name: &str) -> Option<RoomInfo> {
+        let response = {
+            let mut lock = match self.inner.lock() {
+                Ok(lock) => lock,
+                Err(poison) => poison.into_inner(),
+            };
+
+            lock.get_room_info(name)?
+        };
+
+        let info = response.await.expect("sender shouldn't be dropped");
+
+        Some(info)
+    }
+
+    pub async fn get_rooms_info(&self) -> HashMap<String, RoomInfo> {
+        let mut responses = {
+            let mut lock = match self.inner.lock() {
+                Ok(lock) => lock,
+                Err(poison) => poison.into_inner(),
+            };
+
+            lock.get_rooms_info()
+        };
+
+        let mut rooms_data = HashMap::new();
+
+        while let Some(room_data) = responses.join_next().await {
+            let (name, info) = room_data.expect("room communication task shouldn't panic");
+            let info = info.expect("sender shouldn't be dropped");
+
+            rooms_data.insert(name, info);
+        }
+
+        rooms_data
     }
 }
 
@@ -74,5 +116,31 @@ impl AppStateInner {
         } else {
             self.make_room(name)
         }
+    }
+
+    fn get_room_info(&mut self, name: &str) -> Option<oneshot::Receiver<RoomInfo>> {
+        let room = self.rooms.get(name)?;
+        let (sender, reciever) = oneshot::channel();
+
+        if room.send(CoreMessage::InfoRequest { sender }) {
+            Some(reciever)
+        } else {
+            None
+        }
+    }
+
+    fn get_rooms_info(&mut self) -> JoinSet<(String, Result<RoomInfo, oneshot::error::RecvError>)> {
+        let mut responses = JoinSet::new();
+
+        for (name, room) in &self.rooms {
+            let name = name.clone();
+            let (sender, reciever) = oneshot::channel();
+
+            if room.send(CoreMessage::InfoRequest { sender }) {
+                responses.spawn(async move { (name, reciever.await) });
+            }
+        }
+
+        responses
     }
 }

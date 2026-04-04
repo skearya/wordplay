@@ -157,7 +157,7 @@
 							]}
 						>
 							<div
-								class="striped aspect-square size-24 content-center rounded-full border border-dashed text-center"
+								class="aspect-square size-24 content-center rounded-full border border-dashed text-center opacity-80"
 							>
 								?
 							</div>

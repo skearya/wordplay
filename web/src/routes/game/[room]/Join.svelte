@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import FilledDoubleRightArrow from '$lib/icons/FilledDoubleRightArrow.svelte';
+	import AnimatedDoubleRightArrow from '$lib/icons/AnimatedDoubleRightArrow.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
 	import Background from './Background.svelte';
 
-	const {
+	let {
 		room,
 		connection,
 		onJoin
@@ -57,7 +57,7 @@
 				class="relative h-full bg-pink pr-6 pl-12"
 			>
 				<p class="bg-pink font-serif text-2xl text-background">Enter!</p>
-				<FilledDoubleRightArrow class="absolute right-2 bottom-2.5" />
+				<AnimatedDoubleRightArrow class="absolute right-2 bottom-2.5" />
 			</button>
 		</div>
 		<div class="overflow-hidden border-t border-pastel-pink/20 bg-pastel-pink/5 font-mono">

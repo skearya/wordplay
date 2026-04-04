@@ -42,10 +42,6 @@
 		}
 	});
 
-	onDestroy(() => {
-		socket?.close();
-	});
-
 	function connectSocket(username: string) {
 		if (connection.kind !== 'awaiting') return;
 
@@ -58,7 +54,7 @@
 			Object.entries(socketParams).filter((param): param is [string, string] => param[1] !== null)
 		);
 
-		socket = new WebSocket(`ws://localhost:3000/${params.room}?${urlParams}`);
+		socket = new WebSocket(`ws://localhost:3000/connect/${params.room}?${urlParams}`);
 
 		socket.addEventListener('open', () => {
 			connection = { kind: 'connected' };

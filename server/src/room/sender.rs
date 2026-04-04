@@ -10,8 +10,8 @@ impl RoomSender {
         Self(sender)
     }
 
-    pub fn send(&self, message: impl Into<RoomMessage>) {
-        self.0.send(message.into()).ok();
+    pub fn send(&self, message: impl Into<RoomMessage>) -> bool {
+        self.0.send(message.into()).is_ok()
     }
 
     pub fn is_closed(&self) -> bool {

@@ -4,8 +4,7 @@ urgent:
 
 to-do:
 
-- fix word bomb dead outline move
-- proper game picker, settings
-- room info
+- proper game picker
+- settings
 - anagrams
 - scrabble

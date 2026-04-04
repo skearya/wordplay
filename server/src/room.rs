@@ -7,7 +7,7 @@ pub mod messages {
 
     use crate::{
         game::messages::{GameState, PostGameInfo},
-        messages::{ClientMessage, ServerClient},
+        messages::{ClientMessage, RoomSettings, ServerClient},
         room::clients::SocketRef,
         socket::SocketParams,
     };
@@ -42,7 +42,7 @@ pub mod messages {
             /// Response to the socket task containing the client's designated UUID.
             /// If the `rejoin_token` was valid, the client will given the previously associated UUID.
             /// Otherwise, the client will be given a randomly generated UUID.
-            response: oneshot::Sender<Option<Uuid>>,
+            sender: oneshot::Sender<Option<Uuid>>,
         },
         Leave {
             uuid: Uuid,
@@ -53,6 +53,20 @@ pub mod messages {
             uuid: Uuid,
             message: ClientMessage,
         },
+        /// Request to the room task for basic room info.
+        /// This will be used on the homepage (if game is public) and room join page.
+        InfoRequest {
+            sender: oneshot::Sender<RoomInfo>,
+        },
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct RoomInfo {
+        pub settings: RoomSettings,
+        pub clients: Vec<ServerClient>,
     }
 }
 
@@ -78,7 +92,7 @@ use crate::{
     room::{
         clients::{Client, Clients},
         context::Context,
-        messages::{CoreMessage, ServerCore},
+        messages::{CoreMessage, RoomInfo, ServerCore},
         sender::RoomSender,
     },
 };
@@ -238,7 +252,7 @@ impl Room {
             CoreMessage::Join {
                 socket,
                 params,
-                response,
+                sender,
             } => {
                 let error = if self.clients.len() > self.settings.size as usize {
                     Some("room full")
@@ -254,7 +268,7 @@ impl Room {
 
                 if let Some(err) = error {
                     socket.close(err);
-                    response.send(None).ok();
+                    sender.send(None).ok();
 
                     return Ok(StateChange::None);
                 }
@@ -309,7 +323,7 @@ impl Room {
                     }
                 });
 
-                response.send(Some(uuid)).ok();
+                sender.send(Some(uuid)).ok();
 
                 Ok(StateChange::None)
             }
@@ -334,6 +348,16 @@ impl Room {
                 }
 
                 self.clients.broadcast(ServerCore::Leave { uuid });
+
+                Ok(StateChange::None)
+            }
+            CoreMessage::InfoRequest { sender } => {
+                sender
+                    .send(RoomInfo {
+                        settings: self.settings,
+                        clients: self.clients.values().map(|client| client.into()).collect(),
+                    })
+                    .ok();
 
                 Ok(StateChange::None)
             }
@@ -401,21 +425,23 @@ mod tests {
         async fn new(id: &mut u32, room: &RoomSender) -> anyhow::Result<Self> {
             *id += 1;
 
-            let (sender, reciever) = mpsc::unbounded_channel();
-            let (response, uuid) = oneshot::channel();
+            let (socket_sender, socket_reciever) = mpsc::unbounded_channel();
+            let (uuid_sender, uuid_reciever) = oneshot::channel();
 
             room.send(CoreMessage::Join {
-                socket: SocketRef::new(Uuid::new_v4(), sender),
+                socket: SocketRef::new(Uuid::new_v4(), socket_sender),
                 params: SocketParams {
                     username: format!("Client {id}"),
                     rejoin_token: None,
                 },
-                response,
+                sender: uuid_sender,
             });
 
             Ok(Self {
-                uuid: uuid.await?.unwrap(),
-                reciever,
+                uuid: uuid_reciever
+                    .await?
+                    .expect("should've been able to join room"),
+                reciever: socket_reciever,
             })
         }
 

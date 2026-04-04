@@ -1,16 +1,18 @@
 mod game;
 mod general;
 mod global;
+mod info;
 mod lobby;
 mod messages;
 mod room;
 mod socket;
 mod state;
 
-use axum::{Router, routing::get};
+use axum::{Router, http::HeaderValue, routing::get};
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
-use crate::{global::init_globals, socket::handler, state::AppState};
+use crate::{global::init_globals, state::AppState};
 
 #[tokio::main]
 async fn main() {
@@ -21,8 +23,11 @@ async fn main() {
     let state = AppState::new();
 
     let app = Router::new()
-        .route("/{room}", get(handler))
-        .with_state(state);
+        .route("/info", get(info::rooms))
+        .route("/info/{room}", get(info::room))
+        .route("/connect/{room}", get(socket::handler))
+        .with_state(state)
+        .layer(CorsLayer::new().allow_origin(HeaderValue::from_static("http://localhost:5173")));
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("listening on {:#?}", listener.local_addr().unwrap());

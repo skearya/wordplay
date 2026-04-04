@@ -1,9 +1,15 @@
 <script lang="ts">
 	import '../app.css';
 	import '@fontsource-variable/inter';
+	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 
 	let { children } = $props();
+
+	onMount(() => {
+		history.scrollRestoration = 'manual';
+		window.scrollTo(0, 0);
+	});
 </script>
 
 <svelte:head>
