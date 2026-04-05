@@ -30,7 +30,7 @@
 		bind:this={innerNavElement}
 		class={[
 			'flex items-center justify-between px-5 py-4 transition-transform',
-			ctx.state.kind === 'lobby' ? 'translate-y-0' : '-translate-y-full bg-background/90'
+			ctx.state.kind === 'lobby' ? 'translate-y-0' : '-translate-y-full bg-background'
 		]}
 	>
 		<Logo />

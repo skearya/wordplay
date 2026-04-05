@@ -76,12 +76,33 @@
 			if (playerInputElement) {
 				playerInputElement.value = '';
 				playerInputElement.focus();
+				playerInputLength = 0;
 			}
 		}
 	});
 
+	let playerInput = $state('');
+	let playerInputLength = $derived(playerInput.length);
+
+	const players = $derived(
+		Object.entries(wordBomb.players).filter(([_uuid, player]) => player!.lives > 0)
+	);
+
+	const playerScale = $derived(`${100 - Math.log2(players.length) * 8}%`);
+
+	const activeOutlineScale = $derived(
+		ctx.uuid === wordBomb.turn
+			? 100 + playerInputLength * 2
+			: 100 - Math.log2(players.length + 1) * 8
+	);
+
+	const unusedLetters = $derived(
+		[...'abcdefghijklmnopqrstuvwxyz'].filter(
+			(c) => !wordBomb.players[ctx.uuid]!.letters.includes(c)
+		)
+	);
+
 	const screenPull = 0.003;
-	const alphabet = [...'abcdefghijklmnopqrstuvwxyz'];
 
 	async function animateTurnChange(
 		opt?:
@@ -238,16 +259,6 @@
 		);
 	}
 
-	const unusedLetters = $derived(
-		alphabet.filter((c) => !wordBomb.players[ctx.uuid]!.letters.includes(c))
-	);
-
-	const players = $derived(
-		Object.entries(wordBomb.players).filter(([_uuid, player]) => player!.lives > 0)
-	);
-
-	const playerScale = $derived(`${100 - Math.log2(players.length) * 8}%`);
-
 	function getPlayerFinalPosition(index: number, players: number) {
 		const dist = Math.min(window.innerWidth, window.innerHeight) * 0.35;
 		const angleBetween = (2 * Math.PI) / players;
@@ -330,12 +341,12 @@
 	</div>
 	<div bind:this={activeOutlineContainer} class="absolute top-0 left-0">
 		<div
-			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
+			style={`scale: ${activeOutlineScale}%;`}
 			class="rotating-border rotating absolute top-1/2 left-1/2 size-56 -translate-x-1/2 -translate-y-1/2 duration-300"
 		></div>
 		<div
 			bind:this={incorrectOutlineElement}
-			style={`scale: ${ctx.uuid === wordBomb.turn ? 100 : 100 - Math.log2(players.length + 1) * 8}%;`}
+			style={`scale: ${activeOutlineScale}%;`}
 			class="rotating timing-function-0 absolute top-1/2 left-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 border-red opacity-0 transition-transform duration-300"
 		></div>
 	</div>
@@ -376,10 +387,11 @@
 				{#if ctx.uuid === uuid}
 					<input
 						bind:this={playerInputElement}
+						bind:value={playerInput}
 						type="text"
 						disabled={ctx.uuid !== wordBomb.turn}
 						placeholder="answer"
-						class="mt-2.5 w-24 border px-2 py-1.5 text-center text-lg shadow-xs outline-0 focus:border-green focus:ring-green disabled:opacity-50"
+						class="mt-2.5 w-24 border border-green px-2 py-1.5 text-center text-lg focus:border-pastel-green focus:ring-0 focus:outline-none disabled:opacity-50"
 						oninput={(e) => {
 							sendMsg({ kind: 'wordBomb', data: { kind: 'input', input: e.currentTarget.value } });
 						}}
