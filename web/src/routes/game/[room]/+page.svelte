@@ -28,6 +28,7 @@
 
 	let socket: WebSocket | undefined;
 	let connection = $state<State>({ kind: 'awaiting' });
+	let manuallyClosed = false;
 
 	$effect(() => {
 		if (connection.kind === 'connected') {
@@ -40,6 +41,11 @@
 
 			return () => clearTimeout(id);
 		}
+	});
+
+	onDestroy(() => {
+		socket?.close();
+		manuallyClosed = true;
 	});
 
 	function connectSocket(username: string) {
@@ -64,7 +70,7 @@
 			const message = JSON.parse(e.data) as ServerMessage;
 
 			if (import.meta.env.DEV) {
-				console.log('Message', message, e.data);
+				console.log('Message', message);
 			}
 
 			switch (message.kind) {
@@ -103,6 +109,8 @@
 		});
 
 		socket.addEventListener('close', (e) => {
+			if (manuallyClosed) return;
+
 			console.error('WebSocket closed', e);
 
 			connection = {
