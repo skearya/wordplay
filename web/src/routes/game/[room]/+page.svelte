@@ -4,6 +4,7 @@
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
 	import type { Context } from '$lib/context';
+	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onDestroy } from 'svelte';
 	import Wordplay from '$lib/components/Wordplay.svelte';
 	import {
@@ -60,7 +61,9 @@
 			Object.entries(socketParams).filter((param): param is [string, string] => param[1] !== null)
 		);
 
-		socket = new WebSocket(`ws://localhost:3000/connect/${params.room}?${urlParams}`);
+		socket = new WebSocket(
+			`${import.meta.env.DEV ? 'ws' : 'wss'}://${PUBLIC_SERVER_URL}/connect/${params.room}?${urlParams}`
+		);
 
 		socket.addEventListener('open', () => {
 			connection = { kind: 'connected' };

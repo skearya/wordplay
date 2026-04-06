@@ -8,9 +8,9 @@ mod room;
 mod socket;
 mod state;
 
-use axum::{Router, http::HeaderValue, routing::get};
+use axum::{Router, routing::get};
 use tokio::net::TcpListener;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{self, CorsLayer};
 
 use crate::{global::init_globals, state::AppState};
 
@@ -27,7 +27,7 @@ async fn main() {
         .route("/info/{room}", get(info::room))
         .route("/connect/{room}", get(socket::handler))
         .with_state(state)
-        .layer(CorsLayer::new().allow_origin(HeaderValue::from_static("http://localhost:5173")));
+        .layer(CorsLayer::new().allow_origin(cors::Any));
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("listening on {:#?}", listener.local_addr().unwrap());

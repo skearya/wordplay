@@ -70,5 +70,5 @@
 	style={`translate: ${x.current}px ${y.current}px;` +
 		`scale: ${scale.current};` +
 		`transform-origin: ${startX}px ${startY}px;`}
-	class="bg-pastel-pink h-96 w-64 rounded"
+	class="h-96 w-64 rounded bg-pastel-pink"
 ></div>

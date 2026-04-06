@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
+	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
 	import gridSvg from '$lib/assets/grid.svg';
 	import Github from '$lib/icons/Github.svelte';
@@ -69,10 +70,11 @@
 	});
 
 	async function fetchRoomsInfo() {
-		const res = await fetch('http://localhost:3000/info');
-		const json = (await res.json()) as RoomsInfoResponse;
+		const data = (await (
+			await fetch(`${import.meta.env.DEV ? 'http' : 'https'}://${PUBLIC_SERVER_URL}/info`)
+		).json()) as RoomsInfoResponse;
 
-		return json;
+		return data;
 	}
 </script>
 

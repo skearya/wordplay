@@ -468,10 +468,10 @@ mod tests {
         assert!(matches!(one.recv().await?,
             ServerMessage::Info {
                 uuid,
-                rejoin_token,
                 clients,
                 settings,
                 state,
+                ..
             } if uuid == one.uuid
                 && clients
                     == HashMap::from([(
@@ -508,10 +508,10 @@ mod tests {
         assert!(matches!(one.recv().await?,
             ServerMessage::Info {
                 uuid,
-                rejoin_token,
                 clients,
                 settings,
                 state,
+                ..
             } if uuid == one.uuid
                 && clients
                     == HashMap::from([(
@@ -540,10 +540,10 @@ mod tests {
         assert!(matches!(two.recv().await?,
             ServerMessage::Info {
                 uuid,
-                rejoin_token,
                 clients,
                 settings,
                 state,
+                ..
             } if uuid == two.uuid
                 && clients
                     == HashMap::from([
