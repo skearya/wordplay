@@ -130,7 +130,7 @@
 	<Join
 		room={params.room}
 		connection={connection.kind}
-		onJoin={(username) => connectSocket(username)}
+		onEnter={(username) => connectSocket(username)}
 	/>
 {:else if connection.kind === 'ready'}
 	<Wordplay bind:ctx={connection.ctx} sendMsg={connection.sendMsg} />

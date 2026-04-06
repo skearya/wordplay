@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import AnimatedDoubleRightArrow from '$lib/icons/AnimatedDoubleRightArrow.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
@@ -8,14 +9,22 @@
 	let {
 		room,
 		connection,
-		onJoin
+		onEnter
 	}: {
 		room: string;
 		connection: 'awaiting' | 'connecting' | 'connected';
-		onJoin: (username: string) => void;
+		onEnter: (username: string) => void;
 	} = $props();
 
-	let username = $state(import.meta.env.DEV ? 'wordplayer' : '');
+	let username = $state('');
+
+	onMount(() => {
+		const prevUsername = localStorage.getItem('username');
+
+		if (prevUsername) {
+			username = prevUsername;
+		}
+	});
 </script>
 
 <main out:fade>
@@ -27,7 +36,8 @@
 			e.preventDefault();
 
 			if (1 <= username.length && username.length <= 32) {
-				onJoin(username);
+				localStorage.setItem('username', username);
+				onEnter(username);
 			}
 		}}
 	>
