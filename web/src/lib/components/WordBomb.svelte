@@ -12,7 +12,7 @@
 	import GameBombWire from '$lib/icons/GameBombWire.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import Star from '$lib/icons/Star.svelte';
-	import { lerp } from '$lib/utils';
+	import { debounce, lerp } from '$lib/utils';
 	import Avatar from './Avatar.svelte';
 
 	let {
@@ -28,6 +28,9 @@
 	let playerInputElement = $state<HTMLInputElement>();
 	let playerElements: Record<string, HTMLElement> = $state({});
 	let arrowElements: Record<string, HTMLElement> = $state({});
+
+	let windowWidth = $state(0);
+	let windowHeight = $state(0);
 
 	onMount(() => {
 		animateTurnChange({ kind: 'first-run' });
@@ -122,8 +125,8 @@
 		const outlineX = outlineBBox.left + outlineBBox.width / 2;
 		const outlineY = outlineBBox.top + outlineBBox.height / 2;
 
-		const playerDistanceX = playerX - window.innerWidth / 2;
-		const playerDistanceY = playerY - window.innerHeight / 2;
+		const playerDistanceX = playerX - windowWidth / 2;
+		const playerDistanceY = playerY - windowHeight / 2;
 
 		const containerShiftX = -playerDistanceX * screenPull * 2;
 		const containerShiftY = -playerDistanceY * screenPull * 2;
@@ -260,13 +263,13 @@
 	}
 
 	function getPlayerFinalPosition(index: number, players: number) {
-		const dist = Math.min(window.innerWidth, window.innerHeight) * 0.35;
 		const angleBetween = (2 * Math.PI) / players;
 		const angle = index * angleBetween;
 
 		const containerRect = playersContainer.getBoundingClientRect();
 		const centerX = containerRect.left + containerRect.width / 2;
 		const centerY = containerRect.top + containerRect.height / 2;
+		const dist = Math.min(windowWidth, windowHeight) * 0.35;
 
 		return {
 			x: centerX + Math.cos(angle) * dist,
@@ -315,6 +318,12 @@
 	}
 </script>
 
+<svelte:window
+	bind:innerWidth={windowWidth}
+	bind:innerHeight={windowHeight}
+	on:resize={debounce(() => animateTurnChange(), 150)}
+/>
+
 <div class="relative flex flex-1 items-center justify-center gap-4 overflow-hidden p-4 pt-0">
 	<div
 		bind:this={bombElement}
@@ -333,7 +342,7 @@
 			<div
 				animate:flip
 				out:correctLetterOut
-				class="size-12 content-center border border-green bg-green/15 text-center uppercase"
+				class="size-12 content-center border border-green bg-green/15 text-center font-mono uppercase"
 			>
 				{letter}
 			</div>
@@ -358,7 +367,7 @@
 			{@const angleBetween = (2 * Math.PI) / players.length}
 			{@const angle = i * angleBetween}
 			{@const arrowAngle = angle + angleBetween / 2}
-			{@const dist = Math.min(window.innerWidth, window.innerHeight) * 0.35}
+			{@const dist = Math.min(windowWidth, windowHeight) * 0.35}
 			<div
 				bind:this={playerElements[uuid]}
 				style={`translate: calc(-50% + cos(${angle}rad) * ${dist}px) calc(-50% - sin(${angle}rad) * ${dist}px);` +

@@ -36,3 +36,18 @@ export const lerp = (start: number, end: number, amount: number) =>
 	start * (1 - amount) + end * amount;
 
 export const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
+
+export function debounce<T extends any[]>(
+	callback: (...args: T) => void,
+	wait: number
+): (...args: T) => void {
+	let timeoutId: number | undefined = undefined;
+
+	return (...args: T) => {
+		clearTimeout(timeoutId);
+
+		timeoutId = setTimeout(() => {
+			callback(...args);
+		}, wait);
+	};
+}

@@ -36,7 +36,7 @@
 		<Logo />
 		<div class="flex items-center gap-x-4">
 			<div class="flex -space-x-4 border-green">
-				{#each Object.keys(ctx.clients).slice(0, 4) as uuid}
+				{#each Object.keys(ctx.clients).slice(0, 4) as uuid (uuid)}
 					<Avatar {ctx} {uuid} size="sm" class="border border-black" />
 				{/each}
 				{#if Object.keys(ctx.clients).length > 4}

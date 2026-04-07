@@ -166,9 +166,9 @@
 						{#each lobby.ready as uuid, i (uuid)}
 							{@const angleBetween = (2 * Math.PI) / lobby.ready.length}
 							{@const angle = i * angleBetween + Math.PI / 2}
-							{@const distanceFromCenter = 80 + Math.log2(lobby.ready.length) * 20}
-							{@const x = Math.cos(angle) * distanceFromCenter}
-							{@const y = Math.sin(angle) * distanceFromCenter - 32}
+							{@const dist = 80 + Math.log2(lobby.ready.length) * 20}
+							{@const x = Math.cos(angle) * dist}
+							{@const y = Math.sin(angle) * dist - 32}
 							<div
 								in:fly={{ x: 48, y: 48, duration: 400 }}
 								out:fly={{ x: 48, y: -48, duration: 400 }}
