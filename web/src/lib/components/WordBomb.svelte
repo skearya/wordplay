@@ -278,11 +278,14 @@
 	}
 
 	// Modified version of `svelte/animate/flip`.
-	function flip(
+	function flipLetter(
 		_node: HTMLElement,
-		{ from, to }: { from: DOMRect; to: DOMRect },
-		{ delay = 300, duration = (d) => Math.sqrt(d) * 20, easing = cubicOut }: FlipParams = {}
+		{ from, to }: { from: DOMRect; to: DOMRect }
 	): AnimationConfig {
+		const delay = 300;
+		const duration = (d: number) => Math.sqrt(d) * 20;
+		const easing = cubicOut;
+
 		const ox = 0.5;
 		const oy = 0.5;
 
@@ -297,7 +300,7 @@
 
 		return {
 			delay,
-			duration: typeof duration === 'function' ? duration(Math.sqrt(dx * dx + dy * dy)) : duration,
+			duration: duration(Math.sqrt(dx * dx + dy * dy)),
 			easing,
 			css: (_t, u) => `translate: ${u * dx}px ${u * dy}px`
 		};
@@ -340,7 +343,7 @@
 	<div class="absolute top-0 left-0 flex max-h-full flex-col flex-wrap gap-1 p-2">
 		{#each unusedLetters as letter (letter)}
 			<div
-				animate:flip
+				animate:flipLetter
 				out:correctLetterOut
 				class="size-12 content-center border border-green bg-green/15 text-center font-mono uppercase"
 			>

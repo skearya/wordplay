@@ -1,3 +1,13 @@
+// Drop .svg's into `/svg`, run this script, and you'll get .svelte components with this structure:
+
+// <script lang="ts">
+// 	const {
+// 		width = ?,
+// 		height = ?,
+// 		class: className
+// 	}: { width?: number; height?: number; class?: string } = $props();
+// </script>
+
 import fs from 'node:fs';
 import path from 'node:path';
 

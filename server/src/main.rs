@@ -10,7 +10,10 @@ mod state;
 
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
-use tower_http::cors::{self, CorsLayer};
+use tower_http::{
+    cors::{self, CorsLayer},
+    services::{ServeDir, ServeFile},
+};
 
 use crate::{global::init_globals, state::AppState};
 
@@ -18,7 +21,7 @@ use crate::{global::init_globals, state::AppState};
 async fn main() {
     init_globals();
 
-    console_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     let state = AppState::new();
 
@@ -26,8 +29,11 @@ async fn main() {
         .route("/info", get(info::rooms))
         .route("/info/{room}", get(info::room))
         .route("/connect/{room}", get(socket::handler))
-        .with_state(state)
-        .layer(CorsLayer::new().allow_origin(cors::Any));
+        .fallback_service(
+            ServeDir::new("assets").not_found_service(ServeFile::new("assets/200.html")),
+        )
+        .layer(CorsLayer::new().allow_origin(cors::Any))
+        .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("listening on {:#?}", listener.local_addr().unwrap());

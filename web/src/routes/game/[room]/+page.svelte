@@ -62,7 +62,7 @@
 		);
 
 		socket = new WebSocket(
-			`${import.meta.env.DEV ? 'ws' : 'wss'}://${PUBLIC_SERVER_URL}/connect/${params.room}?${urlParams}`
+			`${PUBLIC_SERVER_URL.replace('http', 'ws')}/connect/${params.room}?${urlParams}`
 		);
 
 		socket.addEventListener('open', () => {

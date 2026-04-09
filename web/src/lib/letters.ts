@@ -5,6 +5,18 @@ import { lerp } from './utils';
 
 const { Engine, Bodies, Composite, Mouse, MouseConstraint, Vector, Body } = Matter;
 
+export const lightStyle = {
+	letterColor: 'rgba(255, 255, 255)',
+	letterOutlineColor: 'black',
+	textColor: 'black'
+};
+
+export const darkStyle = {
+	letterColor: 'rgba(71, 93, 80)',
+	letterOutlineColor: 'rgba(139, 166, 152, 0.5)',
+	textColor: 'rgba(139, 166, 152, 1)'
+};
+
 export function createLetterCanvas(
 	canvas: HTMLCanvasElement,
 	{
@@ -14,7 +26,11 @@ export function createLetterCanvas(
 		bottomPosition = undefined,
 		initialForce = false
 	}: {
-		style: 'light' | 'dark';
+		style: {
+			letterColor: string;
+			letterOutlineColor: string;
+			textColor: string;
+		};
 		gravity: number;
 		initLetters: (
 			width: number,
@@ -24,7 +40,6 @@ export function createLetterCanvas(
 		initialForce?: boolean;
 	}
 ): () => void {
-	const light = style === 'light';
 	const originalWidth = canvas.clientWidth;
 	const originalHeight = canvas.clientHeight;
 
@@ -95,7 +110,7 @@ export function createLetterCanvas(
 	mouse.pixelRatio = window.devicePixelRatio || 1;
 
 	const mouseConstraint = MouseConstraint.create(engine, {
-		mouse: mouse,
+		mouse,
 		constraint: {
 			stiffness: 1.0,
 			render: { visible: false }
@@ -145,15 +160,23 @@ export function createLetterCanvas(
 			ctx.translate(box.position.x, box.position.y);
 			ctx.rotate(box.angle);
 
-			ctx.fillStyle = `rgba(${light ? '255, 255, 255' : '71, 93, 80'}, ${Math.min(Vector.magnitude(box.velocity) / 2, 0.8)})`;
-			ctx.fillRect(-letterWidth / 2, -letterHeight / 2, letterWidth, letterHeight);
+			const velocity = Math.min(Vector.magnitude(box.velocity) / 2, 0.8);
 
-			ctx.strokeStyle = light ? 'black' : 'rgba(139, 166, 152, 0.5)';
+			ctx.fillStyle = style.letterColor;
+			ctx.globalAlpha = velocity;
+			ctx.fillRect(-letterWidth / 2, -letterHeight / 2, letterWidth, letterHeight);
+			ctx.globalAlpha = 1.0;
+
+			ctx.strokeStyle = style.letterOutlineColor;
 			ctx.strokeRect(-letterWidth / 2, -letterHeight / 2, letterWidth, letterHeight);
 
 			ctx.font = '300 40px sans-serif';
 			ctx.textAlign = 'center';
-			ctx.fillStyle = light ? 'black' : 'rgba(139, 166, 152, 1)';
+
+			// TODO: There's potential doing something like this.
+			// ctx.fillStyle = `color-mix(in oklch, #f6f5b4 ${t * 1.25 * 100}%, #1d1f1e ${(1 - t * 1.25) * 100}%)`;
+
+			ctx.fillStyle = style.textColor;
 			ctx.fillText(letter, 0, 0);
 
 			ctx.font = '500 12px sans-serif';

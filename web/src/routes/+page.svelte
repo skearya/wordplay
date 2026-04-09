@@ -8,7 +8,7 @@
 	import Me from '$lib/icons/Me.svelte';
 	import Search from '$lib/icons/Search.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
-	import { createLetterCanvas } from '$lib/letters';
+	import { createLetterCanvas, lightStyle } from '$lib/letters';
 	import Room from './Room.svelte';
 
 	const { data }: PageProps = $props();
@@ -17,7 +17,11 @@
 	let headerTextElement: HTMLElement;
 	let contentElement: HTMLElement;
 
+	let fetchRoomsInfoPromise: ReturnType<typeof fetchRoomsInfo> | null = $state(null);
+
 	onMount(() => {
+		fetchRoomsInfoPromise = fetchRoomsInfo();
+
 		const animation = contentElement.animate(
 			{
 				translate: ['0px 50vh', '0px 0px']
@@ -43,7 +47,7 @@
 		);
 
 		const cleanupCanvas = createLetterCanvas(backgroundCanvasElement, {
-			style: 'light',
+			style: lightStyle,
 			gravity: 0.01,
 			initLetters: (width, height) => {
 				const letterWidth = 64;
@@ -66,13 +70,16 @@
 			bottomPosition: () => animation?.effect?.getComputedTiming().progress ?? 0
 		});
 
+		backgroundCanvasElement.animate(
+			{ opacity: '100%' },
+			{ fill: 'forwards', duration: 150, easing: 'ease-in' }
+		);
+
 		return () => cleanupCanvas();
 	});
 
 	async function fetchRoomsInfo() {
-		const data = (await (
-			await fetch(`${import.meta.env.DEV ? 'http' : 'https'}://${PUBLIC_SERVER_URL}/info`)
-		).json()) as RoomsInfoResponse;
+		const data = (await (await fetch(`${PUBLIC_SERVER_URL}/info`)).json()) as RoomsInfoResponse;
 
 		return data;
 	}
@@ -82,10 +89,10 @@
 	style={`background: linear-gradient(45deg, rgba(255, 250, 226, 1), rgba(229, 228, 158, 0.8)), url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.91' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");`}
 	class="absolute top-0 left-0 -z-10 h-full w-full bg-cover"
 >
-	<canvas bind:this={backgroundCanvasElement} class="h-full w-full"></canvas>
+	<canvas bind:this={backgroundCanvasElement} class="h-full w-full opacity-0"></canvas>
 	<h1
 		bind:this={headerTextElement}
-		class="pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl text-background opacity-0"
+		class="pointer-events-none absolute bottom-[50vh] left-0 p-4 font-serif text-8xl text-foreground opacity-0 mix-blend-exclusion"
 	>
 		Wordplay
 	</h1>
@@ -114,28 +121,30 @@
 				<Search />
 			</div>
 		</div>
-		{#await fetchRoomsInfo()}
-			loading
-		{:then { rooms }}
-			<div class="relative grid grid-cols-3 gap-2.5">
-				{#each Object.entries(rooms) as [name, info]}
-					<Room {name} {info} />
-				{:else}
-					<div
-						class="text-xl content-center h-16 text-center bg-pink text-black font-serif col-span-3"
-					>
-						There aren't any public rooms right now, be the first?
-					</div>
-					{#each { length: 15 }, i}
-						<Room
-							name="Your Room Here..."
-							style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
-						/>
+		{#if fetchRoomsInfoPromise}
+			{#await fetchRoomsInfoPromise}
+				loading
+			{:then { rooms }}
+				<div class="relative grid grid-cols-3 gap-2.5">
+					{#each Object.entries(rooms) as [name, info]}
+						<Room {name} {info} />
+					{:else}
+						<div
+							class="text-xl content-center h-16 text-center bg-pink text-black font-serif col-span-3"
+						>
+							There aren't any public rooms right now, be the first?
+						</div>
+						{#each { length: 15 }, i}
+							<Room
+								name="Your Room Here..."
+								style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
+							/>
+						{/each}
 					{/each}
-				{/each}
-			</div>
-		{:catch}
-			error
-		{/await}
+				</div>
+			{:catch}
+				error
+			{/await}
+		{/if}
 	</div>
 </section>

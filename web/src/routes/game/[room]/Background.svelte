@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
-	import { createLetterCanvas } from '$lib/letters';
+	import { createLetterCanvas, darkStyle } from '$lib/letters';
 	import { getRandomRange } from '$lib/utils';
 
 	const setupCanvas: Attachment<HTMLCanvasElement> = (canvas) => {
 		const cleanupCanvas = createLetterCanvas(canvas, {
-			style: 'dark',
+			style: darkStyle,
 			gravity: 0.05,
 			initLetters: (width, height) =>
 				'wordplaybyskeary.me'
