@@ -10,6 +10,7 @@
 	import Crown from '$lib/icons/Crown.svelte';
 	import DoubleRightArrow from '$lib/icons/DoubleRightArrow.svelte';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
+	import Me from '$lib/icons/Me.svelte';
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Avatar from './Avatar.svelte';
@@ -17,7 +18,9 @@
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
-	let panels: ('stats' | 'join')[] = $state(lobby.prevGame ? ['stats'] : ['join']);
+	let panels: ('stats' | 'join' | 'practice')[] = $state(
+		lobby.prevGame ? ['stats'] : ['join', 'practice']
+	);
 
 	const handleTimer = (action: TimerAction) => {
 		switch (action) {
@@ -34,7 +37,7 @@
 
 	onMount(() => {
 		if (lobby.prevGame) {
-			setTimeout(() => (panels = ['stats', 'join']), 2500);
+			setTimeout(() => (panels = ['stats', 'join', 'practice']), 2500);
 		}
 
 		return lobbyEmitter.handle({
@@ -55,14 +58,21 @@
 	});
 </script>
 
-<div class="flex flex-1 items-stretch justify-center gap-4 overflow-hidden p-4 pt-0">
+<div
+	class={[
+		'no-scrollbar flex flex-1 items-stretch gap-4 overflow-x-auto p-4 pt-0',
+		panels.length === 1 ? 'justify-center' : 'justify-start'
+	]}
+>
 	{#each panels as kind (kind)}
 		<section
 			animate:flip={{ duration: 400 }}
 			in:fly={{ delay: 400 }}
 			class={kind === 'stats'
-				? 'flex max-w-md flex-[30%] flex-col overflow-y-hidden border border-pink bg-pink/15'
-				: 'relative flex flex-[70%] flex-col overflow-hidden border border-green bg-green/15'}
+				? 'flex max-w-md min-w-[30%] flex-col overflow-y-hidden border border-pink bg-pink/15'
+				: kind === 'join'
+					? 'relative flex min-w-[calc(70%_-_var(--spacing)_*_4)] flex-col overflow-hidden border border-green bg-green/15'
+					: 'relative flex min-w-[30%] flex-col items-center justify-center overflow-hidden border border-pastel-blue bg-pastel-blue/10'}
 		>
 			{#if kind === 'stats'}
 				<div
@@ -134,7 +144,7 @@
 						</div>
 					</div>
 				</div>
-			{:else}
+			{:else if kind === 'join'}
 				<div class="pointer-events-none absolute -right-6 -bottom-6 opacity-50">
 					<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
 				</div>
@@ -188,8 +198,8 @@
 						style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
 						class="z-10 w-72 space-y-2.5 border bg-dark-dark-green/80 p-4 pt-5"
 					>
-						<div class="flex items-center justify-between">
-							<h1 class="font-serif text-4xl text-yellow">Word Bomb</h1>
+						<div class="flex items-center justify-between text-yellow">
+							<h1 class="font-serif text-4xl">Word Bomb</h1>
 							<DownArrow />
 						</div>
 						<div class="h-[1px] w-full bg-green"></div>
@@ -225,6 +235,13 @@
 						Start Early
 					</Button>
 				</div>
+			{:else}
+				<div
+					class="absolute top-0 left-0 w-min rounded-br-2xl bg-pastel-blue px-3 py-1 text-nowrap text-background"
+				>
+					<p>Practice</p>
+				</div>
+				<Me class="rotate-180 sepia-100" />
 			{/if}
 		</section>
 	{/each}

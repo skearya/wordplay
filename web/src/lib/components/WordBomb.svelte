@@ -422,7 +422,7 @@
 				style={`translate: calc(-50% + cos(${arrowAngle}rad) * ${dist}px) calc(-50% - sin(${arrowAngle}rad) * ${dist}px);` +
 					`scale: ${playerScale}%;` +
 					`rotate: ${-arrowAngle}rad;`}
-				class="timing-function-0 absolute top-1/2 left-1/2 transition-transform duration-[400ms]"
+				class="timing-function-0 absolute top-1/2 left-1/2 text-light-green transition-transform duration-[400ms]"
 			>
 				{#each { length: 3 }}
 					<DownArrow class="opacity-0" />

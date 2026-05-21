@@ -20,12 +20,15 @@
 			initialForce: true
 		});
 
+		canvas.animate({ opacity: '100%' }, { fill: 'forwards', duration: 150, easing: 'ease-in' });
+
 		return () => cleanupCanvas();
 	};
 </script>
 
 <div class="absolute top-0 left-0 -z-10 h-screen w-screen overflow-hidden">
-	<canvas {@attach setupCanvas} class="background background-scroll h-full w-full"></canvas>
+	<canvas {@attach setupCanvas} class="background background-scroll h-full w-full opacity-0"
+	></canvas>
 </div>
 
 <style>
