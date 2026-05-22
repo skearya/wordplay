@@ -11,7 +11,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { generalEmitter } from '$lib/events';
 	import Me from '$lib/icons/Me.svelte';
-	import Avatar from './Avatar.svelte';
+	import Avatar from '../Avatar.svelte';
 
 	let { ctx = $bindable(), sendMsg }: Omit<Props<never>, 'state'> = $props();
 
