@@ -80,6 +80,10 @@
 		color: var(--color-white);
 	}
 
+	kbd {
+		@apply inline-flex min-h-[20px] items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-1 font-mono text-sm text-neutral-200;
+	}
+
 	@keyframes background-scroll-keyframes {
 		0% {
 			background-position: 0px 0px;
@@ -113,18 +117,8 @@
 	.striped {
 		background: repeating-linear-gradient(
 			-45deg,
-			rgba(71, 93, 80, 0.8),
-			rgba(71, 93, 80, 0.8) 1px,
-			transparent 1px,
-			transparent 8px
-		);
-	}
-
-	.striped-lighter {
-		background: repeating-linear-gradient(
-			-45deg,
-			rgba(71, 93, 80, 0.4),
-			rgba(71, 93, 80, 0.4) 1px,
+			var(--stripe-color),
+			var(--stripe-color) 1px,
 			transparent 1px,
 			transparent 8px
 		);

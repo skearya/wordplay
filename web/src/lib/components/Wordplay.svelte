@@ -3,7 +3,7 @@
 	import type { Context } from '$lib/context';
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
-	import { coreEmitter } from '$lib/events';
+	import { coreEmitter, generalEmitter } from '$lib/events';
 	import { transitionState } from '$lib/stores/transition.svelte';
 	import { objectAssign, unreachable } from '$lib/utils';
 	import Game from './Game.svelte';
@@ -19,8 +19,8 @@
 		sendMsg: (message: ClientMessage) => void;
 	} = $props();
 
-	onMount(() =>
-		coreEmitter.handle({
+	onMount(() => {
+		const coreUnsubscribe = coreEmitter.handle({
 			join: ({ uuid, client }) => {
 				ctx.clients[uuid] = client;
 			},
@@ -47,8 +47,22 @@
 					}
 				});
 			}
-		})
-	);
+		});
+
+		const generalUnsubscribe = generalEmitter.handle({
+			error: ({ message }) => {
+				console.error(message);
+			},
+			settings: (settings) => {
+				ctx.settings = settings;
+			}
+		});
+
+		return () => {
+			coreUnsubscribe();
+			generalUnsubscribe();
+		};
+	});
 </script>
 
 <main

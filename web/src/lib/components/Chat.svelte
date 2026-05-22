@@ -1,0 +1,106 @@
+<script lang="ts" module>
+	type Message = { key: string; author: string; content: string };
+
+	let messages: Message[] = $state([]);
+</script>
+
+<script lang="ts">
+	import type { Props } from '$lib/context';
+	import type { TransitionConfig } from 'svelte/transition';
+	import { onMount } from 'svelte';
+	import { cubicOut } from 'svelte/easing';
+	import { generalEmitter } from '$lib/events';
+	import Me from '$lib/icons/Me.svelte';
+	import Avatar from './Avatar.svelte';
+
+	let { ctx = $bindable(), sendMsg }: Omit<Props<never>, 'state'> = $props();
+
+	let messagesContainer: HTMLElement;
+
+	onMount(() =>
+		generalEmitter.handle({
+			chat: ({ author, content }) => {
+				messages.push({ key: crypto.randomUUID(), author, content });
+			},
+			error: ({ message }) => {
+				messages.push({ key: crypto.randomUUID(), author: 'Server', content: message });
+			}
+		})
+	);
+
+	$effect(() => {
+		messages.length;
+
+		messagesContainer.scrollTo({
+			top: messagesContainer.scrollHeight,
+			behavior: 'smooth'
+		});
+	});
+
+	function messageIn(_node: HTMLElement): TransitionConfig {
+		const delay = 0;
+		const duration = 400;
+		const easing = cubicOut;
+
+		return {
+			delay,
+			duration,
+			easing,
+			css: (t) =>
+				`background-color: color-mix(in srgb, var(--color-pastel-pink), transparent ${t * 50 + 50}%);`
+		};
+	}
+</script>
+
+<div class="relative flex flex-1 flex-col border border-pastel-pink bg-pastel-pink/10">
+	<div
+		class="absolute top-0 left-0 w-min rounded-br-2xl bg-pastel-pink px-3 py-1 text-nowrap text-background"
+	>
+		<p>Chat</p>
+	</div>
+	<div bind:this={messagesContainer} class="flex-1 overflow-x-hidden overflow-y-auto pb-1">
+		<div
+			style="--stripe-color: var(--color-pastel-pink); "
+			class="striped h-12 w-full border-b border-pastel-pink opacity-25"
+		></div>
+		{#each ['Welcome to Wordplay!', 'Please leave issues or feedback on <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200 underline">GitHub</a>.'] as content, i}
+			{#await new Promise((resolve) => setTimeout(resolve, 1000 + 2000 * i)) then}
+				<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
+					<Me width={147 * 0.275} height={152 * 0.275} />
+					<div class="text-sm leading-snug">
+						<p class="font-medium">skeary</p>
+						{@html content}
+					</div>
+				</div>
+			{/await}
+		{/each}
+		{#each messages as { author, content }}
+			<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
+				{#if author === 'Server'}
+					<Me />
+				{:else}
+					<Avatar {ctx} uuid={author} size="sm" />
+				{/if}
+				<div class="text-sm leading-snug">
+					<p class="font-medium">{ctx.clients[author]!.username}</p>
+					<p>{content}</p>
+				</div>
+			</div>
+		{/each}
+	</div>
+	<input
+		maxlength="250"
+		placeholder="Send a message..."
+		class="border-t border-pink/25 px-3.5 py-3 transition-colors duration-75 focus:border-pink focus:ring-0 focus:outline-none disabled:opacity-50"
+		onkeyup={(e) => {
+			if (e.key === 'Enter' && e.currentTarget.value != '') {
+				sendMsg({
+					kind: 'general',
+					data: { kind: 'chat', content: e.currentTarget.value }
+				});
+
+				e.currentTarget.value = '';
+			}
+		}}
+	/>
+</div>

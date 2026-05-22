@@ -16,7 +16,7 @@
 	} & (SvelteHTMLElements['a'] & SvelteHTMLElements['div']) = $props();
 
 	const containerClass = [
-		'striped-lighter relative flex h-32 flex-col justify-between border border-faded-green p-2.5',
+		'relative flex h-32 flex-col justify-between border border-faded-green p-2.5',
 		info && 'bg-background',
 		className
 	];

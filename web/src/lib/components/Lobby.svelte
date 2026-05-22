@@ -4,23 +4,22 @@
 	import type { Props } from '$lib/context';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { fly } from 'svelte/transition';
+	import { fly, slide } from 'svelte/transition';
 	import grid2Svg from '$lib/assets/grid2.svg';
 	import { lobbyEmitter } from '$lib/events';
 	import Crown from '$lib/icons/Crown.svelte';
 	import DoubleRightArrow from '$lib/icons/DoubleRightArrow.svelte';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
-	import Me from '$lib/icons/Me.svelte';
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Avatar from './Avatar.svelte';
+	import Chat from './Chat.svelte';
 	import Countdown from './Countdown.svelte';
+	import Practice from './Practice.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
-	let panels: ('stats' | 'join' | 'practice')[] = $state(
-		lobby.prevGame ? ['stats'] : ['join', 'practice']
-	);
+	let panels: ('stats' | 'join' | 'pane')[] = $state(lobby.prevGame ? ['stats'] : ['join', 'pane']);
 
 	const handleTimer = (action: TimerAction) => {
 		switch (action) {
@@ -37,7 +36,7 @@
 
 	onMount(() => {
 		if (lobby.prevGame) {
-			setTimeout(() => (panels = ['stats', 'join', 'practice']), 2500);
+			setTimeout(() => (panels = ['stats', 'join', 'pane']), 2500);
 		}
 
 		return lobbyEmitter.handle({
@@ -56,6 +55,8 @@
 			practiceResult: () => {}
 		});
 	});
+
+	let showOtherGamesDropdown = $state(false);
 </script>
 
 <div
@@ -71,8 +72,8 @@
 			class={kind === 'stats'
 				? 'flex max-w-md min-w-[30%] flex-col overflow-y-hidden border border-pink bg-pink/15'
 				: kind === 'join'
-					? 'relative flex min-w-[calc(70%_-_var(--spacing)_*_4)] flex-col overflow-hidden border border-green bg-green/15'
-					: 'relative flex min-w-[30%] flex-col items-center justify-center overflow-hidden border border-pastel-blue bg-pastel-blue/10'}
+					? 'relative flex min-w-[calc(70%_-_var(--spacing)_*_4)] flex-col overflow-hidden border border-green bg-green/20'
+					: 'relative flex min-w-[30%] flex-col gap-y-4'}
 		>
 			{#if kind === 'stats'}
 				<div
@@ -194,22 +195,33 @@
 						{/each}
 					</div>
 					<DoubleRightArrow />
-					<button
+					<div
 						style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
-						class="z-10 w-72 space-y-2.5 border bg-dark-dark-green/80 p-4 pt-5"
+						class="z-10 flex w-72 flex-col border bg-dark-dark-green/80"
 					>
-						<div class="flex items-center justify-between text-yellow">
+						<button
+							class="mb-2.5 flex items-center justify-between p-4 pt-5 pb-0 text-yellow"
+							onclick={() => (showOtherGamesDropdown = !showOtherGamesDropdown)}
+						>
 							<h1 class="font-serif text-4xl">Word Bomb</h1>
 							<DownArrow />
-						</div>
-						<div class="h-[1px] w-full bg-green"></div>
-						<div class="grid grid-cols-2 justify-between text-sm text-light-green">
+						</button>
+						{#if showOtherGamesDropdown}
+							<div
+								transition:slide
+								class="divide-y divide-green border-t border-green text-center font-serif text-xl text-yellow"
+							>
+								<p class="py-4">No other games, yet.</p>
+							</div>
+						{/if}
+						<div class="mb-2.5 h-[1px] bg-green"></div>
+						<div class="grid grid-cols-2 justify-between p-4 pt-0 text-sm text-light-green">
 							<p class="text-left font-medium">Difficulty</p>
 							<p class="text-right">Easy</p>
 							<p class="text-left font-medium">Starting Lives</p>
 							<p class="text-right">2</p>
 						</div>
-					</button>
+					</div>
 				</div>
 				<div class="z-10 flex gap-x-4 p-4">
 					<Button
@@ -236,12 +248,8 @@
 					</Button>
 				</div>
 			{:else}
-				<div
-					class="absolute top-0 left-0 w-min rounded-br-2xl bg-pastel-blue px-3 py-1 text-nowrap text-background"
-				>
-					<p>Practice</p>
-				</div>
-				<Me class="rotate-180 sepia-100" />
+				<Practice {ctx} {sendMsg} />
+				<Chat {ctx} {sendMsg} />
 			{/if}
 		</section>
 	{/each}
