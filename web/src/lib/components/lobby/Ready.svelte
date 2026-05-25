@@ -7,6 +7,7 @@
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Avatar from '../Avatar.svelte';
+	import Tag from '../Tag.svelte';
 	import Countdown from './Countdown.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
@@ -15,15 +16,15 @@
 </script>
 
 <section class="relative flex h-full flex-col overflow-hidden border border-green bg-green/20">
-	<div class="pointer-events-none absolute -right-6 -bottom-6 opacity-50">
-		<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
-	</div>
-	<div class="absolute top-0 left-0 w-min rounded-br-2xl bg-green px-3 py-1 text-nowrap">
+	<Tag class="bg-green text-foreground">
 		{#if lobby.timerStart}
 			<Countdown timerStart={lobby.timerStart} />
 		{:else}
-			<p>Ready Players</p>
+			Ready Players
 		{/if}
+	</Tag>
+	<div class="pointer-events-none absolute -right-6 -bottom-6 opacity-50">
+		<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
 	</div>
 	<div class="absolute top-3 right-3 w-min text-nowrap text-bright-green">
 		<p>{ctx.settings.size - lobby.ready.length} slots left</p>
@@ -37,7 +38,7 @@
 				]}
 			>
 				<div
-					class="aspect-square size-24 content-center rounded-full border border-dashed text-center opacity-80"
+					class="size-24 content-center rounded-full border border-dashed text-center opacity-80"
 				>
 					?
 				</div>
@@ -66,13 +67,13 @@
 		<DoubleRightArrow />
 		<div
 			style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
-			class="z-10 flex w-72 flex-col border bg-dark-dark-green/80"
+			class="z-10 flex w-72 flex-col border bg-dark-dark-green/85"
 		>
 			<button
-				class="mb-2.5 flex items-center justify-between p-4 pt-5 pb-0 text-yellow"
+				class="flex items-center justify-between px-4 pt-5 pb-3 font-serif text-4xl text-yellow"
 				onclick={() => (showOtherGamesDropdown = !showOtherGamesDropdown)}
 			>
-				<h1 class="font-serif text-4xl">Word Bomb</h1>
+				<p>Word Bomb</p>
 				<DownArrow />
 			</button>
 			{#if showOtherGamesDropdown}
@@ -83,7 +84,7 @@
 					<p class="py-4">No other games, yet.</p>
 				</div>
 			{/if}
-			<div class="mb-2.5 h-[1px] bg-green"></div>
+			<div class="mb-3 h-[1px] bg-green"></div>
 			<div class="grid grid-cols-2 justify-between p-4 pt-0 text-sm text-light-green">
 				<p class="text-left font-medium">Difficulty</p>
 				<p class="text-right">Easy</p>

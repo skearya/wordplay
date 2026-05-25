@@ -1,10 +1,13 @@
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import Tag from '$lib/components/Tag.svelte';
 	import AnimatedDoubleRightArrow from '$lib/icons/AnimatedDoubleRightArrow.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
-	import Background from './Background.svelte';
+	import { createLetterCanvas, darkStyle } from '$lib/letters';
+	import { getRandomRange } from '$lib/utils';
 
 	let {
 		room,
@@ -25,12 +28,37 @@
 			username = prevUsername;
 		}
 	});
+
+	const setupCanvas: Attachment<HTMLCanvasElement> = (canvas) => {
+		const cleanupCanvas = createLetterCanvas(canvas, {
+			style: darkStyle,
+			gravity: 0.05,
+			initLetters: (width, height) =>
+				'wordplaybyskeary.me'
+					.split('')
+					.reverse()
+					.map((letter) => ({
+						letter,
+						x: getRandomRange(75, width - 75),
+						y: getRandomRange(75, height - 75),
+						angle: Math.random() - 0.5 * 2.0
+					})),
+			initialForce: true
+		});
+
+		canvas.animate({ opacity: '100%' }, { fill: 'forwards', duration: 150, easing: 'ease-in' });
+
+		return () => cleanupCanvas();
+	};
 </script>
 
 <main out:fade>
-	<Background />
+	<div class="absolute top-0 left-0 -z-10 h-screen w-screen overflow-hidden">
+		<canvas {@attach setupCanvas} class="background background-scroll h-full w-full opacity-0"
+		></canvas>
+	</div>
 	<form
-		style="background: radial-gradient(at top left, var(--color-background) 0%, rgba(233, 184, 255, 0.1) 100%), var(--color-background); border-image: conic-gradient(from -112deg, rgba(121, 120, 150, 0.5), rgba(203, 201, 252, 1)) 1;"
+		style="background: radial-gradient(at top left, var(--color-background) 0%, color-mix(in srgb, var(--color-pastel-pink) 10%, transparent) 100%), var(--color-background); border-image: conic-gradient(from -112deg, rgba(121, 120, 150, 0.5), rgba(203, 201, 252, 1)) 1;"
 		class="absolute top-28 left-1/2 flex h-64 max-w-xl -translate-x-1/2 flex-col border"
 		onsubmit={(e) => {
 			e.preventDefault();
@@ -41,11 +69,7 @@
 			}
 		}}
 	>
-		<div
-			class="absolute top-0 left-0 w-min rounded-br-2xl bg-pink px-3 py-1 text-nowrap text-black"
-		>
-			<p>Joining Game <code>'{room}'</code></p>
-		</div>
+		<Tag class="bg-pink">Joining Game <code>'{room}'</code></Tag>
 		<div class="flex flex-1 items-center">
 			<div class="flex flex-1 flex-col justify-center p-4">
 				<label for="username" class="mb-1.5 block text-sm font-medium">Username</label>
@@ -89,3 +113,35 @@
 		/>
 	</form>
 </main>
+
+<style>
+	.background {
+		animation:
+			400ms cubic-bezier(0.33, 1, 0.68, 1) background-fade-in,
+			120s linear infinite background-scroll-keyframes;
+		background-image:
+			repeating-linear-gradient(
+				90deg,
+				transparent,
+				transparent 30px,
+				color-mix(in srgb, var(--color-pastel-pink) 6%, transparent) 30px,
+				color-mix(in srgb, var(--color-pastel-pink) 6%, transparent) 31px
+			),
+			repeating-linear-gradient(
+				150deg,
+				transparent,
+				transparent 35px,
+				color-mix(in srgb, var(--color-pastel-pink) 4%, transparent) 35px,
+				color-mix(in srgb, var(--color-pastel-pink) 4%, transparent) 36px
+			);
+	}
+
+	@keyframes background-fade-in {
+		0% {
+			scale: 1.1;
+		}
+		100% {
+			scale: 1;
+		}
+	}
+</style>

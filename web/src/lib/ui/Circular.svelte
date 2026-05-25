@@ -9,7 +9,7 @@
 		children: Snippet<[item: Item, angle: number]>;
 	};
 
-	const {
+	let {
 		items,
 		radius = 'min(100vw, 100vh) * 0.35',
 		offset,

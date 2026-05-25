@@ -12,7 +12,7 @@
 	viewBox="0 0 112 114"
 	fill="none"
 	xmlns="http://www.w3.org/2000/svg"
-	filter="url(#noiseFilter)"
+	filter="url(#noise-filter)"
 	class={className}
 >
 	<path
@@ -78,7 +78,7 @@
 			<stop stop-color="#F6F5B4" />
 			<stop offset="1" stop-color="#DF4A2D" />
 		</linearGradient>
-		<filter id="noiseFilter">
+		<filter id="noise-filter">
 			<feTurbulence
 				type="turbulence"
 				baseFrequency="0.2"

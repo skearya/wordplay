@@ -25,4 +25,4 @@
 	});
 </script>
 
-<p>{countdown} seconds left</p>
+{countdown} seconds left

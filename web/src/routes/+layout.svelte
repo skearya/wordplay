@@ -1,8 +1,10 @@
 <script lang="ts">
 	import '../app.css';
+	// @ts-expect-error
 	import '@fontsource-variable/inter';
 	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
+	import Error from '$lib/components/Error.svelte';
 
 	let { children } = $props();
 
@@ -19,8 +21,7 @@
 <svelte:boundary onerror={(error) => console.error(error)}>
 	{@render children?.()}
 
-	{#snippet failed(_error, _reset)}
-		<button onclick={() => window.location.reload()}>oops, something broke. try again?</button>
-		<code>{_error}</code>
+	{#snippet failed(error, _reset)}
+		<Error message={`${error}`} fatal />
 	{/snippet}
 </svelte:boundary>

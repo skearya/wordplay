@@ -12,6 +12,7 @@
 	import { generalEmitter } from '$lib/events';
 	import Me from '$lib/icons/Me.svelte';
 	import Avatar from '../Avatar.svelte';
+	import Tag from '../Tag.svelte';
 
 	let { ctx = $bindable(), sendMsg }: Omit<Props<never>, 'state'> = $props();
 
@@ -47,45 +48,25 @@
 			duration,
 			easing,
 			css: (t) =>
-				`background-color: color-mix(in srgb, var(--color-pastel-pink), transparent ${t * 50 + 50}%);`
+				`background-color: color-mix(in srgb, var(--color-pastel-pink) ${50 - t * 50}%, transparent);`
 		};
 	}
 </script>
 
-<div class="relative flex flex-1 flex-col border border-pastel-pink bg-pastel-pink/10">
-	<div
-		class="absolute top-0 left-0 w-min rounded-br-2xl bg-pastel-pink px-3 py-1 text-nowrap text-background"
-	>
-		<p>Chat</p>
-	</div>
+<div class="relative flex h-full flex-col border border-pastel-pink bg-pastel-pink/10">
+	<Tag class="bg-pastel-pink">Chat</Tag>
 	<div bind:this={messagesContainer} class="flex-1 overflow-x-hidden overflow-y-auto pb-1">
 		<div
-			style="--stripe-color: var(--color-pastel-pink); "
-			class="striped h-12 w-full border-b border-pastel-pink opacity-25"
+			style="--stripe-color: var(--color-pastel-pink);"
+			class="striped h-16 w-full border-b border-pastel-pink opacity-25"
 		></div>
 		{#each ['Welcome to Wordplay!', 'Please leave issues or feedback on <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200 underline">GitHub</a>.'] as content, i}
-			{#await new Promise((resolve) => setTimeout(resolve, 1000 + 2000 * i)) then}
-				<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
-					<Me width={147 * 0.275} height={152 * 0.275} />
-					<div class="text-sm leading-snug">
-						<p class="font-medium">skeary</p>
-						{@html content}
-					</div>
-				</div>
+			{#await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1))) then}
+				{@render messageSnippet({ key: `${i}`, author: 'Server', content }, true)}
 			{/await}
 		{/each}
-		{#each messages as { author, content }}
-			<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
-				{#if author === 'Server'}
-					<Me />
-				{:else}
-					<Avatar {ctx} uuid={author} size="sm" />
-				{/if}
-				<div class="text-sm leading-snug">
-					<p class="font-medium">{ctx.clients[author]!.username}</p>
-					<p>{content}</p>
-				</div>
-			</div>
+		{#each messages as message (message.key)}
+			{@render messageSnippet(message, false)}
 		{/each}
 	</div>
 	<input
@@ -104,3 +85,17 @@
 		}}
 	/>
 </div>
+
+{#snippet messageSnippet({ author, content }: Message, trusted: boolean)}
+	<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
+		{#if trusted}
+			<Me width={147 * 0.275} height={152 * 0.275} />
+		{:else}
+			<Avatar {ctx} uuid={author} size="sm" />
+		{/if}
+		<div class="text-sm leading-snug">
+			<p class="font-medium">{trusted ? author : ctx.clients[author]!.username}</p>
+			{#if trusted}{@html content}{:else}{content}{/if}
+		</div>
+	</div>
+{/snippet}

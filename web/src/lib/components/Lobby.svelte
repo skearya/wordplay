@@ -6,6 +6,7 @@
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
 	import { lobbyEmitter } from '$lib/events';
+	import { unreachable } from '$lib/utils';
 	import Chat from './lobby/Chat.svelte';
 	import Practice from './lobby/Practice.svelte';
 	import Ready from './lobby/Ready.svelte';
@@ -13,8 +14,8 @@
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
-	let panels: ('stats' | 'join' | 'pane')[] = $state(
-		lobby.prevGame ? ['stats'] : ['stats', 'join', 'pane']
+	let panels: ('stats' | 'join' | 'chat' | 'practice')[] = $state(
+		lobby.prevGame ? ['stats'] : ['join', 'chat', 'practice']
 	);
 
 	const handleTimer = (action: TimerAction) => {
@@ -32,7 +33,7 @@
 
 	onMount(() => {
 		if (lobby.prevGame) {
-			setTimeout(() => (panels = ['stats', 'join', 'pane']), 2500);
+			setTimeout(() => (panels = ['stats', 'join', 'chat', 'practice']), 2500);
 		}
 
 		return lobbyEmitter.handle({
@@ -63,21 +64,18 @@
 		<div
 			animate:flip={{ duration: 400 }}
 			in:fly={{ delay: 400 }}
-			class={[
-				kind === 'stats'
-					? 'min-w-[30%]'
-					: kind === 'join'
-						? 'min-w-[calc(70%_-_var(--spacing)_*_4)]'
-						: 'grid min-w-[30%] grid-rows-2 gap-y-4'
-			]}
+			class={[kind === 'join' ? 'min-w-[calc(70%_-_var(--spacing)_*_8)]' : 'min-w-[30%]']}
 		>
 			{#if kind === 'stats'}
 				<Stats />
 			{:else if kind === 'join'}
 				<Ready {ctx} state={lobby} {sendMsg} />
-			{:else}
-				<Practice {ctx} {sendMsg} />
+			{:else if kind === 'chat'}
 				<Chat {ctx} {sendMsg} />
+			{:else if kind === 'practice'}
+				<Practice {ctx} {sendMsg} />
+			{:else if kind satisfies never}
+				{unreachable(kind)}
 			{/if}
 		</div>
 	{/each}

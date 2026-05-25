@@ -5,7 +5,7 @@
 		color: 'pastel-blue' | 'pastel-pink';
 	};
 
-	const { children, color, ...rest }: HTMLButtonAttributes & Props = $props();
+	let { children, color, ...rest }: HTMLButtonAttributes & Props = $props();
 </script>
 
 <button

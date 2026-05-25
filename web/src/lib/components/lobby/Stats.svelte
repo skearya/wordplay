@@ -5,7 +5,7 @@
 
 <section class="flex h-full max-w-md flex-col overflow-y-hidden border border-pink bg-pink/15">
 	<div
-		style={`background: url("${grid2Svg}"), #F3ACFF;`}
+		style={`background: url("${grid2Svg}"), var(--color-pink);`}
 		class="background-scroll p-4 pt-16 text-black"
 	>
 		<div class="relative mb-2.5 size-20">
@@ -47,7 +47,7 @@
 				{/each}
 			</div>
 			<div
-				style="scrollbar-width: none;"
+				style="scrollbar-width: thin;"
 				class="flex-1 divide-y overflow-y-auto border border-pastel-pink"
 			>
 				{#each { length: 99 }, i}

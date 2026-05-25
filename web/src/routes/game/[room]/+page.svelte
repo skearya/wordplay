@@ -6,6 +6,7 @@
 	import type { Context } from '$lib/context';
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onDestroy } from 'svelte';
+	import Error from '$lib/components/Error.svelte';
 	import Wordplay from '$lib/components/Wordplay.svelte';
 	import {
 		anagramsEmitter,
@@ -135,12 +136,13 @@
 {:else if connection.kind === 'ready'}
 	<Wordplay bind:ctx={connection.ctx} sendMsg={connection.sendMsg} />
 {:else if connection.kind === 'error'}
-	<main class="flex h-screen items-center justify-center">
-		<div>
-			<h1>Connection error, sorry about that!</h1>
-			<code>{JSON.stringify(connection, null, 2)}</code>
-		</div>
-	</main>
+	<Error
+		message={'Connection Error: ' +
+			Object.entries(connection)
+				.filter(([k]) => k !== 'kind')
+				.map(([k, v]) => `${k}: ${v === '' ? '?' : v}`)
+				.join(', ')}
+	/>
 {:else if connection satisfies never}
 	{unreachable(connection)}
 {/if}

@@ -3,6 +3,7 @@
 	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
+	import { fade, slide } from 'svelte/transition';
 	import gridSvg from '$lib/assets/grid.svg';
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
@@ -16,16 +17,63 @@
 	let backgroundCanvasElement: HTMLCanvasElement;
 	let headerTextElement: HTMLElement;
 	let contentElement: HTMLElement;
+	let roomsMessageElement: HTMLElement | undefined = $state();
 
-	let fetchRoomsInfoPromise: ReturnType<typeof fetchRoomsInfo> | null = $state(null);
+	let roomsInfo = $state<
+		| { kind: 'pending' }
+		| { kind: 'fulfilled'; data: RoomsInfoResponse }
+		| { kind: 'rejected'; error: any }
+	>({ kind: 'pending' });
+
+	let roomsMessage = $derived(
+		roomsInfo.kind === 'pending'
+			? 'Loading...'
+			: roomsInfo.kind === 'fulfilled' && Object.keys(roomsInfo.data.rooms).length === 0
+				? "There aren't any public rooms right now, be the first?"
+				: roomsInfo.kind === 'rejected'
+					? 'Something went wrong, please try refreshing...?'
+					: null
+	);
+
+	const TEXT_UPDATE_MS = 25;
+
+	$effect(() => {
+		const message = roomsMessage;
+		if (!message) return;
+
+		const el = roomsMessageElement;
+		if (!el) return;
+
+		let erasing = true;
+		let timeoutId: number | undefined = undefined;
+
+		const fn = () => {
+			if (erasing) {
+				el.textContent = el.textContent.substring(0, el.textContent.length - 1);
+				if (el.textContent === '') erasing = false;
+
+				timeoutId = setTimeout(fn, TEXT_UPDATE_MS);
+			} else {
+				el.textContent = message.substring(0, el.textContent.length + 1);
+				if (el.textContent === message) return;
+
+				timeoutId = setTimeout(fn, TEXT_UPDATE_MS + el.textContent.length);
+			}
+		};
+
+		fn();
+
+		return () => clearTimeout(timeoutId);
+	});
 
 	onMount(() => {
-		fetchRoomsInfoPromise = fetchRoomsInfo();
+		fetchRoomsInfo().then(
+			(data) => (roomsInfo = { kind: 'fulfilled', data }),
+			(error) => (roomsInfo = { kind: 'rejected', error })
+		);
 
 		const animation = contentElement.animate(
-			{
-				translate: ['0px 50vh', '0px 0px']
-			},
+			{ translate: ['0px 50vh', '0px 0px'] },
 			{
 				fill: 'forwards',
 				delay: 500,
@@ -35,9 +83,7 @@
 		);
 
 		headerTextElement.animate(
-			{
-				opacity: '100%'
-			},
+			{ opacity: '100%' },
 			{
 				fill: 'forwards',
 				delay: 1500,
@@ -78,16 +124,14 @@
 		return () => cleanupCanvas();
 	});
 
-	async function fetchRoomsInfo() {
-		const data = (await (await fetch(`${PUBLIC_SERVER_URL}/info`)).json()) as RoomsInfoResponse;
-
-		return data;
+	async function fetchRoomsInfo(): Promise<RoomsInfoResponse> {
+		return (await (await fetch(`${PUBLIC_SERVER_URL}/info`)).json()) as RoomsInfoResponse;
 	}
 </script>
 
 <header
 	style={`background: linear-gradient(45deg, rgba(255, 250, 226, 1), rgba(229, 228, 158, 0.8)), url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.91' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");`}
-	class="absolute top-0 left-0 -z-10 h-full w-full bg-cover"
+	class="absolute top-0 left-0 -z-10 h-full w-full"
 >
 	<canvas bind:this={backgroundCanvasElement} class="h-full w-full opacity-0"></canvas>
 	<h1
@@ -121,30 +165,33 @@
 				<Search />
 			</div>
 		</div>
-		{#if fetchRoomsInfoPromise}
-			{#await fetchRoomsInfoPromise}
-				loading
-			{:then { rooms }}
-				<div class="relative grid grid-cols-3 gap-2.5">
-					{#each Object.entries(rooms) as [name, info]}
-						<Room {name} {info} />
-					{:else}
-						<div
-							class="text-xl content-center h-16 text-center bg-pink text-black font-serif col-span-3"
-						>
-							There aren't any public rooms right now, be the first?
-						</div>
-						{#each { length: 15 }, i}
-							<Room
-								name="Your Room Here..."
-								style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
-							/>
-						{/each}
-					{/each}
-				</div>
-			{:catch}
-				error
-			{/await}
+		{#if roomsMessage}
+			<div
+				bind:this={roomsMessageElement}
+				transition:slide={{ duration: 200 }}
+				class={[
+					'h-16 content-center text-center font-serif text-xl text-black transition-colors duration-1000',
+					roomsInfo.kind === 'rejected' ? 'bg-red' : 'bg-pink'
+				]}
+			>
+				{roomsMessage}
+			</div>
+		{/if}
+		{#if roomsInfo.kind === 'fulfilled' && Object.keys(roomsInfo.data.rooms).length !== 0}
+			<div transition:fade class="relative grid grid-cols-3 gap-2.5">
+				{#each Object.entries(roomsInfo.data.rooms) as [name, info]}
+					<Room {name} {info} />
+				{/each}
+			</div>
+		{:else}
+			<div transition:fade={{ duration: 200 }} class="relative grid grid-cols-3 gap-2.5">
+				{#each { length: 15 }, i}
+					<Room
+						name="Your Room Here..."
+						style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
+					/>
+				{/each}
+			</div>
 		{/if}
 	</div>
 </section>

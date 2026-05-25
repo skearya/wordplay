@@ -16,8 +16,7 @@
 	} & (SvelteHTMLElements['a'] & SvelteHTMLElements['div']) = $props();
 
 	const containerClass = [
-		'relative flex h-32 flex-col justify-between border border-faded-green p-2.5',
-		info && 'bg-background',
+		'relative flex h-32 flex-col justify-between bg-background border border-faded-green p-2.5',
 		className
 	];
 </script>
@@ -49,15 +48,11 @@
 			<div class="size-[38px] rounded-full border border-pastel-blue"></div>
 		{/if}
 	</div>
-	{#if info}
-		{#if info.settings.game === 'wordBomb'}
-			<Bomb class="absolute right-3 bottom-3" />
-		{:else if info.settings.game === 'anagrams'}
-			{unreachable(info.settings.game)}
-		{:else if info.settings.game satisfies never}
-			{unreachable(info.settings.game)}
-		{/if}
-	{:else}
+	{#if info === undefined || info.settings.game === 'wordBomb'}
 		<Bomb class="absolute right-3 bottom-3" />
+	{:else if info.settings.game === 'anagrams'}
+		{unreachable(info.settings.game)}
+	{:else if info.settings.game satisfies never}
+		{unreachable(info.settings.game)}
 	{/if}
 {/snippet}
