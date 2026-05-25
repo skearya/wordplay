@@ -3,7 +3,7 @@
 	import Crown from '$lib/icons/Crown.svelte';
 </script>
 
-<section class="flex h-full max-w-md flex-col overflow-y-hidden border border-pink bg-pink/15">
+<section class="flex h-full flex-col overflow-y-hidden border border-pink bg-pink/15">
 	<div
 		style={`background: url("${grid2Svg}"), var(--color-pink);`}
 		class="background-scroll p-4 pt-16 text-black"
