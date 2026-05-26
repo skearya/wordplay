@@ -4,29 +4,32 @@
 
 	type Props = {
 		items: Item[];
+		key: (item: Item) => unknown;
+		render: Snippet<[item: Item, angle: number]>;
 		radius?: string;
 		offset?: boolean;
-		children: Snippet<[item: Item, angle: number]>;
 	};
 
 	let {
 		items,
+		key,
+		render,
 		radius = 'min(100vw, 100vh) * 0.35',
 		offset,
-		children,
+		class: classList,
 		...rest
 	}: Props & SvelteHTMLElements['div'] = $props();
 </script>
 
-<div class="relative" {...rest}>
-	{#each items as item, i}
+<div class={['relative', classList]} {...rest}>
+	{#each items as item, i (key(item))}
 		{@const angleBetween = (2 * Math.PI) / items.length}
 		{@const angle = i * angleBetween + (offset ? angleBetween / 2 : 0)}
 		<div
 			style={`translate: calc(-50% + cos(${angle}rad) * (${radius})) calc(-50% - sin(${angle}rad) * (${radius}));`}
 			class="absolute top-1/2 left-1/2"
 		>
-			{@render children(item, angle)}
+			{@render render(item, angle)}
 		</div>
 	{/each}
 </div>
