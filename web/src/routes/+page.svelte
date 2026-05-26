@@ -1,17 +1,20 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import type { RoomInfo } from '@bindings/RoomInfo';
 	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
 	import { fade, slide } from 'svelte/transition';
 	import gridSvg from '$lib/assets/grid.svg';
+	import Bomb from '$lib/icons/Bomb.svelte';
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
 	import Search from '$lib/icons/Search.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
 	import { createLetterCanvas, lightStyle } from '$lib/letters';
 	import { animateText } from '$lib/typewriter';
-	import Room from './Room.svelte';
+	import Avatar from '$lib/ui/Avatar.svelte';
+	import { unreachable } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -171,18 +174,47 @@
 		{#if roomEntries.length !== 0}
 			<div transition:fade class="relative grid grid-cols-3 gap-2.5">
 				{#each roomEntries as [name, info]}
-					<Room {name} {info} />
+					{@render room({ name, info })}
 				{/each}
 			</div>
 		{:else}
 			<div transition:fade={{ duration: 200 }} class="relative grid grid-cols-3 gap-2.5">
 				{#each { length: 15 }, i}
-					<Room
-						name="Your Room Here..."
-						style={`animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`}
-					/>
+					{@render room({
+						name: 'Your Room Here...',
+						style: `animation: pulse 2s ${Math.floor(i / 3) * 300}ms cubic-bezier(0.4, 0, 0.6, 1) infinite;`
+					})}
 				{/each}
 			</div>
 		{/if}
 	</div>
 </section>
+
+{#snippet room({ name, info, style }: { name: string; info?: RoomInfo; style?: string })}
+	<svelte:element
+		this={info ? 'a' : 'div'}
+		href={info ? `/game/${name}` : null}
+		class="relative flex h-32 flex-col justify-between border border-faded-green bg-background p-2.5"
+		{style}
+	>
+		<p class="text-lg">{name}</p>
+		<div class="flex -space-x-2">
+			{#if info}
+				{#each info.clients as client}
+					<Avatar size="sm" username={client.username} avatarUrl={client.avatarUrl ?? undefined} />
+				{/each}
+			{:else}
+				<div class="size-9.5 rounded-full border border-pastel-red"></div>
+				<div class="size-9.5 rounded-full border border-pastel-green"></div>
+				<div class="size-9.5 rounded-full border border-pastel-blue"></div>
+			{/if}
+		</div>
+		{#if info === undefined || info.settings.game === 'wordBomb'}
+			<Bomb class="absolute right-3 bottom-3" />
+		{:else if info.settings.game === 'anagrams'}
+			{unreachable(info.settings.game)}
+		{:else if info.settings.game satisfies never}
+			{unreachable(info.settings.game)}
+		{/if}
+	</svelte:element>
+{/snippet}
