@@ -10,6 +10,7 @@
 	import Search from '$lib/icons/Search.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
 	import { createLetterCanvas, lightStyle } from '$lib/letters';
+	import { animateText } from '$lib/typewriter';
 	import Room from './Room.svelte';
 
 	const { data }: PageProps = $props();
@@ -24,47 +25,6 @@
 		| { kind: 'fulfilled'; data: RoomsInfoResponse }
 		| { kind: 'rejected'; error: any }
 	>({ kind: 'pending' });
-
-	let roomsMessage = $derived(
-		roomsInfo.kind === 'pending'
-			? 'Loading...'
-			: roomsInfo.kind === 'fulfilled' && Object.keys(roomsInfo.data.rooms).length === 0
-				? "There aren't any public rooms right now, be the first?"
-				: roomsInfo.kind === 'rejected'
-					? 'Something went wrong, please try refreshing...?'
-					: null
-	);
-
-	const TEXT_UPDATE_MS = 25;
-
-	$effect(() => {
-		const message = roomsMessage;
-		if (!message) return;
-
-		const el = roomsMessageElement;
-		if (!el) return;
-
-		let erasing = true;
-		let timeoutId: number | undefined = undefined;
-
-		const fn = () => {
-			if (erasing) {
-				el.textContent = el.textContent.substring(0, el.textContent.length - 1);
-				if (el.textContent === '') erasing = false;
-
-				timeoutId = setTimeout(fn, TEXT_UPDATE_MS);
-			} else {
-				el.textContent = message.substring(0, el.textContent.length + 1);
-				if (el.textContent === message) return;
-
-				timeoutId = setTimeout(fn, TEXT_UPDATE_MS + el.textContent.length);
-			}
-		};
-
-		fn();
-
-		return () => clearTimeout(timeoutId);
-	});
 
 	onMount(() => {
 		fetchRoomsInfo().then(
@@ -127,6 +87,31 @@
 	async function fetchRoomsInfo(): Promise<RoomsInfoResponse> {
 		return (await (await fetch(`${PUBLIC_SERVER_URL}/info`)).json()) as RoomsInfoResponse;
 	}
+
+	let roomsMessage = $derived.by(() => {
+		if (roomsInfo.kind === 'pending') return 'Loading...';
+		if (roomsInfo.kind === 'rejected') return 'Something went wrong, please try refreshing...?';
+		if (Object.keys(roomsInfo.data.rooms).length === 0)
+			return "There aren't any public rooms right now, be the first?";
+
+		return null;
+	});
+
+	let searchQuery = $state('');
+
+	let roomEntries = $derived.by(() => {
+		if (roomsInfo.kind !== 'fulfilled') return [];
+
+		return Object.entries(roomsInfo.data.rooms).filter(
+			([name]) => name === '' || name.includes(searchQuery)
+		);
+	});
+
+	$effect(() => {
+		if (!roomsMessage || !roomsMessageElement) return;
+
+		return animateText(roomsMessageElement, roomsMessage);
+	});
 </script>
 
 <header
@@ -161,7 +146,13 @@
 		<div class="flex items-center justify-between font-serif">
 			<h1 class="text-2xl">Public rooms</h1>
 			<div class="flex items-center justify-between gap-x-4 text-[#B0B0B0]">
-				<input type="text" placeholder="Search..." class="text-xl" />
+				<input
+					type="text"
+					placeholder="Search..."
+					class="text-xl"
+					disabled={roomsInfo.kind !== 'fulfilled'}
+					bind:value={searchQuery}
+				/>
 				<Search />
 			</div>
 		</div>
@@ -177,9 +168,9 @@
 				{roomsMessage}
 			</div>
 		{/if}
-		{#if roomsInfo.kind === 'fulfilled' && Object.keys(roomsInfo.data.rooms).length !== 0}
+		{#if roomEntries.length !== 0}
 			<div transition:fade class="relative grid grid-cols-3 gap-2.5">
-				{#each Object.entries(roomsInfo.data.rooms) as [name, info]}
+				{#each roomEntries as [name, info]}
 					<Room {name} {info} />
 				{/each}
 			</div>
