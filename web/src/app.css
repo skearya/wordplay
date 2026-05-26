@@ -169,12 +169,8 @@
 		}
 	}
 
-	.timing-function-0 {
+	.ease-out-cubic {
 		transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
-	}
-
-	.shadow-0 {
-		box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
 	}
 
 	.no-scrollbar {

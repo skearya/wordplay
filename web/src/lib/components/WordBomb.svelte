@@ -330,7 +330,7 @@
 <div class="relative flex flex-1 items-center justify-center gap-4 overflow-hidden p-4 pt-0">
 	<div
 		bind:this={bombElement}
-		class="timing-function-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
+		class="ease-out-cubic absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-[400ms]"
 	>
 		<GameBomb />
 		<GameBombWire class="absolute top-0 right-0 translate-x-[4.8rem] -translate-y-[4.8rem]" />
@@ -359,12 +359,12 @@
 		<div
 			bind:this={incorrectOutlineElement}
 			style={`scale: ${activeOutlineScale}%;`}
-			class="rotating timing-function-0 absolute top-1/2 left-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 border-red opacity-0 transition-transform duration-300"
+			class="rotating ease-out-cubic absolute top-1/2 left-1/2 z-10 size-56 -translate-x-1/2 -translate-y-1/2 border-4 border-red opacity-0 transition-transform duration-300"
 		></div>
 	</div>
 	<div
 		bind:this={playersContainer}
-		class="timing-function-0 relative size-full transition-transform duration-[400ms]"
+		class="ease-out-cubic relative size-full transition-transform duration-[400ms]"
 	>
 		{#each players as [uuid, player], i (uuid)}
 			{@const angleBetween = (2 * Math.PI) / players.length}
@@ -375,7 +375,7 @@
 				bind:this={playerElements[uuid]}
 				style={`translate: calc(-50% + cos(${angle}rad) * ${dist}px) calc(-50% - sin(${angle}rad) * ${dist}px);` +
 					`scale: ${playerScale}%;`}
-				class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
+				class="ease-out-cubic absolute top-1/2 left-1/2 flex flex-col items-center p-2 transition-transform duration-[400ms]"
 			>
 				<div class="relative mb-2">
 					<Avatar {ctx} {uuid} />
@@ -422,7 +422,7 @@
 				style={`translate: calc(-50% + cos(${arrowAngle}rad) * ${dist}px) calc(-50% - sin(${arrowAngle}rad) * ${dist}px);` +
 					`scale: ${playerScale}%;` +
 					`rotate: ${-arrowAngle}rad;`}
-				class="timing-function-0 absolute top-1/2 left-1/2 text-light-green transition-transform duration-[400ms]"
+				class="ease-out-cubic absolute top-1/2 left-1/2 text-light-green transition-transform duration-[400ms]"
 			>
 				{#each { length: 3 }}
 					<DownArrow class="opacity-0" />

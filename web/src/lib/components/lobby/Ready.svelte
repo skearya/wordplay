@@ -57,7 +57,7 @@
 						? `translate: -50% -50%;`
 						: `translate: calc(-50% + ${x}px) calc(-50% + ${-y}px);` +
 							`scale: ${100 - Math.log2(lobby.ready.length) * 8}%;`}
-					class="timing-function-0 absolute top-1/2 left-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
+					class="ease-out-cubic absolute top-1/2 left-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
 				>
 					<Avatar {ctx} {uuid} />
 					<p>{ctx.clients[uuid]!.username}</p>
