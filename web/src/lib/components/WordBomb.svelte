@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { WordBombState } from '@bindings/WordBombState';
 	import type { Props } from '$lib/context';
-	import type { AnimationConfig, FlipParams } from 'svelte/animate';
+	import type { AnimationConfig } from 'svelte/animate';
 	import type { TransitionConfig } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
