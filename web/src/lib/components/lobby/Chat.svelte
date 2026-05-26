@@ -61,7 +61,7 @@
 			class="striped h-16 w-full border-b border-pastel-pink opacity-25"
 		></div>
 		{#each ['Welcome to Wordplay!', 'Please leave issues or feedback on <a href="https://github.com/skearya/wordplay" target="_blank" class="text-gray-200 underline">GitHub</a>.'] as content, i}
-			{#await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1))) then}
+			{#await new Promise((resolve) => setTimeout(resolve, 500 + 2000 * i)) then}
 				{@render messageSnippet({ key: `${i}`, author: 'Server', content }, true)}
 			{/await}
 		{/each}

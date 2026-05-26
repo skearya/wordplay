@@ -80,10 +80,6 @@
 		color: var(--color-white);
 	}
 
-	kbd {
-		@apply inline-flex min-h-5 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-1 font-mono text-sm text-neutral-200;
-	}
-
 	@keyframes background-scroll-keyframes {
 		0% {
 			background-position: 0px 0px;

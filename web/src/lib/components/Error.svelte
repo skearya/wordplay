@@ -60,9 +60,9 @@
 		<Tag class="bg-red">
 			<p>Something {fatal ? 'went really' : 'went'} wrong...</p>
 		</Tag>
-		<div class="flex flex-1 items-center justify-center">
-			<p class="line-clamp-3 text-center font-mono">{message ? message : 'Unknown Error'}</p>
-		</div>
+		<p class="line-clamp-3 flex-1 content-center text-center font-mono">
+			{message ? message : 'Unknown Error'}
+		</p>
 		<Button color="pastel-blue" onclick={() => location.reload()}>Reload</Button>
 	</div>
 </main>
