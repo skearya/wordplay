@@ -2,7 +2,7 @@
 	import type { RoomInfo } from '@bindings/RoomInfo';
 	import type { SvelteHTMLElements } from 'svelte/elements';
 	import Bomb from '$lib/icons/Bomb.svelte';
-	import StaticAvatar from '$lib/ui/StaticAvatar.svelte';
+	import Avatar from '$lib/ui/Avatar.svelte';
 	import { unreachable } from '$lib/utils';
 
 	let {
@@ -15,18 +15,18 @@
 		info?: RoomInfo;
 	} & (SvelteHTMLElements['a'] & SvelteHTMLElements['div']) = $props();
 
-	const containerClass = [
+	const containerClass = () => [
 		'relative flex h-32 flex-col justify-between bg-background border border-faded-green p-2.5',
 		className
 	];
 </script>
 
 {#if info}
-	<a href={`/game/${name}`} class={containerClass} {...rest}>
+	<a href={`/game/${name}`} class={containerClass()} {...rest}>
 		{@render content(info)}
 	</a>
 {:else}
-	<div class={containerClass} {...rest}>
+	<div class={containerClass()} {...rest}>
 		{@render content()}
 	</div>
 {/if}
@@ -36,16 +36,12 @@
 	<div class="flex -space-x-2">
 		{#if info}
 			{#each info.clients as client}
-				<StaticAvatar
-					size="sm"
-					username={client.username}
-					avatarUrl={client.avatarUrl ?? undefined}
-				/>
+				<Avatar size="sm" username={client.username} avatarUrl={client.avatarUrl ?? undefined} />
 			{/each}
 		{:else}
-			<div class="size-[38px] rounded-full border border-pastel-red"></div>
-			<div class="size-[38px] rounded-full border border-pastel-green"></div>
-			<div class="size-[38px] rounded-full border border-pastel-blue"></div>
+			<div class="size-9.5 rounded-full border border-pastel-red"></div>
+			<div class="size-9.5 rounded-full border border-pastel-green"></div>
+			<div class="size-9.5 rounded-full border border-pastel-blue"></div>
 		{/if}
 	</div>
 	{#if info === undefined || info.settings.game === 'wordBomb'}

@@ -51,3 +51,7 @@ export function debounce<T extends any[]>(
 		}, wait);
 	};
 }
+
+export function keepAlphanumeric(input: string) {
+	return input.replace(/[^a-zA-Z0-9]/g, '');
+}

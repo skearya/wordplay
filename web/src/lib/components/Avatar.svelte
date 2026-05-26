@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Context, Props } from '$lib/context';
+	import type { Context } from '$lib/context';
 	import type { ComponentProps } from 'svelte';
-	import StaticAvatar from '$lib/ui/StaticAvatar.svelte';
+	import Avatar from '$lib/ui/Avatar.svelte';
 
-	type StaticAvatarProps = ComponentProps<typeof StaticAvatar>;
+	type UIAvatarProps = ComponentProps<typeof Avatar>;
 
 	let {
 		ctx,
@@ -14,12 +14,12 @@
 	}: {
 		ctx: Context;
 		uuid: string;
-	} & Partial<StaticAvatarProps> = $props();
+	} & Partial<UIAvatarProps> = $props();
 
 	let user = $derived(ctx.clients[uuid]!);
 </script>
 
-<StaticAvatar
+<Avatar
 	{size}
 	username={user.username}
 	avatarUrl={user.avatarUrl ?? undefined}
