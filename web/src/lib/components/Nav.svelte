@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Props } from '$lib/context';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import GreenSettings from '$lib/icons/GreenSettings.svelte';
 	import Logo from '$lib/icons/Logo.svelte';
-	import Avatar from './Avatar.svelte';
 
 	let { ctx = $bindable() }: Omit<Props<never>, 'state' | 'sendMsg'> = $props();
 

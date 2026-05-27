@@ -9,10 +9,10 @@
 	import type { TransitionConfig } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import { generalEmitter } from '$lib/events';
 	import Me from '$lib/icons/Me.svelte';
-	import Avatar from '../Avatar.svelte';
-	import Tag from '../Tag.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 
 	let { ctx = $bindable(), sendMsg }: Omit<Props<never>, 'state'> = $props();
 

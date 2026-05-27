@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Props } from '$lib/context';
-	import Tag from '../Tag.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 
 	let { ctx = $bindable(), sendMsg }: Omit<Props<never>, 'state'> = $props();
 </script>

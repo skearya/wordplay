@@ -3,8 +3,8 @@
 	import { fade } from 'svelte/transition';
 	import { createLetterCanvas } from '$lib/letters';
 	import Button from '$lib/ui/Button.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { getRandomRange } from '$lib/utils';
-	import Tag from './Tag.svelte';
 
 	let { message, fatal }: { message?: string; fatal?: boolean } = $props();
 

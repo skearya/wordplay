@@ -5,12 +5,12 @@
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
+	import Chat from '$lib/components/lobby/Chat.svelte';
+	import Practice from '$lib/components/lobby/Practice.svelte';
+	import Ready from '$lib/components/lobby/Ready.svelte';
+	import Stats from '$lib/components/lobby/Stats.svelte';
 	import { lobbyEmitter } from '$lib/events';
 	import { unreachable } from '$lib/utils';
-	import Chat from './lobby/Chat.svelte';
-	import Practice from './lobby/Practice.svelte';
-	import Ready from './lobby/Ready.svelte';
-	import Stats from './lobby/Stats.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 

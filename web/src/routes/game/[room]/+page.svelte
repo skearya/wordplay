@@ -6,7 +6,8 @@
 	import type { Context } from '$lib/context';
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onDestroy } from 'svelte';
-	import Error from '$lib/components/Error.svelte';
+	import Error from '$lib/components/states/Error.svelte';
+	import Join from '$lib/components/states/Join.svelte';
 	import Wordplay from '$lib/components/Wordplay.svelte';
 	import {
 		anagramsEmitter,
@@ -17,7 +18,6 @@
 		wordBombEmitter
 	} from '$lib/events';
 	import { unreachable } from '$lib/utils';
-	import Join from './Join.svelte';
 
 	const { params }: PageProps = $props();
 

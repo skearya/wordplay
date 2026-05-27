@@ -3,13 +3,13 @@
 	import type { Context } from '$lib/context';
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
+	import Nav from '$lib/components/Nav.svelte';
+	import Game from '$lib/components/states/Game.svelte';
+	import Lobby from '$lib/components/states/Lobby.svelte';
+	import Transition from '$lib/components/Transition.svelte';
 	import { coreEmitter, generalEmitter } from '$lib/events';
 	import { transitionState } from '$lib/stores/transition.svelte';
 	import { objectAssign, unreachable } from '$lib/utils';
-	import Game from './Game.svelte';
-	import Lobby from './Lobby.svelte';
-	import Nav from './Nav.svelte';
-	import Transition from './Transition.svelte';
 
 	let {
 		ctx = $bindable(),

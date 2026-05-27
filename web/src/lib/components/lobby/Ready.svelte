@@ -2,13 +2,13 @@
 	import type { LobbyState } from '@bindings/LobbyState';
 	import type { Props } from '$lib/context';
 	import { fly, slide } from 'svelte/transition';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import Countdown from '$lib/components/lobby/Countdown.svelte';
 	import DoubleRightArrow from '$lib/icons/DoubleRightArrow.svelte';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import Avatar from '../Avatar.svelte';
-	import Tag from '../Tag.svelte';
-	import Countdown from './Countdown.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 

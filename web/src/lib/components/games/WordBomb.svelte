@@ -5,6 +5,7 @@
 	import type { TransitionConfig } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import { wordBombEmitter } from '$lib/events';
 	import { explode } from '$lib/explode';
 	import DownArrow from '$lib/icons/DownArrow.svelte';
@@ -13,7 +14,6 @@
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import Star from '$lib/icons/Star.svelte';
 	import { debounce, lerp } from '$lib/utils';
-	import Avatar from './Avatar.svelte';
 
 	let {
 		ctx = $bindable(),
@@ -101,7 +101,7 @@
 
 	const unusedLetters = $derived(
 		[...'abcdefghijklmnopqrstuvwxyz'].filter(
-			(c) => !wordBomb.players[ctx.uuid]!.letters.includes(c)
+			(c) => !wordBomb.players[ctx.uuid]?.letters.includes(c)
 		)
 	);
 

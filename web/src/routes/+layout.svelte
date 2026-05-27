@@ -1,10 +1,10 @@
 <script lang="ts">
 	import '../app.css';
-	// @ts-expect-error
+	// @ts-ignore
 	import '@fontsource-variable/inter';
 	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
-	import Error from '$lib/components/Error.svelte';
+	import Error from '$lib/components/states/Error.svelte';
 
 	let { children } = $props();
 
