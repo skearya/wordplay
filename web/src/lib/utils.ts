@@ -1,3 +1,5 @@
+import { dev } from '$app/environment';
+
 export type Variant<T extends { kind: string }, Kind extends T['kind']> = Extract<
 	T,
 	{ kind: Kind }
@@ -54,4 +56,12 @@ export function debounce<T extends any[]>(
 
 export function keepAlphanumeric(input: string) {
 	return input.replace(/[^a-zA-Z0-9]/g, '');
+}
+
+export function serverURL(path: string, ws?: boolean) {
+	if (dev) {
+		return `${ws ? 'ws' : 'http'}://localhost:3000${path}`;
+	}
+
+	return path;
 }

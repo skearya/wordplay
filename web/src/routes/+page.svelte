@@ -2,7 +2,6 @@
 	import type { PageProps } from './$types';
 	import type { RoomInfo } from '@bindings/RoomInfo';
 	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
-	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
 	import { fade, slide } from 'svelte/transition';
 	import gridSvg from '$lib/assets/grid.svg';
@@ -14,7 +13,7 @@
 	import { createLetterCanvas, lightStyle } from '$lib/letters';
 	import { animateText } from '$lib/typewriter';
 	import Avatar from '$lib/ui/Avatar.svelte';
-	import { unreachable } from '$lib/utils';
+	import { serverURL, unreachable } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -88,7 +87,7 @@
 	});
 
 	async function fetchRoomsInfo(): Promise<RoomsInfoResponse> {
-		return (await (await fetch(`${PUBLIC_SERVER_URL}/info`)).json()) as RoomsInfoResponse;
+		return (await (await fetch(serverURL('/info'))).json()) as RoomsInfoResponse;
 	}
 
 	let roomsMessage = $derived.by(() => {

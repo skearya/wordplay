@@ -4,7 +4,7 @@
 	import type { ServerMessage } from '@bindings/ServerMessage';
 	import type { SocketParams } from '@bindings/SocketParams';
 	import type { Context } from '$lib/context';
-	import { PUBLIC_SERVER_URL } from '$env/static/public';
+	import { dev } from '$app/environment';
 	import { onDestroy } from 'svelte';
 	import Error from '$lib/components/states/Error.svelte';
 	import Join from '$lib/components/states/Join.svelte';
@@ -17,7 +17,7 @@
 		lobbyEmitter,
 		wordBombEmitter
 	} from '$lib/events';
-	import { unreachable } from '$lib/utils';
+	import { serverURL, unreachable } from '$lib/utils';
 
 	const { params }: PageProps = $props();
 
@@ -55,16 +55,14 @@
 
 		const socketParams: SocketParams = {
 			username,
-			rejoinToken: import.meta.env.DEV ? null : localStorage.getItem('rejoinToken')
+			rejoinToken: dev ? null : localStorage.getItem('rejoinToken')
 		};
 
 		const urlParams = new URLSearchParams(
 			Object.entries(socketParams).filter((param): param is [string, string] => param[1] !== null)
 		);
 
-		socket = new WebSocket(
-			`${PUBLIC_SERVER_URL.replace('http', 'ws')}/connect/${params.room}?${urlParams}`
-		);
+		socket = new WebSocket(serverURL(`/connect/${params.room}?${urlParams}`));
 
 		socket.addEventListener('open', () => {
 			connection = { kind: 'connected' };

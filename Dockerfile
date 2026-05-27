@@ -27,8 +27,6 @@ RUN npm ci
 COPY web .
 COPY server/bindings ../server/bindings
 
-ENV PUBLIC_SERVER_URL=http://localhost:3000
-
 RUN npm run check
 RUN npm run build
 
