@@ -1,3 +1,4 @@
+import type { Attachment } from 'svelte/attachments';
 import { dev } from '$app/environment';
 
 export type Variant<T extends { kind: string }, Kind extends T['kind']> = Extract<
@@ -56,6 +57,25 @@ export function debounce<T extends any[]>(
 
 export function keepAlphanumeric(input: string) {
 	return input.replace(/[^a-zA-Z0-9]/g, '');
+}
+
+export function camelCaseToWords(s: string) {
+	const result = s.replace(/([A-Z])/g, ' $1');
+	return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+export function onClickOutside(callback: () => void): Attachment {
+	return (node) => {
+		function handleClick(event: MouseEvent) {
+			if (!node.contains(event.target as Node)) {
+				callback();
+			}
+		}
+
+		document.addEventListener('click', handleClick, true);
+
+		return () => document.removeEventListener('click', handleClick, true);
+	};
 }
 
 export function serverURL(path: string, ws?: boolean) {

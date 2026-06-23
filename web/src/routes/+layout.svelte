@@ -2,6 +2,8 @@
 	import '../app.css';
 	// @ts-ignore
 	import '@fontsource-variable/inter';
+	// @ts-ignore
+	import '@fontsource-variable/jetbrains-mono';
 	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import Error from '$lib/components/states/Error.svelte';

@@ -21,7 +21,7 @@
 	const handleTimer = (action: TimerAction) => {
 		switch (action) {
 			case 'start':
-				lobby.timerStart = BigInt(Date.now());
+				lobby.timerStart = Date.now();
 				break;
 			case 'stop':
 				lobby.timerStart = null;

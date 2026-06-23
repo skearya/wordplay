@@ -34,6 +34,7 @@ pub mod messages {
             points: u32,
         },
         Invalid {
+            uuid: Uuid,
             /// Reason for invalid guess (ex: "guess doesn't include prompt")
             reason: String,
         },
@@ -67,7 +68,7 @@ pub mod messages {
     pub struct AnagramsPostGame {
         pub original: String,
         pub leaderboard: Vec<(Uuid, u32)>,
-        // pub words: Vec<(Uuid, Vec<String>)>,
+        pub words: Vec<(Uuid, Vec<String>)>,
     }
 }
 
@@ -197,6 +198,11 @@ impl Anagrams {
                 .iter()
                 .map(|(&uuid, player)| (uuid, player.points()))
                 .collect(),
+            words: self
+                .players
+                .iter()
+                .map(|(&uuid, player)| (uuid, player.used.clone()))
+                .collect(),
         }
     }
 }
@@ -223,12 +229,10 @@ impl GameHandler for Anagrams {
                         .broadcast(ServerAnagrams::Valid { uuid, points });
                 }
                 Err(reason) => {
-                    ctx.clients.send(
+                    ctx.clients.broadcast(ServerAnagrams::Invalid {
                         uuid,
-                        ServerAnagrams::Invalid {
-                            reason: reason.to_owned(),
-                        },
-                    );
+                        reason: reason.to_owned(),
+                    });
                 }
             },
         }

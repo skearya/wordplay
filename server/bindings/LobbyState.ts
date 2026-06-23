@@ -5,4 +5,4 @@ export type LobbyState = { ready: Array<string>,
 /**
  * Unix timestamp of when the countdown timer started.
  */
-timerStart: bigint | null, prevGame: PostGameInfo | null, };
+timerStart: number | null, prevGame: PostGameInfo | null, };

@@ -9,6 +9,8 @@
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
+	import { openSettings } from '../Nav.svelte';
+	import { camelCaseToWords } from '$lib/utils';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
@@ -65,25 +67,15 @@
 			{/each}
 		</div>
 		<DoubleRightArrow />
-		<div
-			style="border-image: linear-gradient(to right, var(--color-green), #95C3A8) 1;"
-			class="z-10 flex w-72 flex-col border bg-dark-dark-green/85"
+		<button
+			style="border-image: linear-gradient(to right, var(--color-green), var(--color-light-green)) 1;"
+			class="z-10 flex w-72 flex-col border bg-dark-dark-green/85 transition-colors hover:bg-[color-mix(in_oklch,var(--color-dark-dark-green)_85%,var(--color-light-green))]"
+			onclick={() => openSettings()}
 		>
-			<button
-				class="flex items-center justify-between px-4 pt-5 pb-3 font-serif text-4xl text-yellow"
-				onclick={() => (showOtherGamesDropdown = !showOtherGamesDropdown)}
-			>
-				<p>Word Bomb</p>
+			<div class="flex items-center justify-between px-4 pt-5 pb-3 font-serif text-4xl text-yellow">
+				<p>{camelCaseToWords(ctx.settings.game)}</p>
 				<DownArrow />
-			</button>
-			{#if showOtherGamesDropdown}
-				<div
-					transition:slide
-					class="divide-y divide-green border-t border-green text-center font-serif text-xl text-yellow"
-				>
-					<p class="py-4">No other games, yet.</p>
-				</div>
-			{/if}
+			</div>
 			<div class="mb-3 h-[1px] bg-green"></div>
 			<div class="grid grid-cols-2 justify-between p-4 pt-0 text-sm text-light-green">
 				<p class="text-left font-medium">Difficulty</p>
@@ -91,7 +83,7 @@
 				<p class="text-left font-medium">Starting Lives</p>
 				<p class="text-right">2</p>
 			</div>
-		</div>
+		</button>
 	</div>
 	<div class="z-10 flex gap-x-4 p-4">
 		<Button

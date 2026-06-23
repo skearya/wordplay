@@ -10,12 +10,12 @@ pub mod messages {
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombSettings {
-        pub min_wpm: usize,
+        pub min_wpp: usize,
     }
 
     impl Default for WordBombSettings {
         fn default() -> Self {
-            Self { min_wpm: 500 }
+            Self { min_wpp: 500 }
         }
     }
 
@@ -245,7 +245,7 @@ impl WordBomb {
             order,
             turn: 0,
             prompt: Prompt {
-                text: random_prompt(ctx.settings.word_bomb.min_wpm),
+                text: random_prompt(ctx.settings.word_bomb.min_wpp),
                 uses: 0,
             },
             timer: Timer {
@@ -325,7 +325,7 @@ impl WordBomb {
             Prompt { text, uses: 1 }
         } else {
             Prompt {
-                text: random_prompt(self.settings.min_wpm),
+                text: random_prompt(self.settings.min_wpp),
                 uses: 0,
             }
         };

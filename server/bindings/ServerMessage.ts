@@ -21,7 +21,7 @@ rejoinToken: string,
 /**
  * Room clients.
  */
-clients: { [key in string]?: ServerClient }, 
+clients: { [key in string]: ServerClient }, 
 /**
  * Room and game settings.
  */

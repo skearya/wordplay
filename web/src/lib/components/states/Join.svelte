@@ -2,11 +2,11 @@
 	import type { Attachment } from 'svelte/attachments';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import Tag from '$lib/ui/Tag.svelte';
 	import AnimatedDoubleRightArrow from '$lib/icons/AnimatedDoubleRightArrow.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
 	import { createLetterCanvas, darkStyle } from '$lib/letters';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { getRandomRange } from '$lib/utils';
 
 	let {

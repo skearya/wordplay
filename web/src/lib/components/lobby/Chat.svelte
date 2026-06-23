@@ -88,13 +88,13 @@
 
 {#snippet messageSnippet({ author, content }: Message, trusted: boolean)}
 	<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
-		{#if trusted}
+		{#if author === 'Server'}
 			<Me width={147 * 0.275} height={152 * 0.275} />
 		{:else}
 			<Avatar {ctx} uuid={author} size="sm" />
 		{/if}
 		<div class="text-sm leading-snug">
-			<p class="font-medium">{trusted ? author : ctx.clients[author]!.username}</p>
+			<p class="font-medium">{author === 'Server' ? author : ctx.clients[author]!.username}</p>
 			{#if trusted}{@html content}{:else}{content}{/if}
 		</div>
 	</div>

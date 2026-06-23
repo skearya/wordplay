@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import type { RoomInfo } from '@bindings/RoomInfo';
 	import type { RoomsInfoResponse } from '@bindings/RoomsInfoResponse';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { fade, slide } from 'svelte/transition';
 	import gridSvg from '$lib/assets/grid.svg';
@@ -61,19 +62,25 @@
 				const letterWidth = 64;
 				const letterHeight = 64;
 
-				return ['wordplay', 'byskeary.me', 'abcdefghijkl'].reverse().flatMap((line, lineIndex) =>
-					line.split('').map((letter, letterIndex) => {
-						const lineWidth = line.length * (letterWidth + 4);
-						const start = width / 2 - lineWidth / 2;
+				return (
+					window.innerWidth > 1024
+						? ['wordplay', 'byskeary.me', 'abcdefghijkl']
+						: ['wordplay', 'byskeary.']
+				)
+					.reverse()
+					.flatMap((line, lineIndex) =>
+						line.split('').map((letter, letterIndex) => {
+							const lineWidth = line.length * (letterWidth + 4);
+							const start = width / 2 - lineWidth / 2;
 
-						return {
-							letter,
-							x: start + letterIndex * (letterWidth + 4) + letterWidth / 2,
-							y: height - lineIndex * letterHeight - letterHeight / 2,
-							angle: (Math.random() - 0.5) * 0.05
-						};
-					})
-				);
+							return {
+								letter,
+								x: start + letterIndex * (letterWidth + 4) + letterWidth / 2,
+								y: height - lineIndex * letterHeight - letterHeight / 2,
+								angle: (Math.random() - 0.5) * 0.05
+							};
+						})
+					);
 			},
 			bottomPosition: () => animation?.effect?.getComputedTiming().progress ?? 0
 		});
@@ -114,6 +121,13 @@
 
 		return animateText(roomsMessageElement, roomsMessage);
 	});
+
+	function go() {
+		const name = prompt('Room name:');
+		if (!name) return;
+
+		goto(`/game/${name}`);
+	}
 </script>
 
 <header
@@ -132,19 +146,22 @@
 <section
 	bind:this={contentElement}
 	style={`background-image: url("${gridSvg}");`}
-	class="background-scroll mt-[50vh] flex min-h-[50vh] translate-y-[50vh] items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black"
+	class="background-scroll mt-[50vh] flex min-h-[50vh] translate-y-[50vh] flex-col items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black lg:flex-row"
 >
-	<div class="sticky top-4 w-[325px] space-y-2.5 text-background">
-		<button class="w-full bg-pastel-red py-7 text-2xl font-medium">Join room</button>
-		<button class="w-full bg-pastel-light-red py-7 text-2xl font-medium">Create room</button>
-		<button class="w-full bg-pastel-green py-7 text-2xl font-medium">Singleplayer</button>
+	<div class="static top-4 w-full space-y-2.5 text-background lg:sticky lg:w-[325px]">
+		<button class="w-full bg-pastel-red py-7 text-2xl font-medium" onclick={() => go()}>
+			Join room
+		</button>
+		<button class="w-full bg-pastel-light-red py-7 text-2xl font-medium" onclick={() => go()}>
+			Create room
+		</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
 			<Me width={42} height={42} />
 			<Github />
 			<Settings class="ml-auto" />
 		</div>
 	</div>
-	<div class="flex-1 space-y-2.5 p-2.5">
+	<div class="flex-1 space-y-2.5 self-stretch p-2.5">
 		<div class="flex items-center justify-between font-serif">
 			<h1 class="text-2xl">Public rooms</h1>
 			<div class="flex items-center justify-between gap-x-4 text-[#B0B0B0]">
@@ -177,7 +194,10 @@
 				{/each}
 			</div>
 		{:else}
-			<div transition:fade={{ duration: 200 }} class="relative grid grid-cols-3 gap-2.5">
+			<div
+				transition:fade={{ duration: 200 }}
+				class="relative grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3"
+			>
 				{#each { length: 15 }, i}
 					{@render room({
 						name: 'Your Room Here...',
@@ -199,7 +219,7 @@
 		<p class="text-lg">{name}</p>
 		<div class="flex -space-x-2">
 			{#if info}
-				{#each info.clients as client}
+				{#each info.clients.slice(0, 3) as client}
 					<Avatar size="sm" username={client.username} avatarUrl={client.avatarUrl ?? undefined} />
 				{/each}
 			{:else}

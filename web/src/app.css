@@ -47,6 +47,9 @@
 		'Inter Variable', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
 		'Segoe UI Symbol', 'Noto Color Emoji';
 	--font-serif: 'PP Editorial New', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+	--font-mono:
+		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		'Liberation Mono', 'Courier New', monospace;
 
 	--color-background: #040605;
 	--color-foreground: #ffffff;
@@ -180,5 +183,15 @@
 
 	.no-scrollbar::-webkit-scrollbar {
 		display: none;
+	}
+
+	.no-spinner {
+		appearance: textfield;
+	}
+
+	.no-spinner::-webkit-outer-spin-button,
+	.no-spinner::-webkit-inner-spin-button {
+		appearance: none;
+		margin: 0;
 	}
 }

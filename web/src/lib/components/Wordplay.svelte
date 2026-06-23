@@ -71,7 +71,7 @@
 	class="flex h-screen flex-col overflow-hidden"
 >
 	<Transition bind:ctx />
-	<Nav bind:ctx />
+	<Nav bind:ctx {sendMsg} />
 	{#if ctx.state.kind === 'lobby'}
 		<Lobby bind:ctx bind:state={ctx.state} {sendMsg} />
 	{:else if ctx.state.kind === 'game'}
