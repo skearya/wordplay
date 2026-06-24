@@ -8,11 +8,9 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { wordBombEmitter } from '$lib/events';
 	import { explode } from '$lib/explode';
-	import DownArrow from '$lib/icons/DownArrow.svelte';
 	import GameBomb from '$lib/icons/GameBomb.svelte';
 	import GameBombWire from '$lib/icons/GameBombWire.svelte';
 	import HeartIcon from '$lib/icons/HeartIcon.svelte';
-	import Star from '$lib/icons/Star.svelte';
 	import { debounce, lerp } from '$lib/utils';
 
 	let {
@@ -27,7 +25,6 @@
 	let bombElement: HTMLElement;
 	let playerInputElement = $state<HTMLInputElement>();
 	let playerElements: Record<string, HTMLElement> = $state({});
-	let arrowElements: Record<string, HTMLElement> = $state({});
 
 	let windowWidth = $state(0);
 	let windowHeight = $state(0);
@@ -57,7 +54,7 @@
 
 				life ? animateTurnChange({ kind: 'gained-life', on: prevTurn }) : animateTurnChange();
 			},
-			invalid: ({ reason }) => {
+			invalid: () => {
 				animateIncorrect();
 			},
 			exploded: ({ prompt, turn }) => {
@@ -144,13 +141,8 @@
 			activeOutlineContainer.style.translate = `${newPlayerX}px ${newPlayerY}px`;
 
 			activeOutlineContainer.animate(
-				{
-					opacity: ['0%', '100%']
-				},
-				{
-					easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-					duration: 400
-				}
+				{ opacity: ['0%', '100%'] },
+				{ easing: 'cubic-bezier(0.61, 1, 0.88, 1)', duration: 400 }
 			);
 
 			return;
@@ -164,42 +156,19 @@
 				elementModifications: (element) => (element.style.border = '1px solid var(--color-red)')
 			});
 
-			badPlayer.animate(
-				{
-					opacity: ['0%', '100%']
-				},
-				{
-					easing: 'ease-in',
-					duration: 3500
-				}
-			);
+			badPlayer.animate({ opacity: ['0%', '100%'] }, { easing: 'ease-in', duration: 3500 });
 		} else if (opt?.kind === 'gained-life') {
 			const player = playerElements[opt.on];
 
-			player.animate(
-				{
-					rotate: '360deg'
-				},
-				{
-					easing: 'ease-in',
-					duration: 1500
-				}
-			);
+			player.animate({ rotate: '360deg' }, { easing: 'ease-in', duration: 1500 });
 		}
 
 		const toX1 = lerp(outlineX, playerX, 0.1);
 		const toY1 = lerp(outlineY, playerY, 0.1);
 
 		activeOutlineContainer.animate(
-			{
-				translate: `${toX1}px ${toY1}px`,
-				opacity: '0%'
-			},
-			{
-				fill: 'forwards',
-				easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-				duration: 100
-			}
+			{ translate: `${toX1}px ${toY1}px`, opacity: '0%' },
+			{ fill: 'forwards', easing: 'cubic-bezier(0.25, 1, 0.5, 1)', duration: 100 }
 		);
 
 		const fromX2 = lerp(outlineX, newPlayerX, 0.9);
@@ -209,56 +178,22 @@
 		const toY3 = newPlayerY;
 
 		activeOutlineContainer.animate(
-			{
-				translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`],
-				opacity: '100%'
-			},
-			{
-				fill: 'forwards',
-				easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-				duration: 150,
-				delay: 100
-			}
+			{ translate: [`${fromX2}px ${fromY2}px`, `${toX3}px ${toY3}px`], opacity: '100%' },
+			{ fill: 'forwards', easing: 'cubic-bezier(0.61, 1, 0.88, 1)', duration: 150, delay: 100 }
 		);
-
-		const arrows = arrowElements[playerUUID].children;
-
-		for (let i = 0; i < arrows.length; i++) {
-			arrows[i].animate(
-				{
-					translate: `0px ${(i + 1) * 16}px`,
-					opacity: ['100%', '0%'],
-					scale: ['1', `${i}`]
-				},
-				{
-					easing: 'ease-out',
-					duration: 400
-				}
-			);
-		}
 	}
 
 	function animateIncorrect() {
 		for (const text of playerElements[wordBomb.turn]!.querySelectorAll('p')) {
 			text.animate(
-				{
-					color: ['var(--color-red)', text.style.color]
-				},
-				{
-					easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-					duration: 300
-				}
+				{ color: ['var(--color-red)', text.style.color] },
+				{ easing: 'cubic-bezier(0.61, 1, 0.88, 1)', duration: 300 }
 			);
 		}
 
 		incorrectOutlineElement.animate(
-			{
-				opacity: ['100%', '0%']
-			},
-			{
-				easing: 'cubic-bezier(0.61, 1, 0.88, 1)',
-				duration: 300
-			}
+			{ opacity: ['100%', '0%'] },
+			{ easing: 'cubic-bezier(0.61, 1, 0.88, 1)', duration: 300 }
 		);
 	}
 
@@ -269,7 +204,7 @@
 		const containerRect = playersContainer.getBoundingClientRect();
 		const centerX = containerRect.left + containerRect.width / 2;
 		const centerY = containerRect.top + containerRect.height / 2;
-		const dist = Math.min(windowWidth, windowHeight) * 0.35;
+		const dist = Math.min(windowWidth, windowHeight) * 0.4;
 
 		return {
 			x: centerX + Math.cos(angle) * dist,
@@ -369,8 +304,7 @@
 		{#each players as [uuid, player], i (uuid)}
 			{@const angleBetween = (2 * Math.PI) / players.length}
 			{@const angle = i * angleBetween}
-			{@const arrowAngle = angle + angleBetween / 2}
-			{@const dist = Math.min(windowWidth, windowHeight) * 0.35}
+			{@const dist = Math.min(windowWidth, windowHeight) * 0.4}
 			<div
 				bind:this={playerElements[uuid]}
 				style={`translate: calc(-50% + cos(${angle}rad) * ${dist}px) calc(-50% - sin(${angle}rad) * ${dist}px);` +
@@ -384,16 +318,6 @@
 							<HeartIcon />
 						{/each}
 					</div>
-					{#if false}
-						<div class="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2">
-							<Star />
-							<span
-								class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] tracking-tight text-black"
-							>
-								x<span class="text-2xl font-semibold">10</span>
-							</span>
-						</div>
-					{/if}
 				</div>
 				<p class="font-medium">{ctx.clients[uuid]!.username}</p>
 				{#if ctx.uuid === uuid}
@@ -416,17 +340,6 @@
 				{:else}
 					<p class="mt-0.5 text-lg">{player!.input}</p>
 				{/if}
-			</div>
-			<div
-				bind:this={arrowElements[uuid]}
-				style={`translate: calc(-50% + cos(${arrowAngle}rad) * ${dist}px) calc(-50% - sin(${arrowAngle}rad) * ${dist}px);` +
-					`scale: ${playerScale}%;` +
-					`rotate: ${-arrowAngle}rad;`}
-				class="ease-out-cubic absolute top-1/2 left-1/2 text-light-green transition-transform duration-[400ms]"
-			>
-				{#each { length: 3 }}
-					<DownArrow class="opacity-0" />
-				{/each}
 			</div>
 		{/each}
 	</div>

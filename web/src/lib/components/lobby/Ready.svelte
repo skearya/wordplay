@@ -9,12 +9,10 @@
 	import WordBomb from '$lib/icons/WordBomb.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
-	import { openSettings } from '../Nav.svelte';
 	import { camelCaseToWords } from '$lib/utils';
+	import { openSettings } from '../Nav.svelte';
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
-
-	let showOtherGamesDropdown = $state(false);
 </script>
 
 <section class="relative flex h-full flex-col overflow-hidden border border-green bg-green/20">
@@ -28,7 +26,7 @@
 	<div class="pointer-events-none absolute -right-6 -bottom-6 opacity-50">
 		<WordBomb class="aspect-[901/916] w-[calc(min(45vw,60vh))] mix-blend-color-dodge" />
 	</div>
-	<div class="absolute top-3 right-3 w-min text-nowrap text-bright-green">
+	<div class="absolute top-3 right-3 text-bright-green">
 		<p>{ctx.settings.size - lobby.ready.length} slots left</p>
 	</div>
 	<div class="flex flex-1 items-center justify-center gap-x-20 px-12">

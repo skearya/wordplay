@@ -216,7 +216,7 @@
 		class="relative flex h-32 flex-col justify-between border border-faded-green bg-background p-2.5"
 		{style}
 	>
-		<p class="text-lg">{name}</p>
+		<p class="truncate text-lg">{name}</p>
 		<div class="flex -space-x-2">
 			{#if info}
 				{#each info.clients.slice(0, 3) as client}
