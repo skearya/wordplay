@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { LobbyState } from '@bindings/LobbyState';
+	import type { PostGameInfo } from '@bindings/PostGameInfo';
 	import type { TimerAction } from '@bindings/TimerAction';
 	import type { Props } from '$lib/context';
 	import { onMount } from 'svelte';
@@ -14,8 +15,16 @@
 
 	let { ctx = $bindable(), state: lobby = $bindable(), sendMsg }: Props<LobbyState> = $props();
 
-	let panels: ('stats' | 'join' | 'chat' | 'practice')[] = $state(
-		lobby.prevGame ? ['stats'] : ['join', 'chat', 'practice']
+	type Panel =
+		| { kind: 'stats'; info: PostGameInfo }
+		| { kind: 'join' }
+		| { kind: 'chat' }
+		| { kind: 'practice' };
+
+	let panels: Panel[] = $state(
+		lobby.prevGame
+			? [{ kind: 'stats', info: lobby.prevGame }]
+			: [{ kind: 'join' }, { kind: 'chat' }, { kind: 'practice' }]
 	);
 
 	const handleTimer = (action: TimerAction) => {
@@ -33,7 +42,7 @@
 
 	onMount(() => {
 		if (lobby.prevGame) {
-			setTimeout(() => (panels = ['stats', 'join', 'chat', 'practice']), 2500);
+			setTimeout(() => panels.push({ kind: 'join' }, { kind: 'chat' }, { kind: 'practice' }), 2500);
 		}
 
 		return lobbyEmitter.handle({
@@ -60,22 +69,22 @@
 		panels.length === 1 ? 'justify-center' : 'justify-start'
 	]}
 >
-	{#each panels as kind (kind)}
+	{#each panels as panel (panel.kind)}
 		<div
 			animate:flip={{ duration: 400 }}
 			in:fly={{ delay: 400 }}
-			class={[kind === 'join' ? 'min-w-[calc(70%_-_var(--spacing)_*_8)]' : 'min-w-[30%]']}
+			class={[panel.kind === 'join' ? 'min-w-[calc(70%_-_var(--spacing)_*_8)]' : 'min-w-[30%]']}
 		>
-			{#if kind === 'stats'}
-				<Stats />
-			{:else if kind === 'join'}
+			{#if panel.kind === 'stats'}
+				<Stats {ctx} info={panel.info} />
+			{:else if panel.kind === 'join'}
 				<Ready {ctx} state={lobby} {sendMsg} />
-			{:else if kind === 'chat'}
+			{:else if panel.kind === 'chat'}
 				<Chat {ctx} {sendMsg} />
-			{:else if kind === 'practice'}
+			{:else if panel.kind === 'practice'}
 				<Practice {ctx} {sendMsg} />
-			{:else if kind satisfies never}
-				{unreachable(kind)}
+			{:else if panel satisfies never}
+				{unreachable(panel)}
 			{/if}
 		</div>
 	{/each}

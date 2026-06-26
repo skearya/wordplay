@@ -60,7 +60,7 @@
 					class="ease-out-cubic absolute top-1/2 left-1/2 flex flex-col items-center gap-y-2 transition-transform duration-[400ms]"
 				>
 					<Avatar {ctx} {uuid} />
-					<p>{ctx.clients[uuid]!.username}</p>
+					<p>{ctx.clients[uuid].username}</p>
 				</div>
 			{/each}
 		</div>

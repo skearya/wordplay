@@ -86,14 +86,12 @@ pub mod messages {
     #[serde(rename_all = "camelCase")]
     #[ts(export)]
     pub struct WordBombPostGame {
-        pub winner: Uuid,
-        // pub mins_elapsed: f32,
-        // pub words_used: Vec<String>,
-        // pub words_missed: Vec<String>,
-        // pub lives_regained: Vec<(Uuid, u32)>,
-        // pub fastest_guesses: Vec<(Uuid, f32)>,
-        // pub longest_words: Vec<(Uuid, String)>,
-        // pub avg_wpms: Vec<(Uuid, f32)>,
+        pub leaderboard: Vec<Uuid>,
+        pub mins_elapsed: f32,
+        pub words_used: u32,
+        pub fastest_guesses: Vec<(Uuid, f32)>,
+        pub longest_words: Vec<(Uuid, String)>,
+        pub missed_prompts: Vec<(Uuid, String)>,
     }
 }
 
@@ -135,10 +133,12 @@ pub struct WordBomb {
 
     /// Record of when the game started. Used to calculate game length.
     start: Instant,
-    /// Player, used word.
-    used: Vec<(Uuid, String)>,
+    /// Player, used word, duration.
+    used: Vec<(Uuid, String, Duration)>,
     /// Player, prompt that they exploded to.
     exploded: Vec<(Uuid, &'static str)>,
+    /// Dead players.
+    died: Vec<Uuid>,
 }
 
 struct Player {
@@ -256,6 +256,7 @@ impl WordBomb {
             start,
             used: vec![],
             exploded: vec![],
+            died: vec![],
         }
     }
 
@@ -265,11 +266,11 @@ impl WordBomb {
         word.make_ascii_lowercase();
 
         let error = if !word.contains(self.prompt.text) {
-            Some("word doesn't contain prompt")
-        } else if self.used.iter().any(|(_uuid, used)| *used == word) {
-            Some("word has already been used")
+            Some("Word doesn't contain prompt")
+        } else if self.used.iter().any(|used| *used.1 == word) {
+            Some("Word has already been used")
         } else if !is_english(&word) {
-            Some("word is not english")
+            Some("Word isn't english")
         } else {
             None
         };
@@ -281,8 +282,8 @@ impl WordBomb {
         } else {
             let life = self.active().valid(&word);
 
-            self.used.push((self.order[self.turn], word));
-            self.timer.task.abort();
+            self.used
+                .push((self.order[self.turn], word, self.timer.start.elapsed()));
 
             // We should always be able to advance after a correct submission.
             assert!(self.advance(false));
@@ -294,6 +295,10 @@ impl WordBomb {
     /// Returns `true` if advanced, `false` if game ended.
     fn explosion(&mut self) -> bool {
         self.active().exploded();
+
+        if !self.active().alive() {
+            self.died.push(self.order[self.turn])
+        }
 
         self.exploded
             .push((self.order[self.turn], self.prompt.text));
@@ -330,6 +335,7 @@ impl WordBomb {
             }
         };
 
+        self.timer.task.abort();
         self.spawn_timer(exploded);
 
         true
@@ -362,13 +368,58 @@ impl WordBomb {
     }
 
     fn info(&self) -> WordBombPostGame {
+        let winner = *self
+            .players
+            .iter()
+            .find_map(|(uuid, player)| if player.alive() { Some(uuid) } else { None })
+            .expect("one player should be alive");
+
+        let mut leaderboard = self.died.clone();
+        leaderboard.push(winner);
+        leaderboard.reverse();
+
+        let mut fastest_guesses = HashMap::<Uuid, f32>::new();
+        let mut longest_words = HashMap::<Uuid, String>::new();
+
+        for (player, word, duration) in &self.used {
+            let secs = duration.as_secs_f32();
+
+            fastest_guesses
+                .entry(*player)
+                .and_modify(|best| {
+                    if secs < *best {
+                        *best = secs;
+                    }
+                })
+                .or_insert(secs);
+
+            longest_words
+                .entry(*player)
+                .and_modify(|best| {
+                    if word.len() > best.len() {
+                        *best = word.clone();
+                    }
+                })
+                .or_insert_with(|| word.clone());
+        }
+
+        let mut fastest_guesses = fastest_guesses.into_iter().collect::<Vec<(Uuid, f32)>>();
+        fastest_guesses.sort_by(|a, b| a.1.total_cmp(&b.1));
+
+        let mut longest_words = longest_words.into_iter().collect::<Vec<(Uuid, String)>>();
+        longest_words.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
         WordBombPostGame {
-            winner: *self
-                .players
+            leaderboard,
+            mins_elapsed: self.start.elapsed().as_secs_f32() / 60.0,
+            words_used: self.used.len() as u32,
+            fastest_guesses,
+            longest_words,
+            missed_prompts: self
+                .exploded
                 .iter()
-                .find(|(_uuid, player)| player.alive())
-                .expect("one player should be alive")
-                .0,
+                .map(|(uuid, prompt)| (*uuid, (*prompt).to_owned()))
+                .collect(),
         }
     }
 

@@ -25,10 +25,10 @@
 				ctx.clients[uuid] = client;
 			},
 			rejoin: ({ uuid }) => {
-				ctx.clients[uuid]!.connected = true;
+				ctx.clients[uuid].connected = true;
 			},
 			leave: ({ uuid }) => {
-				ctx.clients[uuid]!.connected = false;
+				ctx.clients[uuid].connected = false;
 			},
 			gameStart: ({ state }) => {
 				objectAssign(transitionState, {

@@ -319,7 +319,7 @@
 						{/each}
 					</div>
 				</div>
-				<p class="font-medium">{ctx.clients[uuid]!.username}</p>
+				<p>{ctx.clients[uuid].username}</p>
 				{#if ctx.uuid === uuid}
 					<input
 						bind:this={playerInputElement}

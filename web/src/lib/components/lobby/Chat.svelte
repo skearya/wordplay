@@ -94,7 +94,7 @@
 			<Avatar {ctx} uuid={author} size="sm" />
 		{/if}
 		<div class="text-sm leading-snug">
-			<p class="font-medium">{author === 'Server' ? author : ctx.clients[author]!.username}</p>
+			<p class="font-medium">{author === 'Server' ? author : ctx.clients[author].username}</p>
 			{#if trusted}{@html content}{:else}{content}{/if}
 		</div>
 	</div>

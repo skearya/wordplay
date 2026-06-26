@@ -16,7 +16,7 @@
 		uuid: string;
 	} & Partial<UIAvatarProps> = $props();
 
-	let user = $derived(ctx.clients[uuid]!);
+	let user = $derived(ctx.clients[uuid]);
 </script>
 
 <Avatar
