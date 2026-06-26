@@ -1,7 +1,7 @@
 use axum::{
     extract::{
         Path, Query, State, WebSocketUpgrade,
-        ws::{self, WebSocket},
+        ws::{self, CloseFrame, Utf8Bytes, WebSocket, close_code},
     },
     response::Response,
 };
@@ -54,7 +54,13 @@ async fn socket(
     let room = match state.get_or_insert_room(room_name) {
         Ok(room) => room,
         Err(reason) => {
-            socket.close(reason);
+            sink.send(ws::Message::Close(Some(CloseFrame {
+                code: close_code::ERROR,
+                reason: Utf8Bytes::from_static(reason),
+            })))
+            .await
+            .ok();
+
             return Ok(());
         }
     };
