@@ -97,6 +97,7 @@ pub mod messages {
 
 use std::{
     collections::HashMap,
+    iter,
     time::{Duration, Instant},
 };
 
@@ -374,10 +375,6 @@ impl WordBomb {
             .find_map(|(uuid, player)| if player.alive() { Some(uuid) } else { None })
             .expect("one player should be alive");
 
-        let mut leaderboard = self.died.clone();
-        leaderboard.push(winner);
-        leaderboard.reverse();
-
         let mut fastest_guesses = HashMap::<Uuid, f32>::new();
         let mut longest_words = HashMap::<Uuid, String>::new();
 
@@ -410,7 +407,13 @@ impl WordBomb {
         longest_words.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
 
         WordBombPostGame {
-            leaderboard,
+            leaderboard: self
+                .died
+                .iter()
+                .copied()
+                .chain(iter::once(winner))
+                .rev()
+                .collect(),
             mins_elapsed: self.start.elapsed().as_secs_f32() / 60.0,
             words_used: self.used.len() as u32,
             fastest_guesses,
@@ -418,7 +421,7 @@ impl WordBomb {
             missed_prompts: self
                 .exploded
                 .iter()
-                .map(|(uuid, prompt)| (*uuid, (*prompt).to_owned()))
+                .map(|&(uuid, prompt)| (uuid, prompt.to_owned()))
                 .collect(),
         }
     }

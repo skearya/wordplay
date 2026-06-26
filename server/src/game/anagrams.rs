@@ -191,13 +191,17 @@ impl Anagrams {
     }
 
     fn info(&self) -> AnagramsPostGame {
+        let mut leaderboard = self
+            .players
+            .iter()
+            .map(|(&uuid, player)| (uuid, player.points()))
+            .collect::<Vec<(Uuid, u32)>>();
+
+        leaderboard.sort_by(|a, b| b.1.cmp(&a.1));
+
         AnagramsPostGame {
             original: self.original.to_owned(),
-            leaderboard: self
-                .players
-                .iter()
-                .map(|(&uuid, player)| (uuid, player.points()))
-                .collect(),
+            leaderboard,
             words: self
                 .players
                 .iter()

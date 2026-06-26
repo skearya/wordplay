@@ -79,7 +79,7 @@
 						class={[
 							i === currentIndex
 								? 'border-pastel-pink bg-pastel-pink text-background'
-								: 'border-pink bg-background',
+								: 'border-pink backdrop-blur-xl',
 							'rounded-t-xl border border-b-0 px-2.5 py-1.5 text-sm'
 						]}
 						onclick={() => (currentIndex = i)}
