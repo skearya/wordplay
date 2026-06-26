@@ -10,7 +10,6 @@
 	import Github from '$lib/icons/Github.svelte';
 	import Me from '$lib/icons/Me.svelte';
 	import Search from '$lib/icons/Search.svelte';
-	import Settings from '$lib/icons/Settings.svelte';
 	import { createLetterCanvas, lightStyle } from '$lib/letters';
 	import { animateText } from '$lib/typewriter';
 	import Avatar from '$lib/ui/Avatar.svelte';
@@ -156,9 +155,8 @@
 			Create room
 		</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
-			<Me width={42} height={42} />
-			<Github />
-			<Settings class="ml-auto" />
+			<a href="https://skeary.me/"><Me width={42} height={42} /></a>
+			<a href="https://github.com/skearya/wordplay"><Github /></a>
 		</div>
 	</div>
 	<div class="flex-1 space-y-2.5 self-stretch p-2.5">
