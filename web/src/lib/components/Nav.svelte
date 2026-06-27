@@ -76,7 +76,9 @@
 		bind:this={innerNavElement}
 		class={[
 			'relative flex items-center justify-between px-5 py-4 transition-transform',
-			ctx.state.kind === 'lobby' ? 'translate-y-0' : '-translate-y-full bg-background'
+			ctx.state.kind === 'lobby'
+				? 'translate-y-0'
+				: '-translate-y-full border-b border-b-foreground/25 bg-background'
 		]}
 	>
 		<Logo />
