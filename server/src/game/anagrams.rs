@@ -31,11 +31,11 @@ pub mod messages {
     pub enum ServerAnagrams {
         Valid {
             uuid: Uuid,
+            word: String,
             points: u32,
         },
         Invalid {
             uuid: Uuid,
-            /// Reason for invalid guess (ex: "guess doesn't include prompt")
             reason: String,
         },
     }
@@ -68,7 +68,7 @@ pub mod messages {
     pub struct AnagramsPostGame {
         pub original: String,
         pub leaderboard: Vec<(Uuid, u32)>,
-        pub words: Vec<(Uuid, Vec<String>)>,
+        pub words: Vec<(Uuid, String)>,
     }
 }
 
@@ -158,16 +158,16 @@ impl Anagrams {
     /// Returns `Ok(points)` or `Err(reason)`.
     fn submission(&mut self, uuid: Uuid, word: String) -> Result<u32, &'static str> {
         let error = if word.len() < 2 {
-            Some("word isn't long enough")
+            Some("Word isn't long enough")
         } else if word
             .chars()
             .any(|c| word.matches(c).count() > self.anagram.matches(c).count())
         {
-            Some("word doesn't match anagram")
+            Some("Word doesn't match anagram")
         } else if self.players[&uuid].used.contains(&word) {
-            Some("word has already been used")
+            Some("Word has already been used")
         } else if !is_english(&word) {
-            Some("word is not english")
+            Some("Word isn't english")
         } else {
             None
         };
@@ -183,7 +183,6 @@ impl Anagrams {
             Err(error)
         } else {
             let points = points(&word);
-
             player.valid(word);
 
             Ok(points)
@@ -205,7 +204,7 @@ impl Anagrams {
             words: self
                 .players
                 .iter()
-                .map(|(&uuid, player)| (uuid, player.used.clone()))
+                .flat_map(|(uuid, player)| player.used.iter().map(|word| (*uuid, word.clone())))
                 .collect(),
         }
     }
@@ -227,10 +226,10 @@ impl GameHandler for Anagrams {
         }
 
         match message {
-            ClientAnagrams::Guess { word } => match self.submission(uuid, word) {
+            ClientAnagrams::Guess { word } => match self.submission(uuid, word.clone()) {
                 Ok(points) => {
                     ctx.clients
-                        .broadcast(ServerAnagrams::Valid { uuid, points });
+                        .broadcast(ServerAnagrams::Valid { uuid, word, points });
                 }
                 Err(reason) => {
                     ctx.clients.broadcast(ServerAnagrams::Invalid {

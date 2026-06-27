@@ -148,10 +148,10 @@
 	class="background-scroll mt-[50vh] flex min-h-[50vh] translate-y-[50vh] flex-col items-start gap-2.5 bg-background bg-repeat p-4 inset-shadow-[0_20px_20px] inset-shadow-black lg:flex-row"
 >
 	<div class="static top-4 w-full space-y-2.5 text-background lg:sticky lg:w-[325px]">
-		<button class="w-full bg-pastel-red py-7 text-2xl font-medium" onclick={() => go()}>
+		<button class="w-full bg-pastel-red py-8 text-2xl font-medium" onclick={() => go()}>
 			Join room
 		</button>
-		<button class="w-full bg-pastel-light-red py-7 text-2xl font-medium" onclick={() => go()}>
+		<button class="w-full bg-pastel-light-red py-8 text-2xl font-medium" onclick={() => go()}>
 			Create room
 		</button>
 		<div class="flex items-center gap-x-2.5 p-2.5">
@@ -218,7 +218,7 @@
 		<div class="flex -space-x-2">
 			{#if info}
 				{#each info.clients.slice(0, 3) as client}
-					<Avatar size="sm" username={client.username} avatarUrl={client.avatarUrl ?? undefined} />
+					<Avatar username={client.username} avatarUrl={client.avatarUrl ?? undefined} size="sm" />
 				{/each}
 			{:else}
 				<div class="size-9.5 rounded-full border border-pastel-red"></div>

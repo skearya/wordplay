@@ -34,9 +34,13 @@
 			case 'anagrams':
 				return {
 					winner: info.leaderboard[0][0],
-					headlines: [],
+					headlines: [
+						['Original Word', info.original],
+						['Words Used', `${info.words.length}`]
+					],
 					leaderboards: [
-						['Leaderboard', info.leaderboard.map(([uuid, value]) => [uuid, `${value}`])]
+						['Leaderboard', info.leaderboard.map(([uuid, value]) => [uuid, `${value}`])],
+						['Words', info.words]
 					]
 				};
 			default:
@@ -99,9 +103,9 @@
 						>
 							<p>{i + 1}</p>
 						</div>
-						<Avatar size="sm" {ctx} {uuid} />
-						<p class="text-sm">{ctx.clients[uuid].username}</p>
-						<p class="ml-auto text-sm">{value}</p>
+						<Avatar {ctx} {uuid} size="sm" />
+						<p>{ctx.clients[uuid].username}</p>
+						<p class="ml-auto">{value}</p>
 					</div>
 				{/each}
 			</div>
