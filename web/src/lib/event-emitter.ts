@@ -14,6 +14,8 @@ export class EventEmitter<Message extends { kind: Kinds }, Kinds extends string 
 				for (const message of unhandled) {
 					handler(message as Extract<Message, { kind: K }>);
 				}
+
+				this.unhandledMessages.delete(kind);
 			}
 		}
 
