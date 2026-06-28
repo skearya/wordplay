@@ -89,9 +89,9 @@
 {#snippet messageSnippet({ author, content }: Message, trusted: boolean)}
 	<div in:messageIn class="flex items-center gap-2 px-2 py-1.5">
 		{#if author === 'Server'}
-			<Me width={147 * 0.275} height={152 * 0.275} />
+			<Me width={147 * 0.275} height={152 * 0.275} class="flex-none" />
 		{:else}
-			<Avatar {ctx} uuid={author} size="sm" />
+			<Avatar {ctx} uuid={author} size="sm" class="flex-none" />
 		{/if}
 		<div class="text-sm leading-snug">
 			<p class="font-medium">{author === 'Server' ? author : ctx.clients[author].username}</p>
