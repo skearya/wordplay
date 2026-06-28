@@ -198,14 +198,18 @@ impl Anagrams {
 
         leaderboard.sort_by(|a, b| b.1.cmp(&a.1));
 
+        let mut words = self
+            .players
+            .iter()
+            .flat_map(|(uuid, player)| player.used.iter().map(|word| (*uuid, word.clone())))
+            .collect::<Vec<(Uuid, String)>>();
+
+        words.sort_by(|a, b| points(&b.1).cmp(&points(&a.1)));
+
         AnagramsPostGame {
             original: self.original.to_owned(),
             leaderboard,
-            words: self
-                .players
-                .iter()
-                .flat_map(|(uuid, player)| player.used.iter().map(|word| (*uuid, word.clone())))
-                .collect(),
+            words,
         }
     }
 }
