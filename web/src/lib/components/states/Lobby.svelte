@@ -68,10 +68,6 @@
 		'no-scrollbar flex flex-1 items-stretch gap-4 overflow-x-auto p-4 pt-0',
 		panels.length === 1 ? 'justify-center' : 'justify-start'
 	]}
-	onwheel={(e) => {
-		e.preventDefault();
-		e.currentTarget.scrollLeft += e.deltaY;
-	}}
 >
 	{#each panels as panel (panel.kind)}
 		<div
