@@ -7,7 +7,10 @@ use axum::{
 use serde::Serialize;
 use ts_rs::TS;
 
-use crate::{room::messages::RoomInfo, state::AppState};
+use crate::{
+    room::messages::{DetailedRoomInfo, RoomInfo},
+    state::AppState,
+};
 
 #[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -28,7 +31,7 @@ pub async fn rooms(State(state): State<AppState>) -> Json<RoomsInfoResponse> {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RoomInfoResponse {
-    room: Option<RoomInfo>,
+    room: Option<DetailedRoomInfo>,
 }
 
 pub async fn room(

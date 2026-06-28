@@ -8,7 +8,7 @@ use tokio::{sync::oneshot, task::JoinSet};
 
 use crate::room::{
     Room,
-    messages::{CoreMessage, RoomInfo},
+    messages::{CoreMessage, DetailedRoomInfo, RoomInfo},
     sender::RoomSender,
 };
 
@@ -38,7 +38,7 @@ impl AppState {
         lock.get_or_insert_room(name)
     }
 
-    pub async fn get_room_info(&self, name: &str) -> Option<RoomInfo> {
+    pub async fn get_room_info(&self, name: &str) -> Option<DetailedRoomInfo> {
         let response = {
             let mut lock = match self.inner.lock() {
                 Ok(lock) => lock,
@@ -118,11 +118,11 @@ impl AppStateInner {
         }
     }
 
-    fn get_room_info(&mut self, name: &str) -> Option<oneshot::Receiver<RoomInfo>> {
+    fn get_room_info(&mut self, name: &str) -> Option<oneshot::Receiver<DetailedRoomInfo>> {
         let room = self.rooms.get(name)?;
         let (sender, reciever) = oneshot::channel();
 
-        if room.send(CoreMessage::InfoRequest { sender }) {
+        if room.send(CoreMessage::DetailedInfoRequest { sender }) {
             Some(reciever)
         } else {
             None

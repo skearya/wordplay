@@ -7,7 +7,7 @@ pub mod messages {
 
     use crate::{
         game::messages::{GameState, PostGameInfo},
-        messages::{ClientMessage, RoomSettings, ServerClient},
+        messages::{ClientMessage, RoomSettings, ServerClient, ServerState},
         room::clients::SocketRef,
         socket::SocketParams,
     };
@@ -54,9 +54,14 @@ pub mod messages {
             message: ClientMessage,
         },
         /// Request to the room task for basic room info.
-        /// This will be used on the homepage (if game is public) and room join page.
+        /// This will be used on the homepage (if game is public).
         InfoRequest {
             sender: oneshot::Sender<RoomInfo>,
+        },
+        /// Request to the room task for detailed room info.
+        /// This will be used on the room join page.
+        DetailedInfoRequest {
+            sender: oneshot::Sender<DetailedRoomInfo>,
         },
     }
 
@@ -67,6 +72,16 @@ pub mod messages {
     pub struct RoomInfo {
         pub settings: RoomSettings,
         pub clients: Vec<ServerClient>,
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct DetailedRoomInfo {
+        pub settings: RoomSettings,
+        pub clients: Vec<ServerClient>,
+        pub state: ServerState,
     }
 }
 
@@ -92,7 +107,7 @@ use crate::{
     room::{
         clients::{Client, Clients},
         context::Context,
-        messages::{CoreMessage, RoomInfo, ServerCore},
+        messages::{CoreMessage, DetailedRoomInfo, RoomInfo, ServerCore},
         sender::RoomSender,
     },
 };
@@ -356,6 +371,17 @@ impl Room {
                     .send(RoomInfo {
                         settings: self.settings,
                         clients: self.clients.values().map(|client| client.into()).collect(),
+                    })
+                    .ok();
+
+                Ok(StateChange::None)
+            }
+            CoreMessage::DetailedInfoRequest { sender } => {
+                sender
+                    .send(DetailedRoomInfo {
+                        settings: self.settings,
+                        clients: self.clients.values().map(|client| client.into()).collect(),
+                        state: self.state.snapshot(),
                     })
                     .ok();
 

@@ -1,13 +1,13 @@
 <script lang="ts">
+	import type { RoomInfoResponse } from '@bindings/RoomInfoResponse';
 	import type { Attachment } from 'svelte/attachments';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import AnimatedDoubleRightArrow from '$lib/icons/AnimatedDoubleRightArrow.svelte';
-	import HeartIcon from '$lib/icons/HeartIcon.svelte';
 	import LogoFilled from '$lib/icons/LogoFilled.svelte';
 	import { createLetterCanvas, darkStyle } from '$lib/letters';
 	import Tag from '$lib/ui/Tag.svelte';
-	import { getRandomRange } from '$lib/utils';
+	import { camelCaseToWords, getRandomRange, serverURL } from '$lib/utils';
 
 	let {
 		room,
@@ -20,6 +20,7 @@
 	} = $props();
 
 	let username = $state('');
+	let message = $state('');
 
 	onMount(() => {
 		const prevUsername = localStorage.getItem('username');
@@ -27,7 +28,28 @@
 		if (prevUsername) {
 			username = prevUsername;
 		}
+
+		fetchRoomInfo(room)
+			.then(({ room }) => {
+				if (!room) {
+					message = "This room doesn't exist yet, create it!";
+					return;
+				}
+
+				message = `This room is currently in ${
+					room.state.kind === 'game'
+						? `a game of ${camelCaseToWords(room.state.variant.kind)}`
+						: `lobby for a game of ${camelCaseToWords(room.settings.game)}`
+				}.`;
+			})
+			.catch(() => {
+				message += 'Something went wrong loading room data...';
+			});
 	});
+
+	async function fetchRoomInfo(room: string): Promise<RoomInfoResponse> {
+		return (await (await fetch(serverURL(`/info/${room}`))).json()) as RoomInfoResponse;
+	}
 
 	const setupCanvas: Attachment<HTMLCanvasElement> = (canvas) => {
 		const cleanupCanvas = createLetterCanvas(canvas, {
@@ -59,7 +81,7 @@
 	</div>
 	<form
 		style="background: radial-gradient(at top left, var(--color-background) 0%, color-mix(in srgb, var(--color-pastel-pink) 10%, transparent) 100%), var(--color-background); border-image: conic-gradient(from -112deg, rgba(121, 120, 150, 0.5), rgba(203, 201, 252, 1)) 1;"
-		class="absolute top-28 left-1/2 flex h-64 max-w-xl -translate-x-1/2 flex-col border"
+		class="absolute top-28 left-1/2 flex h-64 w-full max-w-xl -translate-x-1/2 flex-col border"
 		onsubmit={(e) => {
 			e.preventDefault();
 
@@ -97,13 +119,8 @@
 		<div class="overflow-hidden border-t border-pastel-pink/20 bg-pastel-pink/5 font-mono">
 			<div class="marquee -mb-1 py-0.5">
 				{#each { length: 2 }}
-					<p class="pl-32 text-sm text-nowrap text-white/75">
-						The room is currently in a game of Word Bomb with 4 players for 3:39 minutes with 95
-						words used. Consider supporting Wordplay! <HeartIcon
-							width={19.5}
-							height={16.5}
-							class="inline-block"
-						/>
+					<p class="pl-36 text-sm text-nowrap text-white/75">
+						{message}
 					</p>
 				{/each}
 			</div>
