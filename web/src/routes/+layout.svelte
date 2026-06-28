@@ -13,6 +13,10 @@
 	onMount(() => {
 		history.scrollRestoration = 'manual';
 		window.scrollTo(0, 0);
+
+		if (window.innerWidth <= 1280) {
+			alert('Wordplay is not optimized for small screens yet, good luck.');
+		}
 	});
 </script>
 
