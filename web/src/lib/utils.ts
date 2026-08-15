@@ -40,6 +40,24 @@ export const lerp = (start: number, end: number, amount: number) =>
 
 export const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
 
+export function memoize<Args extends unknown[], Return>(
+	f: (...args: Args) => Return
+): (...args: Args) => Return {
+	const cache = new Map<string, Return>();
+
+	return (...args: Args) => {
+		const key = JSON.stringify(args);
+		const cached = cache.get(key);
+
+		if (cached !== undefined) return cached;
+
+		const value = f(...args);
+		cache.set(key, value);
+
+		return value;
+	};
+}
+
 export function debounce<T extends any[]>(
 	callback: (...args: T) => void,
 	wait: number

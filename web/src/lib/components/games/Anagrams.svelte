@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { AnagramsState } from '@bindings/AnagramsState';
 	import type { Props } from '$lib/context';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import { anagramsEmitter } from '$lib/events';
-	import Avatar from '../Avatar.svelte';
 
 	let {
 		ctx = $bindable(),
@@ -15,7 +15,7 @@
 	let playerElements: Record<string, HTMLElement> = $state({});
 	let letterElements: HTMLElement[] = $state([]);
 	let playerInputElement: HTMLElement;
-	let invalidReasonElement: HTMLElement | undefined = $state();
+	let invalidReasonElement: HTMLElement;
 
 	let invalidReason = $state<string | null>(null);
 
@@ -117,18 +117,10 @@
 			{ easing: 'ease-out', duration: 300 }
 		);
 
-		tick().then(() => {
-			if (!invalidReasonElement) return;
-
-			for (const animation of invalidReasonElement.getAnimations()) {
-				animation.cancel();
-			}
-
-			invalidReasonElement.animate(
-				{ opacity: ['100%', '0%'] },
-				{ easing: 'ease-out', delay: 1000, duration: 3000 }
-			);
-		});
+		invalidReasonElement.animate(
+			{ opacity: ['100%', '0%'] },
+			{ easing: 'ease-out', duration: 3000 }
+		);
 	}
 </script>
 
@@ -172,14 +164,12 @@
 				}
 			}}
 		/>
-		{#if invalidReason}
-			<p
-				bind:this={invalidReasonElement}
-				class="absolute -bottom-4 left-1/2 -translate-x-1/2 translate-y-full text-lg whitespace-nowrap text-pastel-red"
-			>
-				{invalidReason}
-			</p>
-		{/if}
+		<p
+			bind:this={invalidReasonElement}
+			class="absolute -bottom-4 left-1/2 -translate-x-1/2 translate-y-full text-lg whitespace-nowrap text-pastel-red opacity-0"
+		>
+			{invalidReason}
+		</p>
 	</div>
 </div>
 

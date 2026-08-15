@@ -80,7 +80,7 @@
 
 	body {
 		background-color: var(--color-background);
-		color: var(--color-white);
+		color: var(--color-foreground);
 	}
 
 	@keyframes background-scroll-keyframes {

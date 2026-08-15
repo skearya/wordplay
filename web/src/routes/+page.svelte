@@ -229,7 +229,7 @@
 		{#if info === undefined || info.settings.game === 'wordBomb'}
 			<Bomb class="absolute right-3 bottom-3" />
 		{:else if info.settings.game === 'anagrams'}
-			{unreachable(info.settings.game)}
+			<!-- TODO -->
 		{:else if info.settings.game satisfies never}
 			{unreachable(info.settings.game)}
 		{/if}
