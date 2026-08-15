@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-Italic.otf') format('opentype');
+	font-weight: normal;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-Regular.otf') format('opentype');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-Ultrabold.otf') format('opentype');
+	font-weight: bold;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-UltraboldItalic.otf') format('opentype');
+	font-weight: bold;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-Ultralight.otf') format('opentype');
+	font-weight: lighter;
+	font-style: italic;
+}
+
+@font-face {
+	font-family: 'PP Editorial New';
+	src: url('/PPEditorialNew-UltralightItalic.otf') format('opentype');
+	font-weight: lighter;
+	font-style: italic;
+}
+
+@theme {
+	--font-sans:
+		'Inter Variable', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+		'Segoe UI Symbol', 'Noto Color Emoji';
+	--font-serif: 'PP Editorial New', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+	--font-mono:
+		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		'Liberation Mono', 'Courier New', monospace;
+
+	--color-background: #040605;
+	--color-foreground: #ffffff;
+
+	--color-pastel-red: #fec5bb;
+	--color-pastel-light-red: #fae1dd;
+	--color-pastel-blue: #c0e8ff;
+	--color-pastel-green: #e8e8e4;
+	--color-pastel-pink: #e9b8ff;
+
+	--color-green: #475d50;
+	--color-dark-dark-green: #161a15;
+	--color-dark-green: #1d1f1e;
+	--color-faded-green: #545a4f;
+	--color-light-green: #8ba698;
+	--color-bright-green: #62e297;
+
+	--color-red: #ff645c;
+	--color-pink: #f3acff;
+	--color-purple: #acaaff;
+	--color-yellow: #f6f5b4;
+}
+
+@layer base {
+	html {
+		overscroll-behavior-y: none;
+	}
+
+	body {
+		background-color: var(--color-background);
+		color: var(--color-foreground);
+	}
+
+	@keyframes background-scroll-keyframes {
+		0% {
+			background-position: 0px 0px;
+		}
+		100% {
+			background-position: -100vw 100vh;
+		}
+	}
+
+	.background-scroll {
+		animation: 120s linear infinite background-scroll-keyframes;
+	}
+
+	/* https://stackoverflow.com/questions/13014808/is-there-any-way-to-animate-an-ellipsis-with-css-animations */
+
+	@keyframes ellipsis {
+		to {
+			width: 20px;
+		}
+	}
+
+	.loading:after {
+		overflow: hidden;
+		display: inline-block;
+		vertical-align: bottom;
+		animation: ellipsis steps(4, end) 2000ms infinite alternate;
+		content: '\2026';
+		width: 0px;
+	}
+
+	.striped {
+		background: repeating-linear-gradient(
+			-45deg,
+			var(--stripe-color),
+			var(--stripe-color) 1px,
+			transparent 1px,
+			transparent 8px
+		);
+	}
+
+	@property --rotation-angle {
+		syntax: '<angle>';
+		initial-value: 0deg;
+		inherits: false;
+	}
+
+	@keyframes rotation-keyframes {
+		from {
+			--rotation-angle: 0deg;
+		}
+		to {
+			--rotation-angle: -360deg;
+		}
+	}
+
+	.rotating {
+		rotate: var(--rotation-angle);
+		animation: 8s rotation-keyframes linear infinite;
+	}
+
+	.rotating-border {
+		border-width: 4px;
+		border-style: solid;
+		border-image: conic-gradient(from var(--rotation-angle), #cbc9fc, #79789627) 1;
+		animation: 8s rotation-keyframes linear infinite;
+	}
+
+	/* https://stackoverflow.com/questions/45847392/pure-css-continuous-horizontal-text-scroll-without-break */
+
+	.marquee {
+		white-space: nowrap;
+		overflow: hidden;
+		display: inline-block;
+		animation: marquee-keyframes 30s linear infinite;
+	}
+
+	.marquee p {
+		display: inline-block;
+	}
+
+	@keyframes marquee-keyframes {
+		0% {
+			transform: translate3d(0, 0, 0);
+		}
+		100% {
+			transform: translate3d(-50%, 0, 0);
+		}
+	}
+
+	.ease-out-cubic {
+		transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+	}
+
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.no-spinner {
+		appearance: textfield;
+	}
+
+	.no-spinner::-webkit-outer-spin-button,
+	.no-spinner::-webkit-inner-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+}

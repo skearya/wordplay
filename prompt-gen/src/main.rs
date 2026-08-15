@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::{fs, str};
 
 fn main() {
-    let words: Vec<&str> = include_str!("../../server/src/static/words_alpha.txt")
+    let words: Vec<&str> = include_str!("../../server/src/res/words_alpha.txt")
         .lines()
         .collect();
 
@@ -31,7 +31,7 @@ fn main() {
         prompt_counts_map.entry(count).or_default().push(prompt);
     }
 
-    // Vec<(amount of times prompt used in other words, prompts)> | collected to vec for sorting
+    // Vec<(amount of times prompt used in other words, prompts)>
     let mut prompt_counts: Vec<(usize, Vec<&str>)> = prompt_counts_map.into_iter().collect();
     prompt_counts.sort_by_key(|pair| pair.0);
 
@@ -41,7 +41,7 @@ fn main() {
         .collect::<Vec<String>>()
         .join("\n");
 
-    fs::write("../server/src/static/prompts.txt", lines).expect("failed to write to file");
+    fs::write("../server/src/res/prompts.txt", lines).expect("failed to write to file");
 }
 
 fn get_all_slices(word: &str) -> Option<Vec<&str>> {

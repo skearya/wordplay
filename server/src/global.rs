@@ -1,82 +1,54 @@
-use rand::{
-    rng,
-    seq::{IndexedRandom, SliceRandom},
-};
 use std::sync::LazyLock;
 
-pub static GLOBAL: LazyLock<GlobalData> = LazyLock::new(GlobalData::new);
+use rand::seq::{IndexedRandom, SliceRandom};
 
-pub struct GlobalData {
-    pub words: Vec<&'static str>,
-    pub prompts: Prompts,
+static WORDS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    let mut words: Vec<&'static str> = include_str!("res/words_alpha.txt").lines().collect();
+    words.sort_unstable();
+
+    words
+});
+
+static PROMPTS: LazyLock<Vec<(usize, Vec<&'static str>)>> = LazyLock::new(|| {
+    include_str!("res/prompts.txt")
+        .lines()
+        .map(|line| line.split_once(':').unwrap())
+        .map(|(wpp, prompts)| (wpp.parse().unwrap(), prompts.split(',').collect()))
+        .collect()
+});
+
+pub fn init_globals() {
+    LazyLock::force(&WORDS);
+    LazyLock::force(&PROMPTS);
 }
 
-impl GlobalData {
-    pub fn new() -> Self {
-        Self {
-            words: include_str!("./static/words_alpha.txt").lines().collect(),
-            prompts: Prompts::new(),
-        }
-    }
-
-    pub fn is_valid(&self, word: &str) -> bool {
-        self.words.binary_search(&word).is_ok()
-    }
-
-    pub fn random_anagram(&self) -> (&str, String) {
-        loop {
-            let anagram = *self.words.choose(&mut rng()).unwrap();
-
-            if anagram.len() == 6 {
-                let mut chars: Vec<char> = anagram.chars().collect();
-                chars.shuffle(&mut rng());
-
-                break (anagram, chars.into_iter().collect());
-            }
-        }
-    }
+pub fn is_english(word: &str) -> bool {
+    WORDS.binary_search(&word).is_ok()
 }
 
-pub struct Prompts {
-    prompts: Vec<&'static str>,
-    wpp_indexes: Vec<(usize, usize)>,
+pub fn random_prompt(min_wpp: usize) -> &'static str {
+    let index = match PROMPTS.binary_search_by(|(wpp, _words)| wpp.cmp(&min_wpp)) {
+        Ok(index) | Err(index) => index,
+    };
+
+    let (_wpp, prompts) = PROMPTS[index..].choose(&mut rand::rng()).unwrap();
+
+    prompts.choose(&mut rand::rng()).unwrap()
 }
 
-impl Prompts {
-    fn new() -> Self {
-        let list = include_str!("./static/prompts.txt")
-            .lines()
-            .filter_map(|line| line.split_once(':'));
+pub fn random_anagram() -> (&'static str, String) {
+    let word = loop {
+        let word = *WORDS.choose(&mut rand::rng()).unwrap();
 
-        let prompts: Vec<&str> = list
-            .clone()
-            .flat_map(|(_, prompts)| prompts.split(','))
-            .collect();
-
-        let wpp_indexes: Vec<(usize, usize)> = list
-            .filter_map(|(wpp, prompts)| wpp.parse().ok().map(|wpp| (wpp, prompts)))
-            .filter_map(|(wpp, line_prompts)| {
-                line_prompts
-                    .split(',')
-                    .next()
-                    .and_then(|first| prompts.iter().position(|&prompt| prompt == first))
-                    .map(|index| (wpp, index))
-            })
-            .collect();
-
-        Self {
-            prompts,
-            wpp_indexes,
+        if word.len() == 6 {
+            break word;
         }
-    }
+    };
 
-    pub fn random_prompt(&self, min_wpp: usize) -> &str {
-        let (_, closest_index) = self
-            .wpp_indexes
-            .iter()
-            .min_by_key(|(index, _)| index.abs_diff(min_wpp))
-            .unwrap();
+    let mut anagram = word.to_owned().into_bytes();
+    anagram.shuffle(&mut rand::rng());
 
-        self.prompts[*closest_index..].choose(&mut rng()).unwrap()
-    }
+    let anagram = String::from_utf8(anagram).expect("word shuffled should've still been utf-8");
+
+    (word, anagram)
 }

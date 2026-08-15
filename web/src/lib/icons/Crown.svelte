@@ -1,0 +1,28 @@
+<script lang="ts">
+	const {
+		width = 34,
+		height = 34,
+		class: className
+	}: { width?: number; height?: number; class?: string } = $props();
+</script>
+
+<svg
+	{width}
+	{height}
+	viewBox="0 0 34 34"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
+	class={className}
+>
+	<path
+		d="M13.4033 1.5L1.5002 15.1482L21.3521 32.4618L33.2552 18.8136L23.9638 19.4482L23.3293 10.1568L14.0379 10.7914L13.4033 1.5Z"
+		fill="#FFCC00"
+	/>
+	<path
+		d="M13.4033 1.5L1.5002 15.1482L21.3521 32.4618L33.2552 18.8136L23.9638 19.4482L23.3293 10.1568L14.0379 10.7914L13.4033 1.5Z"
+		stroke="#000000"
+		stroke-width="1.5"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	/>
+</svg>

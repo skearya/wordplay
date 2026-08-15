@@ -1,0 +1,296 @@
+pub mod messages {
+    use std::collections::HashMap;
+
+    use serde::{Deserialize, Serialize};
+    use ts_rs::TS;
+    use uuid::Uuid;
+
+    #[cfg_attr(test, derive(Debug, PartialEq))]
+    #[derive(Serialize, Deserialize, TS, Clone, Copy)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsSettings {}
+
+    impl Default for AnagramsSettings {
+        fn default() -> Self {
+            Self {}
+        }
+    }
+
+    #[derive(Deserialize, TS)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    #[ts(export)]
+    pub enum ClientAnagrams {
+        Guess { word: String },
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    #[ts(export)]
+    pub enum ServerAnagrams {
+        Valid {
+            uuid: Uuid,
+            word: String,
+            points: u32,
+        },
+        Invalid {
+            uuid: Uuid,
+            reason: String,
+        },
+    }
+
+    pub enum AnagramsMessage {
+        TimerEnd,
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS, Clone)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsState {
+        pub players: HashMap<Uuid, AnagramsPlayer>,
+        pub anagram: String,
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS, Clone)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsPlayer {
+        pub points: u32,
+    }
+
+    #[cfg_attr(test, derive(Deserialize, Debug, PartialEq))]
+    #[derive(Serialize, TS, Clone)]
+    #[serde(rename_all = "camelCase")]
+    #[ts(export)]
+    pub struct AnagramsPostGame {
+        pub original: String,
+        pub leaderboard: Vec<(Uuid, u32)>,
+        pub words: Vec<(Uuid, String)>,
+    }
+}
+
+use std::{collections::HashMap, time::Duration};
+
+use tokio::task::AbortHandle;
+use uuid::Uuid;
+
+use crate::{
+    game::{
+        GameContext, GameHandler,
+        anagrams::messages::{
+            AnagramsMessage, AnagramsPlayer, AnagramsPostGame, AnagramsState, ClientAnagrams,
+            ServerAnagrams,
+        },
+        messages::{GameVariantState, PostGameInfo},
+    },
+    global::{is_english, random_anagram},
+    room::StateChange,
+};
+
+pub struct Anagrams {
+    /// Players.
+    players: HashMap<Uuid, Player>,
+    /// Original word that the anagram was scrambled on.
+    original: &'static str,
+    /// 6 letter anagram.
+    anagram: String,
+    /// Abort handle to timer task.
+    timer: AbortHandle,
+}
+
+struct Player {
+    /// Player's correctly guessed words.
+    used: Vec<String>,
+    /// Amount of times player guessed incorrectly.
+    incorrect: u32,
+}
+
+impl Player {
+    fn new() -> Self {
+        Self {
+            used: vec![],
+            incorrect: 0,
+        }
+    }
+
+    fn valid(&mut self, word: String) {
+        self.used.push(word);
+    }
+
+    fn incorrect(&mut self) {
+        self.incorrect += 1;
+    }
+
+    fn points(&self) -> u32 {
+        self.used.iter().map(|word| points(word)).sum()
+    }
+}
+
+fn points(word: &str) -> u32 {
+    50 * 2_u32.pow(word.len() as u32 - 2)
+}
+
+impl Anagrams {
+    pub fn new(ctx: GameContext, players: &[Uuid]) -> Self {
+        let room = ctx.room.clone();
+
+        let timer = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            room.send(AnagramsMessage::TimerEnd);
+
+            anyhow::Ok(())
+        })
+        .abort_handle();
+
+        let (original, anagram) = random_anagram();
+
+        Self {
+            players: players.iter().map(|&uuid| (uuid, Player::new())).collect(),
+            original,
+            anagram,
+            timer,
+        }
+    }
+
+    /// Returns `Ok(points)` or `Err(reason)`.
+    fn submission(&mut self, uuid: Uuid, word: String) -> Result<u32, &'static str> {
+        let error = if word.len() < 2 {
+            Some("Word isn't long enough")
+        } else if word
+            .chars()
+            .any(|c| word.matches(c).count() > self.anagram.matches(c).count())
+        {
+            Some("Word doesn't match anagram")
+        } else if self.players[&uuid].used.contains(&word) {
+            Some("Word has already been used")
+        } else if !is_english(&word) {
+            Some("Word isn't english")
+        } else {
+            None
+        };
+
+        let player = self
+            .players
+            .get_mut(&uuid)
+            .expect("uuid should've been validated");
+
+        if let Some(error) = error {
+            player.incorrect();
+
+            Err(error)
+        } else {
+            let points = points(&word);
+            player.valid(word);
+
+            Ok(points)
+        }
+    }
+
+    fn info(&self) -> AnagramsPostGame {
+        let mut leaderboard = self
+            .players
+            .iter()
+            .map(|(&uuid, player)| (uuid, player.points()))
+            .collect::<Vec<(Uuid, u32)>>();
+
+        leaderboard.sort_by(|a, b| b.1.cmp(&a.1));
+
+        let mut words = self
+            .players
+            .iter()
+            .flat_map(|(uuid, player)| player.used.iter().map(|word| (*uuid, word.clone())))
+            .collect::<Vec<(Uuid, String)>>();
+
+        words.sort_by(|a, b| points(&b.1).cmp(&points(&a.1)));
+
+        AnagramsPostGame {
+            original: self.original.to_owned(),
+            leaderboard,
+            words,
+        }
+    }
+}
+
+impl GameHandler for Anagrams {
+    type ClientMessage = ClientAnagrams;
+    type SelfMessage = AnagramsMessage;
+    type Outcome = Option<AnagramsPostGame>;
+    type Snapshot = AnagramsState;
+
+    fn on_client_message(
+        &mut self,
+        ctx: GameContext,
+        (uuid, message): (Uuid, Self::ClientMessage),
+    ) -> anyhow::Result<Self::Outcome> {
+        if !self.players.contains_key(&uuid) {
+            return Err(anyhow::anyhow!("you aren't a player"));
+        }
+
+        match message {
+            ClientAnagrams::Guess { word } => match self.submission(uuid, word.clone()) {
+                Ok(points) => {
+                    ctx.clients
+                        .broadcast(ServerAnagrams::Valid { uuid, word, points });
+                }
+                Err(reason) => {
+                    ctx.clients.broadcast(ServerAnagrams::Invalid {
+                        uuid,
+                        reason: reason.to_owned(),
+                    });
+                }
+            },
+        }
+
+        Ok(None)
+    }
+
+    fn on_self_message(
+        &mut self,
+        _ctx: GameContext,
+        message: Self::SelfMessage,
+    ) -> anyhow::Result<Self::Outcome> {
+        match message {
+            AnagramsMessage::TimerEnd => Ok(Some(self.info())),
+        }
+    }
+
+    fn on_abort(&mut self) {
+        self.timer.abort();
+    }
+
+    fn snapshot(&self) -> Self::Snapshot {
+        AnagramsState {
+            players: self
+                .players
+                .iter()
+                .map(|(&uuid, player)| {
+                    (
+                        uuid,
+                        AnagramsPlayer {
+                            points: player.points(),
+                        },
+                    )
+                })
+                .collect(),
+            anagram: self.anagram.clone(),
+        }
+    }
+}
+
+impl From<AnagramsState> for GameVariantState {
+    fn from(value: AnagramsState) -> Self {
+        Self::Anagrams(value)
+    }
+}
+
+impl From<Option<AnagramsPostGame>> for StateChange {
+    fn from(value: Option<AnagramsPostGame>) -> Self {
+        match value {
+            Some(value) => Self::Lobby(Some(PostGameInfo::Anagrams(value))),
+            None => Self::None,
+        }
+    }
+}

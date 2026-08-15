@@ -1,4 +1,2 @@
 /target
-db.sqlite
-db.sqlite-shm
-db.sqlite-wal
+.DS_Store
