@@ -1,9 +1,0 @@
-{
-    "recommendations": [
-        "rust-lang.rust-analyzer",
-        "tamasfe.even-better-toml",
-        "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
-        "astro-build.astro-vscode"
-    ]
-}
